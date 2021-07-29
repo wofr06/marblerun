@@ -1,1 +1,7 @@
+*.odt
 t/data/ext_*
+Makefile
+MYMETA.json
+MYMETA.yml
+pm_to_blib
+blib
