@@ -1,0 +1,59 @@
+Name Run 4
+Date Mar 23, 2020
+Author Wolfgang
+# Spalten 1-6 bilden komplette Bahn auf 1x2 Board, Start 62f
+Level 0
+31 1Cd
+41 1Cc
+71 2Cd sd sb
+91 1Cc sc
+12 1Cd
+22 1Sc
+42 1Cb ld
+82 Cc
+13 1Ce sc
+23 3+Cb ld
+33 1Wf mc
+43 1Ca
+53 1Cb mb
+63 2+Ca
+93 Cb
+a3 +Cb sb
+24 3+Cf md
+54 2Xa sd
+74 Ma
+84 Ca
+25 Hc
+65 +Cb md
+95 Ca
+26 Cf
+36 Ca
+46 3+Ab
+56 3+Cc sc
+66 +Cf sd
+86 Za
+96 Cb
+27 2Cd sd sb
+47 3+Ca
+67 Cd
+77 Cc
+97 Xb sc
+18 1Cb ld mc
+58 Ca
+68 3Xb mc
+78 Cf
+88 Ca
+19 2Ce mc
+59 2Cd sb sd
+79 1Wd
+89 1Cc sc
+a9 1Cb sb
+3b 2Cf
+4b 2Xa sd
+6b 2Ya se
+8b 2Cb
+9b 1Cd
+2c 2Cf
+3c 2Ca
+6c 2Cf
+7c 2Ca

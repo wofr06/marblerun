@@ -1,0 +1,148 @@
+#!/usr/bin/perl
+
+use v5.14;
+use warnings;
+use strict;
+use Getopt::Std;
+use POSIX qw(strftime);
+use Game::MarbleRun;
+use Game::MarbleRun::Draw;
+use Game::MarbleRun::Store;
+use Locale::Maketext::Simple (Style => 'gettext', Class => 'Game::MarbleRun');
+
+use vars qw(%opt);
+getopts('hl:', \%opt) || usage();
+usage() if $opt{h};
+
+# accept several variants of lang input
+my $lang = $opt{l} || 'de_DE.UTF8';
+$lang = $lang . '_' . uc $lang . '.UTF8' if length $lang == 2;
+my $lang_code = substr $lang, 0, 2;
+Game::MarbleRun::loc_lang($lang);
+
+my $g = Game::MarbleRun->new();
+my $hdr = join '', <DATA>;
+my $nl = '\n"';
+
+# print header data
+my $datestring = strftime "%Y-%m-%d %H:%M%z", localtime;
+$hdr =~ s/(Project-Id-Version:) .*/$1 $Game::MarbleRun::VERSION$nl/;
+$hdr =~ s/(PO-Revision-Date:) .*/$1 $datestring$nl/;
+$hdr =~ s/(Language-Team:)\s+../$1 $lang_code/;
+$hdr =~ s/(Language:).*/$1 $lang$nl/;
+$hdr =~ s/(charset=).*/$1$lang$nl/;
+print $hdr;
+
+# print elements and construction sets
+my %seen;
+my $phrases = $g->{elem_name};
+$seen{$_} = 1 for values %$phrases;
+for (keys %{$g->{set_id}}) {
+	$phrases->{'z' . ($g->{set_id}{$_} + 100)} = $_ if ! $seen{$_};
+	$seen{$_} = 1;
+}
+# add here more phrases to be translated (prefix z2)
+$phrases->{z201} = 'Construction plan booklet';
+$phrases->{z202} = 'Instruction booklet';
+$phrases->{z203} = 'track';
+$phrases->{z204} = 'run';
+$phrases->{z205} = 'Straight Tile';	# Draw.pm
+$phrases->{z207} = 'red';	# Marble colors
+$phrases->{z208} = 'green';
+$phrases->{z209} = 'blue';
+$phrases->{z210} = 'silver';
+
+say "msgid \"$phrases->{$_}\"\nmsgstr \"",loc2($phrases->{$_}),"\"\n" for sort keys %$phrases;
+
+my $scriptpath = (grep {-r "$_/gravi"}  split /:/,$ENV{"PATH"})[0];
+# loop over Files with localization calls
+	for my $f (qw(MarbleRun.pm Draw.pm Store.pm gravi)) {
+	open F, ($INC{"Game/$f"} || $INC{"Game/MarbleRun/$f"} || "$scriptpath/$f")
+		or die "$f: $!\n";
+	my $in_eof;
+	while (<F>) {
+		# usage block in gravi
+		if (/loc\(<<EOF/) {
+			while (<F>) {
+				last if /^EOF/;
+				$in_eof .= $_;
+			}
+			say "#: $f:$.\nmsgid \"\"";
+			say "\"$_\\n\"" for split /\n/, $in_eof;
+			say "msgstr \"\"";
+			say "\"$_\\n\"" for split /\n/, loc($in_eof);
+		}
+		next if ! /(?:loc|error)\("([^"]*)|(?:loc|error)\('([^']*)|get_id\('([^']*)/;
+		my $in = $1 || $2 || $3;
+		next if exists $seen{$in};
+		my $str = loc2($in);
+		if ($str !~ /\\n$/) {
+			$str =~ s/\\n/\\n"\n"/;
+			$str = "\"\n\"$str" if $str =~ /\n/;
+		}
+		say "#: $f:$.\nmsgid \"$in\"\nmsgstr \"$str\"\n";
+		$seen{$in} = 1;
+	}
+	close F;
+}
+
+sub loc2 {
+	my ($in) = @_;
+	my %quant = (
+		"%quant(%1,Error) found in input!" => "%quant(%1,Fehler,Fehler) im Input gefunden!",
+		"%quant(%1,Excessive char) '%2'" => "%quant(%1,zusätzliches Zeichen,zusätzliche Zeichen) '%2'",
+	);
+	my $out;
+	$in =~ s/\\n/\n/g;
+	if ($in =~ /%quant/) {
+		if ($lang =~ /de/) {
+			$out = $quant{$in};
+		} else {
+			($out = $in) =~ s/,[^,]+(?=,)/,../ig;
+			$out =~ s/,[^,]+\)/,..)/;
+		}
+	} elsif ($in =~ /%5/) {
+		$out = loc($in, '%1', '%2', '%3', '%4', '%5');
+	} elsif ($in =~ /%4/) {
+		$out = loc($in, '%1', '%2', '%3', '%4');
+	} elsif ($in =~ /%3/) {
+		$out = loc($in, '%1', '%2', '%3');
+	} elsif ($in =~ /%2/) {
+		$out = loc($in, '%1', '%2');
+	} elsif ($in =~ /%1/) {
+		$out = loc($in, '%1');
+	} else {
+		$out = loc($in);
+	}
+	return '' if $in eq $out;
+	$out =~ s/\n/\\n/g;
+	return $out;
+}
+
+sub usage {
+	(my $prog = $0) =~ s,.*/,,;
+	say "Usage: $0 [-l lang]";
+	say "\tGenerate a template language file for localizing Game::MarbleRun";
+	say "\tand write it to STDOUT";
+	exit;
+}
+__END__
+# Game::MarbleRun translations
+# Copyright (C) 2020,2021 Wolfgang Friebel
+# This file is distributed under the same license as perl.
+# Wolfgang Friebel <wp.friebel@gmail.com>, 2020,2021.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: 0.1\n"
+"Report-Msgid-Bugs-To: <wp.friebel@gmail.com>\n"
+"POT-Creation-Date: 2020-04-12 20:38+0200\n"
+"PO-Revision-Date: 2020-04-12 20:38+0100\n"
+"Last-Translator: Wolfgang Friebel <wp.friebel@gmail.com>\n"
+"Language-Team: de <wp.friebel@gmail.com>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain;charset=de_de.utf8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+# gravitrax elements

@@ -1,0 +1,33 @@
+Name Track F
+Date 2020-04-18
+Source Construction plan booklet
+# works even better with Vortex instead of Freefall (Level 1 position 64)
+# 64 Va
+Level 0
+52 6
+72 1+Cd sb
+82 1+Cc sc
+24 6
+34 1+Cd md
+64 2Pa sc
+94 1Cb lb
+35 1+Ce
+36 1+Xc lc
+56 6
+76 1+Cb sb
+97 Ca
+68 Ce
+78 Cc
+88 Ca
+98 Cb
+79 Cf
+89 Ca
+99 Xb
+5a 1Cf md
+8a Za
+9a Cb
+9b Cd
+Level 1
+34 Ab md
+44 ^
+64 Da

@@ -1,0 +1,18 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use Image::LibRSVG;
+
+usage() if ! $ARGV[0];
+my $name = shift;
+$name =~ s/\.svg$//;
+my $svgfile = "$name.svg";
+my $pngfile = "$name.png";
+my $rsvg = Image::LibRSVG->new();
+$rsvg->convert($svgfile, $pngfile);
+print "Created $pngfile from $svgfile\n";
+
+sub usage {
+	die "Usage: $0 <prefix>\n\tconvert prefix.svg to prefix.png\n";
+}

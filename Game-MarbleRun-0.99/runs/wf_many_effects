@@ -1,0 +1,94 @@
+Name Run with many effects
+Date Feb 25, 2021
+Author Wolfgang
+# most rows in direction d, with jumper, 2 x helix, switch, 2 x magnetic cannon,
+# hammer, vertical tunnel, urved and extralong rails
+# needs 2 starter sets and 1 vertical starter set
+# run time 24 s
+11 3Cb md
+41 1+Xf ld
+81 Ma oS oS
+91 Cc
+12 3Cf md
+42 3Xf ld
+82 2Cf
+92 Xf
+53 +Cd md
+83 2Ca
+a3 Cb
+14 +Cd sd
+34 +Xf
+44 +Xa md
+74 Cc
+84 Cd
+94 Ca
+15 +Ce
+35 +Cd
+45 +Cc sd
+65 Cc
+75 3+Cd sd cb
+85 Cd
+95 4Cc
+16 +Cf
+26 +Ca
+36 6
+46 +Cf
+56 +Ha
+66 Cf sd
+86 Cc
+96 4Ce
+27 3Yb sd sb
+47 2Xf ld
+87 Ma oS oS
+97 Ce
+a7 Zb
+28 3Cb sd
+48 3+Ga
+58 Cd
+68 Cc
+78 L2Cc sc
+88 Cd
+98 Ca
+19 3Ce sc
+29 6
+39 3Yd sb md
+59 Ce
+69 3Xf md
+79 Cf
+89 Ca
+99 2+Cc
+1a 1Cd
+2a 1Cc
+4a 6
+5a Cb
+6a 3+xH4b
+8a L2Ce
+9a 2+Cb
+1b 1Ce
+2b 3Cd
+3b 1Cf sd
+5b Ca
+6b 1xH5b
+7b 5+Cf
+8b 2+Ja
+9b 2+S+e
+1c 1Cf ld
+5c 1+Wa ld
+9c 2+Ce
+Level 1
+38 ^
+26 1Cd sb
+36 1Cc
+46 1Cb qd
+27 Cf tf sd
+47 1Ce
+57 1Xf
+18 2+Ce sc
+28 4Cb gd
+48 Vb
+58 1Cb
+39 4Ab ad oR oG oB
+49 Ce
+59 1Ca
+2a 4Cd
+4a Cf ld

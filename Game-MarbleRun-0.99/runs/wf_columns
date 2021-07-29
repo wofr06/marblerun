@@ -1,0 +1,68 @@
+Name Run lines
+Date Feb 23, 2021
+Author Wolfgang
+# in each row 1 or 2 rails, all in direction d, most junctions direction f
+# with 2 starter sets 2 rails in direction c (for the missing junctions)
+# run time 24 s
+11 3Cb md
+41 1+Xf ld
+81 Ma
+#91 Cc       # 3 Starter Sets
+91 CC sc     # 2 Starter sets
+12 3Cf md
+42 3Xf ld
+82 2Cf
+#92 Xf       # 3 Starter Sets
+53 1+Cd md
+83 2Ca
+a3 Cb
+14 1+Cd md
+44 1+Xa md
+74 Cc
+94 Ce
+15 1+Ce
+35 1+Cd
+45 1+Cc md
+75 Cc
+85 Cf sd
+a5 Ce
+16 1+Cf
+26 1+Ca
+46 1+Cf
+56 1+Xf ld
+76 Cf
+86 Cc
+96 2+Aa oa
+27 3Cd sd
+47 1+Xf ld
+87 Ma
+97 Ce
+a7 Zb
+18 3Cc md
+48 2+Cf
+58 Cd
+68 Cc
+88 Cd
+98 Ca
+49 2+Cc sd
+59 Ce
+69 2Xf md
+79 Cf
+89 Ca
+#99 2Cc       # 3 Starter Sets
+99 2Cc sc     # 2 Starter sets
+1a 1Yd
+2a 1Yc
+5a Cf md
+8a +Cf
+#9a 2Xf       # 3 Starter Sets
+1b 1Ye
+3b 1Yd md
+6b +Cc
+7b +Cd
+8b +Ca
+ab 2Cb
+1c 1Wf ld
+5c 1+Wa ld
+6c +Cd
+9c 2Ca

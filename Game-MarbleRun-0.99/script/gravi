@@ -1,0 +1,150 @@
+#!/usr/bin/perl
+
+##############################################################
+#                                                            #
+# A program to register and visualize gravitrax marble runs  #
+#                                                            #
+# © Wolfgang Friebel 2020                                    #
+##############################################################
+use warnings;
+use strict;
+
+use DBI;
+use Getopt::Long;
+use Game::MarbleRun;
+use Game::MarbleRun::Draw;
+use Game::MarbleRun::Store;
+use Locale::Maketext::Simple (Style => 'gettext', Class => 'Game::MarbleRun');
+
+use vars qw(%opt);
+
+Getopt::Long::Configure ("bundling");
+my $ok = GetOptions(a => \$opt{a}, 'd' => \$opt{d}, e => \$opt{e}, f => \$opt{f},
+	h => \$opt{h}, 'i:s' => \$opt{i}, 'l=s' => \$opt{l}, n => \$opt{n},
+	'o=s' => \$opt{o}, q => \$opt{q}, r => \$opt{r}, s => \$opt{s},
+	v => \$opt{v}, 'u:s' => \$opt{u}, x => \$opt{x});
+my $lang = $ENV{LANG};
+if ($opt{l}) {
+	$lang = $opt{l};
+} elsif ($^O =~ /Win/) {
+	# Windows language recognition from registry
+	my $key = '"HKEY_CURRENT_USER\\Control Panel\\International"';
+	my $help = `reg query $key /v LocaleName`;
+	$lang = $1 if $help =~ s/.* (\w\w-\w\w)\s*$//m;
+}
+if ($^O =~ /Win/) {
+	my $res = `chcp`;
+	$Game::MarbleRun::chcp = $1 if $res =~ /(\d+)/;
+	$SIG{INT} =sub {`chcp $Game::MarbleRun::chcp`;exit;};
+	$SIG{TERM} =sub {`chcp $Game::MarbleRun::chcp`;exit;};
+	`chcp 65001`;
+}
+if ($lang) {
+	$lang = $lang . '_' . uc $lang . '.UTF8' if length $lang == 2;
+	Game::MarbleRun::loc_lang($lang);
+}
+usage() if $opt{h} or ! $ok;
+my %attr = $opt{n} ? (db => ':memory:') : ();
+if (! -r $Game::MarbleRun::DB_FILE and ! $opt{n}) {
+	my $input = Game::MarbleRun::Store->new(%attr);
+	my $yn = $input->prompt(loc("store a demo track in the database?"));
+	my $demo = <DATA> . <DATA>;
+	my $Y = loc('Y');
+	$input->store_run($input->parse_run($demo)) if $yn =~ /^[y$Y]/i;
+}
+my $g = Game::MarbleRun::Draw->new(%attr);
+$g->{verbose} = $opt{v};
+$g->{quiet} = $opt{q} || $opt{n};
+$g->{fill} = $opt{f};
+$g->{relative} = $opt{r};
+if ($opt{a}) {
+	my $input = Game::MarbleRun::Store->new(%attr);
+	$input->{verbose} = $opt{v};
+	if (@ARGV) {
+		for (@ARGV) {
+			if (-d $_) {
+				my @list = glob "$_/*";
+				$input->process_input($_) for @list;
+			} else {
+				$input->process_input($_);
+				if ($opt{n}) {
+					# in check mode produce optionally a SVG to help debugging
+					$g->{dbh} = $input->{dbh};
+					$g->{quiet} = 1;
+					$g->display_run(1);
+				}
+			}
+		}
+	} else {
+		$input->process_input();
+	}
+} elsif ($opt{e}) {
+	$g->list_elements();
+} elsif ($opt{s}) {
+	$g->list_sets(@ARGV);
+} elsif (defined $opt{i}) {
+	my $id = $g->owner_of_set_id($opt{i} || $opt{u});
+	$g->inventory($id);
+} else {
+	$g->{outputfile} = $opt{o} if $opt{o};
+	my $person_id = $g->owner_of_set_id($opt{u});
+	my @ids = $g->list_marble_runs($person_id, @ARGV);
+	exit if ! @ids;
+	if (defined $opt{x}) {
+		my $id = $g->get_id('Export a marble run into a file', @ids);
+		$g->export_marble_run($id, $opt{o}) if $id;
+	} elsif (defined $opt{d}) {
+		my $id = $g->get_id('Delete a marble run', @ids);
+		$g->delete_run($id) if $id;
+	} else {
+		my $id;
+		if ($g->{quiet}) {
+			$id = $g->get_id('Generate SVG for a marble run', @ids);
+		} else {
+			$id = $g->get_id('Display instructions for a marble run', @ids);
+		}
+		$g->display_run($id) if $id;
+	}
+}
+$g->finish();
+if ($^O =~ /Win/) {
+	`chcp $Game::MarbleRun::chcp`;
+}
+exit;
+
+##############################################################################
+sub usage {
+	(my $prog = $0) =~ s,.*/,,;
+	print loc('Usage'), ": $0 ", loc("[options] [arguments]"), "\n";
+	print loc(<<EOF);
+  Arguments:
+    For option -a (see below) a list of input file names can be given.
+    Otherwise the arguments are used to select stored runs. As selection
+    criteria the run id, a string contained in the run name, an element
+    used in the run (1 char) or an 'OK' to select runs without missing
+    material are possible. All criteria separated by comma must, criteria
+    separated by white space can be fulfilled. After having selected a run an
+    action for that run is performed, normally the instructions to build a
+    run are printed. Then one can choose whether a SVG file should be produced.
+    (Deleting runs can be achieved using option -d, exporting with -x).
+  Options:
+    -a      add run or owned material from file(s) or STDIN
+    -d      delete a single run
+    -e      print a list of existing elements and its one char name
+    -f      fill all empty positions on ground plane with coordinate values (svg)
+    -i      print inventory for a person (chosen by -u or for the main user)
+    -l lang language name for output (e.g en_US, de_de, de_DE.UTF8)
+    -n      do not generate an svg image, with -a do not store run, check only
+    -o name file name for export or svg image file prefix (without .svg)
+    -q      quiet run, do only output svg image
+    -r      coordinates are relative to ground planes (default for large runs)
+    -s      print a list of existing construction sets and its contents
+    -u [id] chose a person to determine the available material
+    -v      verbose output
+    -x      export a single run to a file or to STDOUT
+EOF
+	exit;
+}
+__END__
+Demo; 21 1Ca sb mc;41 1Ca mb sc;13 2Ce;53 Cb;14 2Cf;24 2Aa sc;34 Zb;44 Ya;
+55 Cb;36 Cf;46 Ca
