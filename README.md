@@ -38,8 +38,7 @@ This module requires these other non core modules and libraries:
 
 ### AUTHOR
 If you found bugs or have marble runs you like to share then you can contact
-me by email: Wolfgang Friebel, <wp.friebel@gmail.com>
-If you have ideas for improvements, can provide translations or like to
+me. If you have ideas for improvements, can provide translations or like to
 contribute code or patches then I would like to hear from you as well.
 
 ## COPYRIGHT AND LICENCE
