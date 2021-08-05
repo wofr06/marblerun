@@ -698,6 +698,25 @@ sub put_Spiral {
 	$self->put_circle($x, $y, 0.5 - $thickness, {fill=>'url(#mygreen)'});
 	$self->put_through_line($x, $y, $orient, $thickness);
 	$self->put_through_line($x, $y, $orient + 2*$elems - 1, $thickness);
+	my ($xc, $yc) = $self->center_pos($x, $y);
+	my $length = 0.4;
+	my $d1 = ($orient + 1) % 6;
+	my $d2 = ($orient + 2) % 6;
+	my $d3 = ($orient + 3) % 6;
+	my $svg = $self->{svg};
+	my $dx1 = $length*$self->{corner_x}[0][$d1];
+	my $dy1 = $length*$self->{corner_y}[0][$d1];
+	my $dx2 = $length*$self->{middle_x}[$d2];
+	my $dy2 = $length*$self->{middle_y}[$d2];
+	my $dx3 = $self->{middle_x}[$d3]*(1-2*$thickness);
+	my $dy3 = $self->{middle_y}[$d3]*(1-2*$thickness);
+	my ($x1, $y1) = ($xc - $dx1, $yc - $dy1);
+	my ($x2, $y2) = ($xc + $dx2, $yc + $dy2);
+	my ($x3, $y3) = ($xc + $dx3, $yc + $dy3);
+	my $r = 0.21*$self->{size};
+	my $r2 = 0.4*$self->{size};
+	$svg->path(d => "M $x1 $y1 A $r $r 0 1 1 $x2 $y2", class => 'tile');
+	$svg->path(d => "M $x2 $y2 A $r2 $r2 0 0 0 $x3 $y3", class => 'tile');
 }
 
 sub put_TipTube {
