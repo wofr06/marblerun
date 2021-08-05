@@ -839,7 +839,8 @@ sub display_run {
 	my ($self, $run_id, $file) = @_;
 	my $quiet = $self->{quiet};
 	my $svg = $self->{svg};
-	my (%pos, $tp_pos);
+	my %pos;
+	my $tp_pos = [[0,0]];
 	my ($meta, $tile, $rail, $marble) = $self->fetch_run_data($run_id);
 	# meta: id name digest date source person_id size_x size_y layers marble
 	#       0  1    2      3    4      5         6      7      8      9
@@ -1047,6 +1048,7 @@ sub display_run {
 		}
 		$self->emit_svg($file, $l) if $svg;
 	}
+	use Data::Dumper;print Dumper $tp_pos;
 	$self->initial_actions($tile, $marble, $tp_pos);
 }
 
@@ -1082,8 +1084,9 @@ sub initial_actions {
 			}
 		}
 		my $pos = loc("At %1", $self->num2pos($x, $y));
+		say $pos, ;
 		$pos = loc('At %1', loc('Level') . " $l ") . loc('pos') . ' '
-			. ($y - $dxy->[1]) . ($x - $dxy->[0]) if $l and $self->{relative};
+			. ($y - $dxy->[$l][1]) . ($x - $dxy->[$l][0]) if $l and $self->{relative};
 				$pos .= ' (' . loc($elem) . ') ' if $sym;
 		if ($sym =~ /^[AMNP]$|x[AFT]/) {
 			next if ! exists $m{$id};
