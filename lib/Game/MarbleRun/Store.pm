@@ -94,9 +94,9 @@ sub find_to_tile {
 		}
 		# vertical tunnel needs 2 ids at the same position, 1st has dz=0
 		shift @ids if $r eq 't';
-		my %dz0 = (t=>7, a=>6, b=>14, c=>5, d=>5, xT=>2, xM=>7, xV=>7, xt=>7);
-		my %dz1 = (s =>5, m=>7, l=>8, t=>7, a=>7, b=>18, c=>7, d=>7, g=>12,
-			q=>12, xT=>2, xM=>7, xV=>7, xt=>7);
+		my %dz0 = (t=>7, a=>5, b=>14, c=>5, d=>5, xT=>2, xM=>7, xV=>7, xt=>7);
+		my %dz1 = (s =>5, m=>7, l=>8, t=>7, a=>7, b=>18, c=>7, d=>7, g=>7,
+			q=>7, xT=>2, xM=>7, xV=>7, xt=>7);
 		return undef if ! @ids;
 		my $zdiff = abs($z - $ids[0]->[4]);
 		my $zmin = exists $dz0{$r} ? $dz0{$r} : 0;
@@ -186,7 +186,7 @@ sub verify_rail_endpoints {
 			my $from = $self->num2pos($t->[1], $t->[2]);
 			if ($t->[0] eq 'xH') {
 				# variable direction for spiral depending on number of elements
-				$cases->{xH}[1] = (5 + $t->[4]) % 6;
+				$cases->{xH}[1] = (1 + $t->[4]) % 6;
 			} elsif ($t->[0] eq 'xF') {
 				# Lift: upper direction of connection is stored in detail
 				$cases->{xF}[1] = ord($1) - 97 if $t->[4] =~ /([a-f])/;
@@ -228,7 +228,7 @@ sub verify_rail_endpoints {
 					if ($tile eq 'xH') {
 						my ($h) = grep {$_->[0] eq 'xH' and $r->[0] == $_->[1]
 							and $r->[1] == $_->[2]} @$data;
-						$cases->{xH}[1] = (5 + $h->[4]) % 6;
+						$cases->{xH}[1] = (1 + $h->[4]) % 6;
 					} elsif ($tile eq 'xF') {
 						my ($f) = grep {$_->[0] eq 'xF' and $r->[0] == $_->[1]
 							and $r->[1] == $_->[2]} @$data;
@@ -608,7 +608,7 @@ sub get_offsets {
 		/^line (\d+)$/;
 		$self->{line}= $1;
 		# process only plane related lines (level, _, ^ and = lines)
-		next if $_ !~ /[=^_]|level|$loc_level/i;
+		next if $_ !~ /^[\w\s]+[=^_]|^level|^$loc_level/i;
 		if (/^\d+\s+_\s*(\d+)\D+(\d+)/) {
 			$relative = $self->{relative} = 1;
 			$level = 0;
@@ -855,7 +855,7 @@ sub parse_run {
 	my $rel_pos = 0;
 	# split content into lines with line numbers prepended
 	my $i = 0;
-	my @lines = map {$i++;map {"$i $_"} split /;/, $_} split /\n/, $content;
+	my @lines = map {$i++;map {"$i $_"} split /;/, $_} split /\r?\n/, $content;
 	# determine offsets for transparent planes and its plane numbers
 	$off_xy = $self->get_offsets(\@lines);
 	my $num_wall = 0;
@@ -865,7 +865,7 @@ sub parse_run {
 		$self->{line} = $1;
 		push @$rules, ['line', $1];
 		# first line is the name of the run if no name line given
-		$run_name = $_ if ($1 || 0) == 1;
+		$run_name = $_ if ! $run_name and ($1 || 0) == 1;
 		next if /^\s*$/;
 		s/\s*$//;
 		# strip off and remember comments
