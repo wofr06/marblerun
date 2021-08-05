@@ -1048,7 +1048,6 @@ sub display_run {
 		}
 		$self->emit_svg($file, $l) if $svg;
 	}
-	use Data::Dumper;print Dumper $tp_pos;
 	$self->initial_actions($tile, $marble, $tp_pos);
 }
 
@@ -1084,7 +1083,6 @@ sub initial_actions {
 			}
 		}
 		my $pos = loc("At %1", $self->num2pos($x, $y));
-		say $pos, ;
 		$pos = loc('At %1', loc('Level') . " $l ") . loc('pos') . ' '
 			. ($y - $dxy->[$l][1]) . ($x - $dxy->[$l][0]) if $l and $self->{relative};
 				$pos .= ' (' . loc($elem) . ') ' if $sym;
