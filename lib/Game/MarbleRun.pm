@@ -875,6 +875,10 @@ sub display_run {
 		# handle transparent planes first
 		if ($l) {
 			my $tp = (grep {$_->[2] =~ /([=^])/ and $_->[8] == $l} @$tile)[0];
+			if (! $tp) { # should not happen
+				$self->error("Incomplete data for level %1, skipping it", $l);
+				next;
+			}
 			my $tp_type = $tp->[2];
 			my ($tp_x, $tp_y) = ($tp->[3], $tp->[4]);
 			my $pos = $self->num2pos($tp_x, $tp_y);

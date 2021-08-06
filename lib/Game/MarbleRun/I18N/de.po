@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: 0.99\n"
 "Report-Msgid-Bugs-To: <wp.friebel@gmail.com>\n"
 "POT-Creation-Date: 2020-04-12 20:38+0200\n"
-"PO-Revision-Date: 2021-07-29 11:58+0200\n"
+"PO-Revision-Date: 2021-08-06 13:43+0200\n"
 "Last-Translator: Wolfgang Friebel <wp.friebel@gmail.com>\n"
 "Language-Team: de <wp.friebel@gmail.com>\n"
 "Language: de_DE.UTF8\n"
@@ -402,79 +402,83 @@ msgstr "Es fehlt"
 msgid "Direction"
 msgstr "Richtung"
 
-#: MarbleRun.pm:851
+#: MarbleRun.pm:852
 msgid "Instructions for %1, board size %2"
 msgstr "Anleitung für %1 mit %2 Bodenplatten"
 
-#: MarbleRun.pm:855
+#: MarbleRun.pm:856
 msgid "ENTER to continue without svg"
 msgstr "oder ENTER ohne SVG"
 
-#: MarbleRun.pm:886
+#: MarbleRun.pm:879
+msgid "Incomplete data for level %1, skipping it"
+msgstr "Fehlende Daten für Ebene %1, wird ignoriert"
+
+#: MarbleRun.pm:891
 msgid "Place %1 %2 with center at %3"
 msgstr "Lege die %1 %2 mit dem Mittelpunkt auf %3"
 
-#: MarbleRun.pm:909
+#: MarbleRun.pm:914
 msgid "At %1"
 msgstr "Auf %1"
 
-#: MarbleRun.pm:951
+#: MarbleRun.pm:956
 msgid "On "
 msgstr "Auf "
 
-#: MarbleRun.pm:957
+#: MarbleRun.pm:962
 msgid "with %1 bridge elements"
 msgstr "mit %1 Brückenelementen"
 
-#: MarbleRun.pm:959
+#: MarbleRun.pm:964
 msgid "with %1 green parts"
 msgstr "mit %1 grünen Teilen"
 
-#: MarbleRun.pm:963
+#: MarbleRun.pm:968
 msgid "with %1 transparent parts"
 msgstr "mit %1 Glasteilen"
 
-#: MarbleRun.pm:964
+#: MarbleRun.pm:969
 msgid "outlet in %1"
 msgstr "Auslass in %1"
 
-#: MarbleRun.pm:979
+#: MarbleRun.pm:984
 msgid "in wall %1 hole %2"
 msgstr "in Wand %1 Loch %2"
 
-#: MarbleRun.pm:1019
+#: MarbleRun.pm:1024
 msgid "Level"
 msgstr "Ebene"
 
-#: MarbleRun.pm:1031
+#: MarbleRun.pm:1036
 msgid "in pillar %1"
 msgstr "in Säule %1"
 
-#: MarbleRun.pm:1034
+#: MarbleRun.pm:1039
 msgid "From %1 to %2 %3 %4"
 msgstr "Von %1 nach %2 %3 %4"
 
-#: MarbleRun.pm:1056
+#: MarbleRun.pm:1061
 msgid "red"
 msgstr "rote"
 
-#: MarbleRun.pm:1057
+#: MarbleRun.pm:1062
 msgid "silver"
 msgstr "silberne"
 
-#: MarbleRun.pm:1105
+#: MarbleRun.pm:1110
 msgid "Switch state"
 msgstr "Weichenstellung"
 
-#: MarbleRun.pm:1107
+#: MarbleRun.pm:1112
 msgid "prepare for start"
 msgstr "Vorbereiten für Start"
 
-#: MarbleRun.pm:1109
+#: MarbleRun.pm:1114
 msgid "flap in %1"
 msgstr "Klappe in %1"
 
-#: MarbleRun.pm:1112
+#: MarbleRun.pm:1117
 msgid "%1 should leave tile in %2"
 msgstr "%1 soll Stein in %2 verlassen"
 
@@ -482,11 +486,11 @@ msgstr "%1 soll Stein in %2 verlassen"
 msgid "Unknown board size, run_id or size_x not given"
 msgstr "Unbekannte Größe der Kugelbahn, run_id oder size_x nicht angegeben"
 
-#: Draw.pm:1230
+#: Draw.pm:1249
 msgid "ENTER to exit"
 msgstr "ENTER für Ende"
 
-#: Draw.pm:1242
+#: Draw.pm:1261
 msgid "Created %1"
 msgstr "%1 wurde erstellt"
 

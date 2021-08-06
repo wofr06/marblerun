@@ -1401,6 +1401,13 @@ $offsets->[$level] = [column_off, row_off, type] for a given level. The
 plane type is 0, 2 or 3 for ground/small/large transparent plane. Adds
 level lines before the transparent plane line (^) if not already present.
 
+=head marble_orients
+
+$g->marble_orients($marbles, $rule);
+
+checks position of marbles and adds silently marbles if missing (e.g. two
+marbles for cannons).
+
 =head2 level_height
 
 $g->level_height($rules, $off_xy, $h);

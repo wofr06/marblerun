@@ -587,7 +587,7 @@ sub put_Balls {
 	my $mcnt=0;
 	for my $m (@$marble) {
 		my $dir = $m->[1];
-		my $id = "$xm${ym}$dir$cnt";
+		my $id = "$xm$ym$dir$cnt";
 		next if ! defined $dir;
 		$id = "run$id$cnt" if $path;
 		$cnt = 0 if $dir ne $old_dir;
@@ -953,22 +953,23 @@ sub features {
 		['xa', 4, 3, 10,],
 		['xb', 5, 0, 0, 'detail'],
 	];
+	#Position of marbles on tiles
+	my %offset = (A => 0.25, 'xF' => 0, M => 2*$self->{r_ball},
+		N => 1./24.+$self->{r_ball}, P => 1./12.+$self->{r_ball},
+		xA => 2*$self->{r_ball}, xZ => 2*$self->{r_ball},
+		xB => [[-0.3, -0.25], [-0.3, 0.25]], Z => 1.5*$self->{r_ball},
+		xK => [[-0.2, -0.3], [-0.2, 0.3], [0.2, -0.3], [0.2, 0.3]],
+	);
 	push @{$self->{tile}{$_->[0]}}, $_ for @$tile;
 	$self->{rail}{$_->[0]} = $_ for @$rail;
+	$self->{offset}{$_} = $offset{$_} for keys %offset;
 }
 
 sub do_run {
 	my ($self, $run_id) = @_;
 	my ($meta, $tiles, $rails, $marbles) = $self->fetch_run_data($run_id);
-	my ($t_pos, $t_id, $state, $elems);
+	my ($t_pos, $t_id, $state, $marble);
 	$self->features();
-	#Position of marbles on tiles
-	my %offset = (A => 0.25, 'xF' => 0, M => 2*$self->{r_ball},
-		N => 1./24.+$self->{r_ball}, P => 1./12.+$self->{r_ball},
-		xA => 2*$self->{r_ball}, xZ => 2*$self->{r_ball},
-		xB => [[-0.3, -0.25], [-0.3, 0.25]],
-		xK => [[-0.2, -0.3], [-0.2, 0.3], [0.2, -0.3], [0.2, 0.3]],
-	);
 	my $i_tile = 0;
 	my $ball = 0;
 	# check if the code for animation is already working
@@ -984,20 +985,21 @@ sub do_run {
 		if ($sym =~ /^[AMNP]|x[ABFKTZ]/) {
 			my $balls = [grep {$t->[0] == $_->[0]} @$marbles];
 			if (!@$balls) {
-				my $num = ref $offset{$sym} ? @{$offset{$sym}} : 1;
-				push @$balls, [$t->[0], $dir, 'S'] for 1 .. $num;
+				my $n=ref $self->{offset}{$sym} ? @{$self->{offset}{$sym}} : 1;
+				push @$balls, [$t->[0], $dir, 'S'] for 1 .. $n;
 			}
-			$state->{"$x,$y"}{$z} .= 'o' . ($_->[2] || 'S') .
-				(defined $_->[1] ? $_->[1] : 'x') for @$balls;
+			$_->[1] = (defined $_->[1] ? $_->[1] : 'x') for @$balls;
+			$_->[2] ||= 'S' for @$balls;
+			$state->{"$x,$y"}{$z} .= "o$_->[2]$_->[1]" for @$balls;
 			# start tile (no incoming direction, # of marbles times)
-			# marble tile z in out color
-			#      0    1 2  3   5     4
+			# marble: tile_id z in out color
+			#               0 1  2   3     4
 			if ($sym eq 'A') {
-				$elems->[$ball++] = [$i_tile, $z, '', @$_[1,2]] for @$balls;
+				$marble->[$ball++] = [$i_tile, $z, '', @$_[1,2]] for @$balls;
 			# lift can also be a start tile
 			} elsif ($sym eq 'xF') {
 				my $need = 3 + 4*(substr($detail, 0, 1) - 2);
-				$elems->[$ball++] = [$i_tile, $z, '', $dir,
+				$marble->[$ball++] = [$i_tile, $z, '', $dir,
 				@{$balls->[$need - 1]}[1,2]] if @$balls >= $need;
 			}
 		# switch
@@ -1015,8 +1017,8 @@ sub do_run {
 # temporary check whether animation is already working
 if ($animate) {
 	# begin is at start tile or lift
-	my @colors = map {$_->[4]} @$elems;
-	my $xyz = $self->neighbor($elems, $t_pos, $t_id, $tiles, $rails, $state);
+	my @colors = map {$_->[4]} @$marble;
+	my $xyz = $self->neighbor($marble, $t_pos, $t_id, $tiles, $rails, $state);
 	return if ! $xyz;
 	my (@begin, @dur, @path, @p);
 	my $i = 0;
@@ -1032,7 +1034,7 @@ if ($animate) {
 	my %dur = map {$i++, $_} sort {$a <=> $b} @dur;
 	for my $k (sort {$a <=> $b} keys %dur) {
 		my ($sym, $x, $y, $dir) = @{$p[$k][0]}[0, 1, 2, 5];
-		$self->put_Balls($x, $y, $offset{$sym}, [[0, $dir, $colors[$k-1]]],
+		$self->put_Balls($x, $y, $self->{offset}{$sym}, [[0, $dir, $colors[$k-1]]],
 			$begin[$k], $dur[$k], $path[$k]);
 	}
 }
@@ -1043,7 +1045,7 @@ if ($animate) {
 			my @pos = grep {/^[RGBS](\d|x)$/} split /o/, $state->{$s}{$z};
 			my ($sym, $x, $y) = @{$tiles->[$t_pos->{$s}{$z}]}[2,3,4];
 			my $desc = [map {[0, substr($_, 1, 1), substr($_, 0, 1)]} @pos];
-			$self->put_Balls($x, $y, $offset{$sym}, $desc, 0, 1);
+			$self->put_Balls($x, $y, $self->{offset}{$sym}, $desc, 0, 1);
 		}
 	}
 }
@@ -1171,7 +1173,7 @@ sub neighbor {
 						$odir = defined $1 ? $1 : $2;
 						# now no marble at this position
 						push @dirs, $odir;
-						$state->{"$x,$y"}{$z} =~ s/$odir/-1/;
+						$state->{"$x,$y"}{$z} =~ s/$odir/-/;
 					}
 				} else {
 					# landing tile, finish track
