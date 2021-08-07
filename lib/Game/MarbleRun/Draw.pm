@@ -269,10 +269,10 @@ sub draw_rail {
 		my $dx2 = $self->{middle_x}[$dir];
 		my $dy2 = $self->{middle_y}[$dir];
 		my ($x2, $y2) = $self->center_pos($posx2, $posy2);
-		$svg->line(x1 => $x1 - $dx1, y1 => $y1 - $dy1, x2 => $x12, y2 => $y12,
-			style => $style, class=>'tile');
-		$svg->line(x1 => $x12, y1 => $y12, x2 => $x2 + $dx2, y2 => $y2 + $dy2,
-			style => $style, class=>'tile');
+		$svg->line(x1 => int($x1 - $dx1), y1 => int($y1 - $dy1), x2 => int $x12,
+			y2 => int $y12, style => $style, class=>'tile');
+		$svg->line(x1 => int $x12, y1 => int $y12, x2 => int($x2 + $dx2),
+			y2 => int($y2 + $dy2), style => $style, class=>'tile');
 		return;
 	}
 	# straight rails
@@ -287,8 +287,8 @@ sub draw_rail {
 		$x1 = $x1 + 2.5*$dx;
 		$y1 = $y1 + 2.5*$dy;
 	}
-	$svg->line(x1 => $x1 - $dx, y1 => $y1 - $dy,
-		x2 => $x2 + $dx, y2 => $y2 + $dy, style => $style, class=>'tile');
+	$svg->line(x1 => int($x1 - $dx), y1 => int($y1 - $dy), x2 => int($x2 + $dx),
+		y2 => int($y2 + $dy), style => $style, class=>'tile');
 }
 
 sub put_hexagon {
@@ -317,14 +317,14 @@ sub put_hexagon {
 		my $dy3 = $dy - 2*$self->{small_width};
 		my $dlx = $dx + $self->{small_width};
 		my $dly = 4*$self->{small_width};
-		$single = "$dx3,-$dy3 l$dlx,0 l0,-$dly l-$dlx,0 l-$dx3,-$dy3";
+		$single = "$dx3 -$dy3 l$dlx 0 l0 -$dly l-$dlx 0 l-$dx3 -$dy3";
 	} elsif ($shape == 2) {
 		my $dx3 = $dx2 - 2*$self->{small_width};
 		my $dy3 = $self->{size}*(1 - $rel_size);
-		$double = "-$dx3,0 l0,-$dy3 l$dx3,0 l$dx2,-$dy l-$dx2,-$dy l-$dx,0
-			l-$dx2,$dy l$dx2,$dy l$dx3,0 l0,$dy3 l-$dx3";
+		$double = "-$dx3 0 l0 -$dy3 l$dx3 0 l$dx2 -$dy l-$dx2 -$dy l-$dx 0
+			l-$dx2 $dy l$dx2 $dy l$dx3 0 l0 $dy3 l-$dx3";
 	}
-	my $hex = "M$mx,$my l$dx,0 l$single l$double,0 l-$dx2,$dy Z";
+	my $hex = "M$mx $my l$dx 0 l$single l$double 0 l-$dx2 $dy Z";
 	# holes
 	my %rot = ();
 	my $angle = 60*($orient || 0);
@@ -334,13 +334,14 @@ sub put_hexagon {
 		$dx2 = 0.5*$dx;
 		$mx = $x - $dx2;
 		$my = $y - $dy;
-		$hex .= " M$mx,$my l$dx,0 l$dx2,$dy l-$dx2,$dy l-$dx,0 l-$dx2,-$dy Z";
+		$hex .= " M$mx $my l$dx 0 l$dx2 $dy l-$dx2 $dy l-$dx 0 l-$dx2 -$dy Z";
 		$my -= $self->{size};
-		$hex .= " M$mx,$my l$dx,0 l$dx2,$dy l-$dx2,$dy l-$dx,0 l-$dx2,-$dy Z"
+		$hex .= " M$mx $my l$dx 0 l$dx2 $dy l-$dx2 $dy l-$dx 0 l-$dx2 -$dy Z"
 			if $shape == 2;
 		$angle = 60*(($orient + 5) % 6) if $shape == 1;
 		%rot = (transform => "rotate($angle, $x, $y)");
 	}
+	$hex =~ s/\.\d+ / /g;
 	$self->{svg}->path(d => $hex, %rot, style => $style, class =>'tile');
 	if ($shape == 1) {
 		$mx = $x + 1.5*$self->{width3};
@@ -349,7 +350,8 @@ sub put_hexagon {
 		my $dlx2 = $self->{small_width};
 		my $dly = 3*$dlx2;
 		my $dly2 = 0.5*$dly;
-		my $clip = "M$mx,$my l0,$dly l-$dlx,0 l-$dlx2,-$dly2 l$dlx2,-$dly2 Z";
+		my $clip = "M$mx $my l0 $dly l-$dlx 0 l-$dlx2 -$dly2 l$dlx2 -$dly2 Z";
+		$clip =~ s/\.\d+ / /g;
 		$self->{svg}->path(d => $clip,
 			style => {stroke => 'url(#mygreen)', fill => 'url(#mygreen)'},
 			%rot, class =>'tile');
@@ -367,8 +369,8 @@ sub put_hexagon2 {
 	# 0=full hex, 1=upper half, 2=lower half
 	my ($xh, $yh);
 	my ($x, $y) = $self->center_pos($posx, $posy);
-	@$xh = map {$x + $rel_size*$_} @{$self->{corner_x}->[$shape]};
-	@$yh = map {$y + $rel_size*$_} @{$self->{corner_y}->[$shape]};
+	@$xh = map {int($x + $rel_size*$_)} @{$self->{corner_x}->[$shape]};
+	@$yh = map {int($y + $rel_size*$_)} @{$self->{corner_y}->[$shape]};
 
 	my $points = $svg->get_path(x => $xh, y => $yh,
 		-closed => 1, -type => 'polygon');
@@ -387,10 +389,10 @@ sub put_arc {
 		$r += $self->{width3};
 		$orient += 4;
 	}
-	$x1 = $x + $self->{middle_x}[($orient) % 6];
-	$y1 = $y + $self->{middle_y}[($orient) % 6];
-	$x2 = $x + $self->{middle_x}[($size+$orient) % 6];
-	$y2 = $y + $self->{middle_y}[($size+$orient) % 6];
+	$x1 = int($x + $self->{middle_x}[($orient) % 6]);
+	$y1 = int($y + $self->{middle_y}[($orient) % 6]);
+	$x2 = int($x + $self->{middle_x}[($size+$orient) % 6]);
+	$y2 = int($y + $self->{middle_y}[($size+$orient) % 6]);
 	$svg->path(d => "M $x1 $y1 A $r $r 0 0 0 $x2 $y2", class => 'tile');
 }
 
@@ -402,7 +404,7 @@ sub put_circle {
 	if ($style_in) {
 		$style->{$_} = $style_in->{$_} for keys %$style_in;
 	}
-	$svg->circle(cx => $x, cy => $y, r => $r*$self->{size}, style => $style);
+	$svg->circle(cx=>int $x, cy=>int $y, r=>$r*$self->{size}, style=>$style);
 }
 
 sub put_through_line {
@@ -416,7 +418,7 @@ sub put_through_line {
 		$x2 = $x1 + ($x2 - $x1)*$fraction;
 		$y2 = $y1 + ($y2 - $y1)*$fraction;
 	}
-	$svg->line(x1 => $x1, y1 => $y1, x2 => $x2, y2 => $y2, class => 'tile');
+	$svg->line(x1=>int $x1, y1=>int $y1, x2=>int $x2, y2=>int $y2, class=>'tile');
 }
 
 sub put_text {
@@ -436,7 +438,7 @@ sub put_text {
 	if ($attrib_in) {
 		$attrib->{$_} = $attrib_in->{$_} for keys %$attrib_in;
 	}
-	$svg->text(x => $x, y => $y, %$attrib)->cdata_noxmlesc($text);
+	$svg->text(x => int $x, y => int $y, %$attrib)->cdata_noxmlesc($text);
 }
 
 sub put_TransparentPlane {
@@ -483,6 +485,8 @@ sub put_TransparentPlane {
 	$plane .= "l-$dx2,$dy l-$dx,0 " x ($num - 1);
 	$plane .= "l-$dx2,$dy l$dx2,$dy " x $num;
 	$plane .= "l$dx,0 l$dx2,$dy " x ($num - 1);
+	$plane =~ s/\.\d+([, ])/$1/g;
+	$holes =~ s/\.\d+([, ])/$1/g;
 	my $style = {stroke=>'lightblue', fill=>'lightblue', opacity=>'0.5'};
 	$svg->path(d=>"M $m0x,$m0y $plane Z$holes", style => $style);
 }
@@ -1079,7 +1083,7 @@ sub generate_path {
 				$dir = (2*$ball + int($ball/3)) % 6;
 			}
 			my ($dx, $dy) = ($self->{middle_x}[$dir], $self->{middle_y}[$dir]);
-			$path .= "L" . ($x - $x0 + $frac*$dx) . ' ' . ($y - $y0+ $frac*$dy);
+			$path .= " L" . ($x - $x0 + $frac*$dx) . ' ' . ($y - $y0+ $frac*$dy);
 		} elsif ($sym =~ /[a-w]/) {
 			$len += $self->{rail}{$sym}[1];
 			last if ! exists $xyz->[$i+1];
@@ -1103,9 +1107,47 @@ sub generate_path {
 				my $flip = $dir_diff < 3 ? 0 : 1;
 				$path .= "A $r $r 0 0 $flip $x $y";
 			}
+		} elsif ($sym eq 'V') {
+			my ($xc,$yc) = $self->center_pos($x, $y);
+			my $r = 0.2*$self->{size};
+			my $turns= 2.5;
+			$path .= spiral_path($xc - $x0, $yc -$y0, $r, $turns, $dir);
+			$len += 2;
 		}
 	}
+	$path =~ s/\.\d+ / /g;
 	return (1, $len/4., $path);
+}
+
+sub spiral_path {
+	my ($xm, $ym, $r, $turns, $dir) = @_;
+	my ($old_th,$new_th, $old_r, $new_r, $old_p, $new_p, $old_slp, $new_slp);
+	my $pi = 3.1416;
+	my $th_step = 2*$pi*0.1;
+	my $b = -$r/$turns/$pi/2;
+	$old_th = $new_th = $pi*$dir/3;
+	my $end_th = 2*$turns*$pi + $old_th;
+	$old_r = $new_r = $r + $b*$new_th;
+	$old_p = [0, 0];
+	$new_p = [$xm + $new_r*cos($new_th), $ym + $new_r*sin($new_th)];
+	$old_slp = $new_slp = ($b*sin($old_th) + ($r + $b*$new_th)*cos($old_th))/
+		($b*cos($old_th) - ($r + $b*$new_th)*sin($old_th));
+	my $path = " L$new_p->[0] $new_p->[1]";
+	while ($old_th < $end_th - $th_step) {
+		($old_th, $new_th) = ($new_th, $new_th + $th_step);
+		($old_r, $new_r) = ($new_r, $r + $b*$new_th);
+		($old_p, $new_p) = ($new_p,
+			[$xm + $new_r*cos($new_th), $ym + $new_r*sin($new_th)]);
+		($old_slp, $new_slp) = ($new_slp,
+			($b*sin($new_th) + ($r + $b*$new_th)*cos($new_th)) /
+			($b*cos($new_th) - ($r + $b*$new_th)*sin($new_th)));
+		my $old_ic = -($old_slp*$old_r*cos($old_th) - $old_r*sin($old_th));
+		my $new_ic = -($new_slp*$new_r*cos($new_th) - $new_r*sin($new_th));
+		my $x0 = ($new_ic - $old_ic)/($old_slp - $new_slp);
+		my ($x_ctrl, $y_ctrl) = ($xm + $x0, $ym + $old_slp*$x0 + $old_ic);
+		$path .= " Q$x_ctrl $y_ctrl $new_p->[0] $new_p->[1]";
+	}
+	return $path;
 }
 
 sub rule_check {
