@@ -186,7 +186,7 @@ sub verify_rail_endpoints {
 			my $from = $self->num2pos($t->[1], $t->[2]);
 			if ($t->[0] eq 'xH') {
 				# variable direction for spiral depending on number of elements
-				$cases->{xH}[1] = (1 + $t->[4]) % 6;
+				$cases->{xH}[1] = (2*$t->[4] - 1) % 6;
 			} elsif ($t->[0] eq 'xF') {
 				# Lift: upper direction of connection is stored in detail
 				$cases->{xF}[1] = ord($1) - 97 if $t->[4] =~ /([a-f])/;
@@ -228,7 +228,7 @@ sub verify_rail_endpoints {
 					if ($tile eq 'xH') {
 						my ($h) = grep {$_->[0] eq 'xH' and $r->[0] == $_->[1]
 							and $r->[1] == $_->[2]} @$data;
-						$cases->{xH}[1] = (1 + $h->[4]) % 6;
+						$cases->{xH}[1] = (2*$h->[4] - 1) % 6;
 					} elsif ($tile eq 'xF') {
 						my ($f) = grep {$_->[0] eq 'xF' and $r->[0] == $_->[1]
 							and $r->[1] == $_->[2]} @$data;

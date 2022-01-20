@@ -11,7 +11,7 @@ use Locale::Maketext::Simple (Style => 'gettext');
 $Game::MarbleRun::VERSION = '0.99';
 my $homedir = $ENV{HOME} || $ENV{HOMEPATH} || die "unknown homedir\n";
 $Game::MarbleRun::DB_FILE = "$homedir/.gravi.db";
-$Game::MarbleRun::DB_SCHEMA_VERSION = 5;
+$Game::MarbleRun::DB_SCHEMA_VERSION = 6;
 
 sub new {
 	my ($class, %attr) = @_;
@@ -163,7 +163,13 @@ EOF
 		xF=>'Lifter', f=>'Lift Tube Element', xi=>'Lift in', xj=>'Lift out',
 		xH=>'Spiral', i=>'Spiral in', j=>'Spiral out', h=>'Spiral Curve',
 		L=>'Pillar', xL=>'Tunnel Pillar', B=>'Balcony', E=>'Double Balcony',
-		xM=>'Dispenser', xV=>'Splinter', xD=>'Dipper', xS=>'Spinner',
+		xM=>'Dispenser', yV=>'Splinter', xD=>'Dipper', xS=>'Spinner',
+		yH=>'Helix', yT=>'Turntable', xQ=>'Loop Curve', xV=>'Vortex 3 in',
+		xC=>'Curve 3x small', yC=>'Curve 2x large',
+		xI=>'Straight with 2 Curves', xX=>'Straight 3x', xW=>'2x 2 in 1 left',
+		yW=>'2x 2 in 1 right', xY=>'2 in 1 left with Curve',
+		yY=>'2 in 1 right with Curve', yX=>'3 Curves, 2 cross',
+		yI=>'Cross Straight and Curve',
 		# Rails
 		s=>'Rail Short', m=>'Rail Medium', l=>'Rail Long', b=>'Rail Bernoulli',
 		v=>'Drop Rail Concave', u=>'Drop Rail Convex', g=>'Rail Overlong',
@@ -198,10 +204,15 @@ EOF
 			e=>1, G=>2, D=>1, P=>1, Z=>1, xG=>5],
 		'Trax', 6, [1=>16, '+'=>8, C=>7, X=>1, o=>6, l=>1, m=>2, s=>3],
 		'Tunnel', 7, [_=>2, T=>4, I=>2, U=>2, t=>2, O=>2, b=>2, u=>1, v=>1],
-		'Lifter', 8, [xF=>1, o=>7, '^'=>1, 1=>8, '+'=>4, f=>2, xi=>1, xj=>1, l=>1,
-			m=>2, s=>3],
+		'Lifter', 8, [xF=>1, o=>7, '^'=>1, 1=>8, '+'=>4, f=>2, xi=>1, xj=>1,
+			l=>1, m=>2, s=>3],
 		'Bridges Extension', 9, [xB=>3, g=>2, q=>2, xb=>12, l=>1, m=>2, s=>3],
 		'Extension Vertical', 10, [B=>16, L=>8, xL=>4, xm=>2, xl=>2],
+		# Advent 2021
+		'Advent 21', 31, [xX=>1, c=>3, yC=>1, 1=>4, xR=>1, xQ=>1, xV=>1, yX=>1,
+			t=>1, xC=>1, d=>3, g=>1, q=>1, xI=>1, U=>1, yI=>1, a=>2, xY=>1,
+			I=>1, xH=>1, i=>1, j=>1, h=>3, yY=>1, xW=>1, yW=>1, T=>2, xS=>1,
+			o=>1, '='=>1],
 		# Action tiles
 		'Hammer', 11, [H=>1, l=>1, m=>2, s=>3],
 		'Looping', 12, [Q=>1, l=>1, m=>2, s=>3],
@@ -214,14 +225,16 @@ EOF
 		'Magnetic Cannon', 19, [M=>1, o=>3],
 		'Jumper', 20, [J=>1, l=>1, m=>2, s=>3],
 		'Tip Tube', 21, [xT=>1, l=>1, m=>2, s=>3],
-		'Spiral', 22, [xH=>2, i=>2, j=>2, h=>6],
-		'Splinter', 23, [xV=>1],
+		'Spiral', 22, [xH=>1, i=>1, j=>1, h=>3],
+		'Splinter', 23, [yV=>1],
 		'Dispenser', 24, [xM=>1],
 		'Catapult', 25, [xK=>1, o=>4],
 		# 2021
 		'Dipper', 26, [xD => 1, 1 => 4, o => 1],
 		'Spinner', 27, [o => 6, xS => 1],
 		'Flextube', 28, [xt => 4, 1 => 4],
+		'Helix', 29, [yH => 1],
+		'Turntable', 30, [yT => 1],
 	];
 	# create tables (only single sql statements allowed)
 	$dbh->do($_) for split /;/, $sql;
@@ -722,17 +735,18 @@ sub list_marble_runs {
 		my $elems = $self->get_run_elements($id);
 		my $skip = @args;
 		for my $arg (@args) {
-			# board size
 			my $ok = 1;
 			for my $and_arg (split /,/, $arg) {
+				# run number
 				if ($arg =~ /^(\d+)$/) {
 					$ok = 0 if $and_arg != $id;
+				# board size nx*ny[*nz]
 				} elsif ($and_arg =~ /^(\d+)x(\d+)(?:$|x(\d+))$/) {
 					my ($x, $y, $z) = ($1, $2, $3);
 					$ok = 0 if $x != $bx or $y != $by
 							or (defined $z and $z != $layers);
 				# element used in the run
-				} elsif ($and_arg =~ /^x?.$/) {
+				} elsif ($and_arg =~ /^[xyz]?.$/) {
 					$ok = 0 if ! exists $elems->{$and_arg};
 				# string (at least 3 chars) contained
 				} elsif (length $and_arg > 2 and $name =~ /$and_arg/i) {
@@ -774,7 +788,7 @@ sub inventory {
 
 sub print_elements {
 	my ($self, $num) = @_;
-	my $elems = join ',', map {"$num->{$_}x" . loc($self->{elem_name}{$_})}
+	my $elems = join ',', map {loc($self->{elem_name}{$_}) . ":$num->{$_}"}
 		sort {$num->{$b} <=> $num->{$a}} keys %$num;
 	# print long string, add line break where comma is at or before col 80
 	my $padding = 8;
@@ -1066,7 +1080,7 @@ sub initial_actions {
 	for my $t (@$tile) {
 		# start, (tunnel)switch, cannon, catapult, bridge, flip, hammer, jumper
 		# cascade, zipline, tiptube, volcan, splinter, mixer, transfer
-		next if $t->[2] !~ /^[ASUMFHJKNP]$|^x[FKBATVMR]$/;
+		next if $t->[2] !~ /^[ASUMFHJKNP]$|^x[FKBATVMR]$|^yT$/;
 		my ($id, $sym, $x, $y, $dir, $detail, $l) = @{$t}[0,2,3,4,6,7,8];
 		# bridges can unfold with 2 elements only
 		next if $sym eq 'xB' and $detail != 2;
@@ -1110,12 +1124,15 @@ sub initial_actions {
 			$pos .= loc("Switch state") . " $detail";
 		} elsif ($sym =~ /^[FHJKN]$|x[KBR]/) {
 			$pos .= loc('prepare for start');
-		} elsif ($sym eq 'xV') {
+		} elsif ($sym eq 'yV') {
 			$pos .= loc("flap in %1", $self->dir_string($dir, 1));
 		} elsif ($sym eq 'xM') {
 			next if ! defined $detail;
 			$pos .= loc("%1 should leave tile in %2", $ball,
 				$self->dir_string($detail, 1));
+		} elsif ($sym eq 'yT') {
+			next if ! $detail;
+			$pos .= loc("Turntable rotor position") . " $detail";
 		}
 		say $pos;
 	}

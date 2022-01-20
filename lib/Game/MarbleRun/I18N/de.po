@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: 0.99\n"
 "Report-Msgid-Bugs-To: <wp.friebel@gmail.com>\n"
 "POT-Creation-Date: 2020-04-12 20:38+0200\n"
-"PO-Revision-Date: 2021-08-06 13:43+0200\n"
+"PO-Revision-Date: 2022-01-20 10:32+0100\n"
 "Last-Translator: Wolfgang Friebel <wp.friebel@gmail.com>\n"
 "Language-Team: de <wp.friebel@gmail.com>\n"
 "Language: de_DE.UTF8\n"
@@ -197,6 +197,9 @@ msgstr "Seilbahn Start"
 msgid "Bridge Tile"
 msgstr "Brückenstein"
 
+msgid "Curve 3x small"
+msgstr "Kurve 3x klein"
+
 msgid "Dipper"
 msgstr ""
 
@@ -209,6 +212,9 @@ msgstr "Basisstein"
 msgid "Spiral"
 msgstr "Spirale"
 
+msgid "Straight with 2 Curves"
+msgstr "Gerade mit 2 Kurven"
+
 msgid "Catapult"
 msgstr "Katapult"
 
@@ -217,6 +223,9 @@ msgstr "Tunnelsäule"
 
 msgid "Dispenser"
 msgstr "Mixer"
+
+msgid "Loop Curve"
+msgstr "Kurve mit Schleife"
 
 msgid "Transfer"
 msgstr ""
@@ -229,6 +238,15 @@ msgstr "Tiptube"
 
 msgid "Splinter"
 msgstr "Splitter"
+
+msgid "2x 2 in 1 left"
+msgstr "2 mal 2 in 1 links"
+
+msgid "Straight 3x"
+msgstr "Kreuzung 3fach"
+
+msgid "2 in 1 left with Curve"
+msgstr "2 in 1 links mit Kurve"
 
 msgid "Zipline End"
 msgstr "Seilbahn Ende"
@@ -256,6 +274,30 @@ msgstr "Wand kurz"
 
 msgid "Flextube"
 msgstr ""
+
+msgid "Curve 2x large"
+msgstr "Kurve 2x groß"
+
+msgid "Helix"
+msgstr ""
+
+msgid "Cross Straight and Curve"
+msgstr "Gerade kreuzt Kurve"
+
+msgid "Turntable"
+msgstr ""
+
+msgid "Vortex 3 in"
+msgstr "Wirbel mit 3 Eingängen"
+
+msgid "2x 2 in 1 right"
+msgstr "2 mal 2 in 1 rechts"
+
+msgid "3 Curves, 2 cross"
+msgstr "Gekreuzte Kurven"
+
+msgid "2 in 1 right with Curve"
+msgstr "2 in 1 rechts mit Kurve"
 
 msgid "Starter Set"
 msgstr ""
@@ -286,6 +328,9 @@ msgstr "Erweiterung vertikal"
 
 msgid "Cable Car (Zipline)"
 msgstr "Seilbahn"
+
+msgid "Advent 21"
+msgstr ""
 
 msgid "Construction plan booklet"
 msgstr "Bauplanheft"
@@ -326,171 +371,175 @@ msgstr "Soll die DB erneuert werden"
 msgid "Y"
 msgstr "J"
 
-#: MarbleRun.pm:268
+#: MarbleRun.pm:281
 msgid "to all\n"
 msgstr "für alle\n"
 
-#: MarbleRun.pm:270
+#: MarbleRun.pm:283
 msgid "N"
 msgstr ""
 
-#: MarbleRun.pm:279
+#: MarbleRun.pm:292
 msgid "pos"
 msgstr "Feld"
 
-#: MarbleRun.pm:280
+#: MarbleRun.pm:293
 msgid "plane"
 msgstr "Platte"
 
-#: MarbleRun.pm:296
+#: MarbleRun.pm:309
 msgid " line %1"
 msgstr " Zeile %1"
 
-#: MarbleRun.pm:488
+#: MarbleRun.pm:501
 msgid "%1Please enter an id from the list above\n"
 msgstr "%1Bitte wähle eine Nummer aus obiger Liste\n"
 
-#: MarbleRun.pm:500
+#: MarbleRun.pm:513
 msgid "No run with id %1 existing\n"
 msgstr "Es existiert keine Bahn mit Nummer %1\n"
 
-#: MarbleRun.pm:524
+#: MarbleRun.pm:537
 msgid "Please give file prefix for %1 output %2"
 msgstr "Bitte gib einen Namen für die %1 Ausgabe an (ohne .%1) %2"
 
-#: MarbleRun.pm:526
+#: MarbleRun.pm:539
 msgid "Please enter a file name"
 msgstr "Bitte gib einen Dateinamen ein"
 
-#: MarbleRun.pm:532
+#: MarbleRun.pm:545
 msgid "Name must start with an alphanum char"
 msgstr "Der Dateiname muss mit einem alphanumerischen Zeichen beginnen"
 
-#: MarbleRun.pm:538
+#: MarbleRun.pm:551
 msgid "File %1 existing, overwrite it?"
 msgstr "Datei %1 existiert, überschreiben?"
 
-#: MarbleRun.pm:563
+#: MarbleRun.pm:576
 msgid "Exporting %1\n"
 msgstr "Exportiere %1\n"
 
-#: MarbleRun.pm:564
+#: MarbleRun.pm:577
 msgid "ENTER to write to STDOUT"
 msgstr "ENTER, um nach STDOUT zu schreiben"
 
-#: MarbleRun.pm:684
+#: MarbleRun.pm:697
 msgid "really delete '%1'"
 msgstr "'%1' wrklich löschen"
 
-#: MarbleRun.pm:689
+#: MarbleRun.pm:702
 msgid "Run %1 deleted\n"
 msgstr "Anleitung für Bahn %1 gelöscht\n"
 
-#: MarbleRun.pm:749
+#: MarbleRun.pm:763
 msgid " id OK x*y*z title (source)"
 msgstr " Nr OK x*y*z Name (Quelle)"
 
-#: MarbleRun.pm:752
+#: MarbleRun.pm:766
 msgid "List of registered marble runs"
 msgstr "Liste der in der Datenbank registrierten Kugelbahnen"
 
-#: MarbleRun.pm:759
+#: MarbleRun.pm:773
 msgid "missing"
 msgstr "Es fehlt"
 
-#: MarbleRun.pm:829
+#: MarbleRun.pm:843
 msgid "Direction"
 msgstr "Richtung"
 
-#: MarbleRun.pm:852
+#: MarbleRun.pm:866
 msgid "Instructions for %1, board size %2"
 msgstr "Anleitung für %1 mit %2 Bodenplatten"
 
-#: MarbleRun.pm:856
+#: MarbleRun.pm:870
 msgid "ENTER to continue without svg"
 msgstr "oder ENTER ohne SVG"
 
-#: MarbleRun.pm:879
+#: MarbleRun.pm:893
 msgid "Incomplete data for level %1, skipping it"
 msgstr "Fehlende Daten für Ebene %1, wird ignoriert"
 
-#: MarbleRun.pm:891
+#: MarbleRun.pm:905
 msgid "Place %1 %2 with center at %3"
 msgstr "Lege die %1 %2 mit dem Mittelpunkt auf %3"
 
-#: MarbleRun.pm:914
+#: MarbleRun.pm:928
 msgid "At %1"
 msgstr "Auf %1"
 
-#: MarbleRun.pm:956
+#: MarbleRun.pm:970
 msgid "On "
 msgstr "Auf "
 
-#: MarbleRun.pm:962
+#: MarbleRun.pm:976
 msgid "with %1 bridge elements"
 msgstr "mit %1 Brückenelementen"
 
-#: MarbleRun.pm:964
+#: MarbleRun.pm:978
 msgid "with %1 green parts"
 msgstr "mit %1 grünen Teilen"
 
-#: MarbleRun.pm:968
+#: MarbleRun.pm:982
 msgid "with %1 transparent parts"
 msgstr "mit %1 Glasteilen"
 
-#: MarbleRun.pm:969
+#: MarbleRun.pm:983
 msgid "outlet in %1"
 msgstr "Auslass in %1"
 
-#: MarbleRun.pm:984
+#: MarbleRun.pm:998
 msgid "in wall %1 hole %2"
 msgstr "in Wand %1 Loch %2"
 
-#: MarbleRun.pm:1024
+#: MarbleRun.pm:1038
 msgid "Level"
 msgstr "Ebene"
 
-#: MarbleRun.pm:1036
+#: MarbleRun.pm:1050
 msgid "in pillar %1"
 msgstr "in Säule %1"
 
-#: MarbleRun.pm:1039
+#: MarbleRun.pm:1053
 msgid "From %1 to %2 %3 %4"
 msgstr "Von %1 nach %2 %3 %4"
 
-#: MarbleRun.pm:1061
+#: MarbleRun.pm:1075
 msgid "red"
 msgstr "rote"
 
-#: MarbleRun.pm:1062
+#: MarbleRun.pm:1076
 msgid "silver"
 msgstr "silberne"
 
-#: MarbleRun.pm:1110
+#: MarbleRun.pm:1124
 msgid "Switch state"
 msgstr "Weichenstellung"
 
-#: MarbleRun.pm:1112
+#: MarbleRun.pm:1126
 msgid "prepare for start"
 msgstr "Vorbereiten für Start"
 
-#: MarbleRun.pm:1114
+#: MarbleRun.pm:1128
 msgid "flap in %1"
 msgstr "Klappe in %1"
 
-#: MarbleRun.pm:1117
+#: MarbleRun.pm:1131
 msgid "%1 should leave tile in %2"
 msgstr "%1 soll Stein in %2 verlassen"
+
+#: MarbleRun.pm:1135
+msgid "Turntable rotor position"
+msgstr "Position des Rotors"
 
 #: Draw.pm:129
 msgid "Unknown board size, run_id or size_x not given"
 msgstr "Unbekannte Größe der Kugelbahn, run_id oder size_x nicht angegeben"
 
-#: Draw.pm:1249
+#: Draw.pm:1293
 msgid "ENTER to exit"
 msgstr "ENTER für Ende"
 
-#: Draw.pm:1261
+#: Draw.pm:1305
 msgid "Created %1"
 msgstr "%1 wurde erstellt"
 
@@ -758,31 +807,31 @@ msgstr "Unbekannter Bausatzname '%1': "
 msgid "Unknown material line '%1'"
 msgstr "Unerwartete Zeile für Material '%1'"
 
-#: gravi:50
+#: gravi:52
 msgid "store a demo track in the database?"
 msgstr "Speichere eine Demo Bahn in der Datenbank?"
 
-#: gravi:94
+#: gravi:96
 msgid "Export a marble run into a file"
 msgstr "Schreibe die Bauanleitung für eine Kugelbahn in eine Datei"
 
-#: gravi:97
+#: gravi:99
 msgid "Delete a marble run"
 msgstr "Lösche eine Bauanleitung aus der Datenbank"
 
-#: gravi:102
+#: gravi:104
 msgid "Generate SVG for a marble run"
 msgstr "Generiere ein SVG Bild für die Bahn"
 
-#: gravi:104
+#: gravi:106
 msgid "Display instructions for a marble run"
 msgstr "Zeige die Bauanleitung für eine Kugelbahn an"
 
-#: gravi:118
+#: gravi:120
 msgid "Usage"
 msgstr "Aufruf"
 
-#: gravi:145
+#: gravi:147
 msgid ""
 "  Arguments:\n"
 "    For option -a (see below) a list of input file names can be given.\n"
