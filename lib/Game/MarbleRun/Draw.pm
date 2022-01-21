@@ -89,7 +89,7 @@ sub center_pos {
 }
 
 sub orientations {
-	my ($self, $name) = @_;
+	my ($self, $case) = @_;
 	my $elems = { '0.5' => 'Orientation', 2 => 'C', 4 => 'Y,S', 6 => 'X',
 		8 => 'G,D', 10 => 'B', 12 => 'Straight Tile', 14 => 'xG'};
 	my %label;
@@ -180,24 +180,13 @@ sub board {
 sub draw_tile {
 	my ($self, $elem, $x, $y, $orient, $detail) = @_;
 	return if ! $self->{svg};
-	if ($elem eq 'C' or $elem eq 'T') {
-		$self->put_Curve($x, $y, $orient);
-	} elsif (($_) = grep {$elem eq $_} qw(Y U U+ U-)) {
-		$self->put_2in1($x, $y, $orient);
-		$self->put_text($x, $y, $elem) if $elem =~ /^[SU]/;
-	} elsif ($elem eq 'S') {
-		$self->put_Switch($x, $y, $orient, $detail);
-	} elsif ($elem eq 'W') {
-		$self->put_3in1($x, $y, $orient);
-	} elsif ($elem eq 'X') {
-		$self->put_Junction($x, $y, $orient);
-	} elsif ($elem eq 'A') {
+	if ($elem eq 'A') {
 		$self->put_Start($x, $y, $orient);
 	} elsif ($elem eq 'Z') {
 		$self->put_Landing($x, $y, $orient);
 	} elsif ($elem eq 'M') {
 		$self->put_Cannon($x, $y, $orient);
-	} elsif (($_) = grep {$elem eq $_} qw(xA xZ H I J K M Q)) {
+	} elsif (($_) = grep {$elem eq $_} qw(xA xZ H J K M Q)) {
 		$self->put_hexagon($x, $y);
 		$self->put_through_line($x, $y, $orient, 0.3);
 		$self->put_through_line($x, $y, $orient + 3, 0.3);
@@ -212,14 +201,14 @@ sub draw_tile {
 		$self->put_Volcano($x, $y, $orient);
 	} elsif ($elem eq 'D') {
 		$self->put_Drop($x, $y, $orient);
-	} elsif ($elem eq 'V') {
-		$self->put_Vortex($x, $y, $orient);
 	} elsif ($elem eq 'xB') {
 		$self->put_BridgeTile($x, $y, $orient, $detail);
 	} elsif ($elem eq 'xF') {
 		$self->put_Lift($x, $y, $orient, $detail);
 	} elsif ($elem eq 'xK') {
 		$self->put_Catapult($x, $y, $orient);
+	} elsif ($elem eq 'xQ') {
+		$self->put_Looptile($x, $y, $orient);
 	} elsif ($elem eq 'xT') {
 		$self->put_TipTube($x, $y, $orient);
 	} elsif ($elem eq 'O') {
@@ -236,12 +225,69 @@ sub draw_tile {
 	# special cases for generic elements
 	} elsif ($elem eq 'xG') {
 		$self->put_BasicTile($x, $y, $orient);
-	} elsif ($elem eq 'Straight Tile') {
-		$self->put_StraightTile($x, $y, $orient);
 	# other tiles (F,R,xD,xM,xR,xS,xV) handled here (hexagon plus symbol)
 	} else {
-		$self->put_hexagon($x, $y);
-		$self->put_text($x, $y, $elem);
+		$self->put_Tile($x, $y, $elem, $orient, $detail);
+	}
+}
+
+sub put_Tile {
+	my ($self, $x, $y, $elem, $orient_in, $detail) = @_;
+	# a: small arc, A: large arc, C: circle H: hexagon I: straight line,
+	# S: switch lever, T: text
+	my %tiles = ('Straight Tile' => 'I0',
+		C => 'a1A0',
+		I => 'H0I0',
+		S => 'A0A2S0',
+		T => 'H0A0',
+		U => 'H0A0A2S0',
+		V => 'I0C0I3C1',
+		W => 'A0I0A2',
+		X => 'I0I1',
+		Y => 'A0A2',
+		xC => 'a0a2a4',
+		xI => 'a1I0a4',
+		xV => 'I0I2I4C0C1',
+		xW => 'A0I0A3',
+		xX => 'I0I2I4',
+		xY => 'A0I0a1',
+		yI => 'A1I0',
+		yW => 'A2I0A5',
+		yX => 'A0A1a2',
+		yY => 'A2I0a4',
+		yC => 'A0A3',
+	);
+	my $thickness = 1/6.;	# for vortex
+
+	my ($r, $x1, $x2, $y1, $y2, $arc);
+	$self->put_hexagon($x, $y);
+	my $parts = exists $tiles{$elem} ? $tiles{$elem} : 'T0';
+	my @part = split //, $parts;
+	while (@part) {
+		my ($type, $orient2) = splice(@part, 0, 2);
+		my $orient = ($orient_in + $orient2) % 6;
+		if ($type eq 'a') {
+			$self->put_arc($x, $y, 1, $orient);
+		} elsif ($type eq 'A') {
+			$self->put_arc($x, $y, 2, $orient);
+		} elsif ($type eq 'C') {
+			my ($r, $style);
+			$r = 0.5 - $thickness if $orient2 == 0;
+			$r = 7/60 if $orient2 == 1;
+			$style = {fill => '#d5d5d5'} if $orient2 == 1;
+			$self->put_circle($x, $y, $r, $style);
+		} elsif ($type eq 'I') {
+			my $frac = $thickness if grep {$elem eq $_} qw(V xV);
+			$self->put_through_line($x, $y, $orient, $frac);
+		} elsif ($type eq 'S') {
+			my $scale = $self->{twoby3} if $elem eq 'U';
+			$self->put_lever($x, $y, $orient, $detail, $scale);
+		} elsif ($type eq 'T') {
+			$self->put_text($x, $y, $elem);
+		} elsif ($type eq 'H') {
+			$self->put_hexagon($x, $y, $self->{twoby3}, {fill=>'url(#mygreen)',
+				'fill-opacity' => '0.8',});
+		}
 	}
 }
 
@@ -498,20 +544,14 @@ sub put_1 {
 	$self->put_hexagon($x, $y, .5, {fill => 'url(#mygreen)'}) if $elem =~ /L/;
 }
 
-sub put_Switch {
-	my ($self, $x, $y, $orient, $detail) = @_;
-	$self->put_2in1($x, $y, $orient);
-	$self->put_lever($x, $y, $orient, $detail);
-}
-
-
 sub put_lever {
-	my ($self, $posx, $posy, $orient, $detail) = @_;
+	my ($self, $posx, $posy, $orient, $detail, $scale) = @_;
 	my $svg = $self->{svg};
-	my ($xc, $yc) = $self->to_position($posx, $posy, 0, 0.3);
+	$scale ||= 1.;
+	my ($xc, $yc) = $self->to_position($posx, $posy, 0, 0.3*$scale);
 	my ($x, $y) = $self->center_pos($xc, $yc);
 	my %c = (q => 50, lg => 45, r => 27.5, ly => 375, lx => 10);
-	$_ *= $self->{size}/600. for values %c; # scale coordinates
+	$_ *= $self->{size}/600.*$scale for values %c; # scale coordinates
 	my $q2 = 2*$c{q};
 	my $q4 = 2*$q2;
 	my $lg2 = 2*$c{lg};
@@ -529,6 +569,23 @@ sub put_lever {
 		c -$dx_bez $c{q} -$dx_bez $yc -$dx_bez $c{ly} l -$c{lx} 0
 		c 0 -$c{ly} -$q2 -$dy_bez -$dx_bez -$c{ly}",
 		transform => "rotate($angle, $xm, $ym)", fill => 'url(#mygreen)');
+}
+
+sub put_Looptile {
+	my ($self, $posx, $posy, $orient) = @_;
+	my $svg = $self->{svg};
+	$self->put_hexagon($posx, $posy);
+	my ($x, $y) = $self->center_pos($posx, $posy);
+	my $angle = $orient*6.2832/6.;
+	my $dy0 = 0.1;
+	my $dx0 = -$dy0/sqrt(3);
+	my $r = 1./3.*$self->{size};
+	my $style = {fill => 'none', stroke=>'black'};
+	my $dx = $self->{size}*(cos($angle)*$dx0 - sin($angle)*$dy0);
+	my $dy = $self->{size}*(sin($angle)*$dx0 + cos($angle)*$dy0);
+	$svg->circle(cx => $x + $dx, cy => $y +$dy, r => $r, style => $style);
+	$self->put_through_line($posx, $posy, $orient, 0.275);
+	$self->put_through_line($posx, $posy, $orient + 1, 0.275);
 }
 
 sub put_Cannon {
@@ -636,15 +693,6 @@ sub put_OpenBasket {
 	$self->put_circle($x, $y, 0.2);
 }
 
-sub put_Vortex {
-	my ($self, $x, $y, $orient) = @_;
-	my $thickness = 0.1;
-	$self->put_hexagon($x, $y);
-	$self->put_through_line($x, $y, $orient, $thickness);
-	$self->put_through_line($x, $y, $orient + 3, $thickness);
-	$self->put_circle($x, $y, 0.5 - $thickness, {fill => 'none'});
-}
-
 sub put_Balcony {
 	my ($self, $x, $y, $orient) = @_;
 	$self->put_hexagon($x, $y, 1, '', 1, $orient);
@@ -731,29 +779,6 @@ sub put_TipTube {
 	$self->put_text($x, $y, 't');
 }
 
-sub put_Curve {
-	my ($self, $x, $y, $orient) = @_;
-	my ($r, $x1, $x2, $y1, $y2, $arc);
-	$self->put_hexagon($x, $y);
-	$self->put_arc($x, $y, 1, $orient + 1);
-	$self->put_arc($x, $y, 2, $orient);
-}
-
-sub put_2in1 {
-	my ($self, $x, $y, $orient) = @_;
-	$self->put_hexagon($x, $y);
-	$self->put_arc($x, $y, 2, $orient);
-	$self->put_arc($x, $y, 2, $orient + 2);
-}
-
-sub put_3in1 {
-	my ($self, $x, $y, $orient) = @_;
-	$self->put_hexagon($x, $y);
-	$self->put_arc($x, $y, 2, $orient);
-	$self->put_through_line($x, $y, $orient);
-	$self->put_arc($x, $y, 2, $orient + 2);
-}
-
 sub put_BasicTile {
 	my ($self, $x, $y, $orient, $element) = @_;
 	my $thickness = (1 - $self->{twoby3})/2.;
@@ -762,7 +787,6 @@ sub put_BasicTile {
 	$self->put_through_line($x, $y, $orient, $thickness);
 	$self->put_through_line($x, $y, $orient + 2, $thickness);
 	$self->put_through_line($x, $y, $orient + 4, $thickness);
-	$self->put_text($x, $y, $element) if $element;
 }
 
 sub put_Start {
@@ -831,19 +855,6 @@ sub put_Splash {
 	$self->put_arc_or_bezier($x, $y, $orient + 1, $self->{twoby3}, 1/3, $r);
 	$self->put_arc_or_bezier($x, $y, $orient + 3, $self->{twoby3}, 1/3, $r);
 	$self->put_arc_or_bezier($x, $y, $orient + 5, $self->{twoby3}, 1/3, $r);
-}
-
-sub put_StraightTile {
-	my ($self, $x, $y, $orient) = @_;
-	$self->put_hexagon($x, $y);
-	$self->put_through_line($x, $y, $orient);
-}
-
-sub put_Junction {
-	my ($self, $x, $y, $orient) = @_;
-	$self->put_hexagon($x, $y);
-	$self->put_through_line($x, $y, $orient);
-	$self->put_through_line($x, $y, $orient + 1);
 }
 
 sub features {
@@ -1317,11 +1328,11 @@ Game::MarbleRun::Draw - Create SVG visualizations from marble runs
   use Game::MarbleRun::Draw;
   $g = Game::MarbleRun::Draw->new(text_offset=>1);
   $g->board(2, 1);
-  $g->put_3in1(6, 5, 3);
-  $g->put_Curve(5, 4, 2);
+  $g->put_Tile(6, 5, 'W', 3);	# a 3 in 1 tile
+  $g->put_Tile(5, 4, 'C', 2);	# a curve
   $g->emit_svg('board_with_2_elems');
   $g2 = Game::MarbleRun::Draw->new();
-  $g2->orientations();
+  $g2->orientations($case);
   $g2->emit_svg('orient');
 
 =head1 DESCRIPTION
@@ -1360,10 +1371,12 @@ background. The following attrs can be used:
 
 =head2 orientations
 
-$g->orientations();
+$g->orientations($case);
 
 An svg image is generated that shows the different orientations of tiles.
-The resulting image is contained in gravi_en.pdf.
+If case is not given, an image for basic tiles orientations is generated.
+The cases 'balcony', 'extra curves' and 'all' produce similar images.
+The resulting image for case 'all' is contained in gravi_en.pdf.
 
 =head2 board
 
@@ -1426,22 +1439,23 @@ $g->{svg}->xmlify();
 =head2 DRAWING INDIVIDUAL TILES
 
 instead of using the draw_tile method and giving an element character to
-generate code for placing tiles individual methods can be used instead.
-For example the svg code for a curve tile can be generated by
+generate code for placing tiles some individual methods can be used instead.
+For example the svg code for a magnetic cannon tile can be generated by
 
-$g->draw_tile('C', $x, $y, $orient); or equivalently by
+$g->draw_tile('M', $x, $y, $orient); or equivalently by
 
-$g->put_Curve($x, $y, $orient);
+$g->put_Cannon($x, $y, $orient);
+
+Where no specific method exists, the method put_Tile is called instead.
 
 The following individual methods are currently defined
 
+  $g->put_Tile($x, $y, $element, $orient, $detail);
   $g->put_TransparentPlane($x, $y, $type);
   $g->put_1($x, $y, $elem_char);
-  $g->put_Switch($x, $y, $orienti, $detail);
   $g->put_Cannon($x, $y, $orient);
   $g->put_FinishLine($x, $y, $orient);
   $g->put_OpenBasket($x, $y);
-  $g->put_Vortex($x, $y, $orient);
   $g->put_Balcony($x, $y, $orient);
   $g->put_DoubleBalcony($x, $y, $orient);
   $g->put_BridgetTile($x, $y, $orient, $detail);
@@ -1449,18 +1463,13 @@ The following individual methods are currently defined
   $g->put_Lift($x, $y, $orient, $detail);
   $g->put_Spiral($x, $y, $orient, $detail);
   $g->put_TipTube($x, $y, $orient);
-  $g->put_Curve($x, $y, $orient);
-  $g->put_2in1($x, $y, $orient);
-  $g->put_3in1($x, $y, $orient);
-  $g->put_BasicTile($x, $y, $orient, $elem_char);
+  $g->put_BasicTile($x, $y, $orient);
   $g->put_Start($x, $y, $orient);
   $g->put_Landing($x, $y, $orient);
   $g->put_Drop($x, $y, $orient);
   $g->put_Catcher($x, $y, $orient);
   $g->put_Volcano($x, $y, $orient);
   $g->put_Splash($x, $y, $orient);
-  $g->put_StraightTile($x, $y, $orient);
-  $g->put_Junction($x, $y, $orient);
 
 =head1 HELPER METHODS
 

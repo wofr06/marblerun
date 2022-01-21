@@ -1,5 +1,5 @@
 Revision history for Perl extension Game::MarbleRun
-
+    - new elements can be used in runs and get drawn
 0.991 Thu Jan 20 2022
     - added new elements from Advent calendar 2021, updated german doc
     - fixed bug in spiral connection check, Symbol for splinter changed to yV.

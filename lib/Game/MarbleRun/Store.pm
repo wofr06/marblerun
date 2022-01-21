@@ -147,9 +147,15 @@ sub verify_rail_endpoints {
 		N => [0, 1, 3, 5], P => [0, 2, 4], Q => [0, 3], S => [0, 2, 4],
 		T => [0, 4], U => [0, 2, 4], V => [0, 3], W => [0, 2, 3, 4],
 		X => [0, 1, 3, 4], Y => [0, 2, 4], Z => [0, 2, 4], xA => [0, 3],
-		xB => [0, 3], xD => [1, 5], xF => [0], xH => [0, 5], xK => [3],
-		xM => [qw(0 1 2 3 4 5)], xR => [0, 3], xS => [qw(0 1 2 3 4 5)],
-		xT => [0, 5], xV => [qw(0 1 2 3 4 5)], xZ => [0, 3],
+		xB => [0, 3], xC => [qw(0 1 2 3 4 5)], xD => [1, 5], xF => [0],
+		xH => [0, 5], xI => [qw(0 1 2 3 4 5)], xK => [3],
+		xM => [qw(0 1 2 3 4 5)], xQ => [0, 1], xR => [0, 3],
+		xS => [qw(0 1 2 3 4 5)],
+		xT => [0, 5], xV => [0, 2, 4], xW => [0, 1, 3, 4],
+		xX => [qw(0 1 2 3 4 5)], xY => [qw(0 1 2 3 4)], xZ => [0, 3],
+		yC => [qw(0 1 3 4)], yH => [qw(0 1 2 3 4 5)], yI => [qw(0 1 3 5)],
+		yT => [qw(0 1 2 3 4 5)], yV => [qw(0 1 2 3 4 5)], yW => [qw(0 2 3 5)],
+		yX => [qw(0 1 2 3 4 5)], yY => [qw(0 2 3 4 5)],
 	};
 	my ($self, $data) = @_;
 	# remember the tile positions
@@ -1017,7 +1023,7 @@ sub parse_run {
 				if ($tile) {
 					# handle Switch position + / -
 					if ($tile =~ s/([SU])([+-]?)/$1/) {
-						$detail = $2 || '-';
+						$detail = $2 || '';
 					# handle number of helix elements
 					} elsif ($tile =~ s/xH(\d*)/xH/) {
 						$detail = $1 || 2;
@@ -1053,7 +1059,7 @@ sub parse_run {
 					}
 					# tile symbol and direction
 					$_ = $tile;
-					$tile = $1 if s/^(x?[=^A-Za-w])//;
+					$tile = $1 if s/^([xyz]?[=^A-Za-w])//;
 					if (s/^([a-f])//i) {
 						$dir = $1;
 						$dir =~ tr/a-fA-F/0-50-5/;
