@@ -1019,11 +1019,13 @@ sub parse_run {
 						push @$rules,
 						[$elem, $x1, $y1, $z, $detail, $dir, $level - $corr] if $elem;
 				}
-				# tile special cases S,U,xH,xB,xF,O,xM
+				# tile special cases S,U,xH,xB,xF,O,xM,xD
 				if ($tile) {
 					# handle Switch position + / -
 					if ($tile =~ s/([SU])([+-]?)/$1/) {
 						$detail = $2 || '';
+					} elsif ($tile =~ s/xD([+-]?)/xD/) {
+						$detail = $1 || '';
 					# handle number of helix elements
 					} elsif ($tile =~ s/xH(\d*)/xH/) {
 						$detail = $1 || 2;

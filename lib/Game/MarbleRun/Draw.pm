@@ -233,6 +233,8 @@ sub draw_tile {
 		$self->put_Looptile($x, $y, $orient);
 	} elsif ($elem eq 'xT') {
 		$self->put_TipTube($x, $y, $orient);
+	} elsif ($elem eq 'xD') {
+		$self->put_Dipper($x, $y, $orient, $detail);
 	} elsif ($elem eq 'O') {
 		$self->put_OpenBasket($x, $y);
 	} elsif ($elem eq 'E') {
@@ -280,6 +282,7 @@ sub put_Tile {
 		yC => 'A0A3',
 	);
 	my $thickness = 1/6.;	# for vortex
+	$orient_in ||= 0;
 
 	my ($r, $x1, $x2, $y1, $y2, $arc);
 	$self->put_hexagon($x, $y);
@@ -487,6 +490,7 @@ sub put_through_line {
 		$y2 = $y1 + ($y2 - $y1)*$fraction;
 	}
 	$svg->line(x1=>int $x1, y1=>int $y1, x2=>int $x2, y2=>int $y2, class=>'tile');
+	return ($x2, $y2);
 }
 
 sub put_text {
@@ -764,6 +768,25 @@ sub put_Lift {
 		style => {fill=>'url(#mygreen)'});
 }
 
+sub put_Dipper {
+	my ($self, $x, $y, $orient, $detail) = @_;
+	my $svg = $self->{svg};
+	$self->put_hexagon($x, $y);
+	my $len = 0.25;
+	my $r = 0.7*$self->{width3};
+	my ($xc, $yc) = $self->center_pos($x, $y);
+	my ($x1, $x2, $y1, $y2);
+	($x1, $y1) = $self->put_through_line($x, $y, $orient - 1 , $len);
+	$x2 = int($xc + 0.5*$self->{middle_x}[($orient+3) % 6]);
+	$y2 = int($yc + 0.5*$self->{middle_y}[($orient+3) % 6]);
+	$svg->path(d => "M $x2 $y2 A $r $r 0 0 0 $x1 $y1", class => 'tile');
+	($x1, $y1) = $self->put_through_line($x, $y, $orient + 1 , $len);
+	$x2 = int($xc + 0.5*$self->{middle_x}[($orient+3) % 6]);
+	$y2 = int($yc + 0.5*$self->{middle_y}[($orient+3) % 6]);
+	$svg->path(d => "M $x1 $y1 A $r $r 0 0 0 $x2 $y2", class => 'tile');
+	$self->put_lever($x, $y, $orient + 3, $detail, 2/3.);
+}
+
 sub put_Spiral {
 	my ($self, $x, $y, $orient, $elems) = @_;
 	$elems ||= 0;
@@ -771,12 +794,13 @@ sub put_Spiral {
 	$self->put_hexagon($x, $y);
 	$self->put_circle($x, $y, 0.5 - $thickness, {fill=>'url(#mygreen)'});
 	$self->put_through_line($x, $y, $orient, $thickness);
-	$self->put_through_line($x, $y, $orient + 2*$elems - 1, $thickness);
+	my $orient_in = $orient + 2*$elems - 1;
+	$self->put_through_line($x, $y, $orient_in, $thickness);
 	my ($xc, $yc) = $self->center_pos($x, $y);
 	my $length = 0.4;
-	my $d1 = ($orient + 1) % 6;
-	my $d2 = ($orient + 2) % 6;
-	my $d3 = ($orient + 3) % 6;
+	my $d1 = ($orient_in + 4) % 6;
+	my $d2 = ($orient_in + 5) % 6;
+	my $d3 = ($orient_in) % 6;
 	my $svg = $self->{svg};
 	my $dx1 = $length*$self->{corner_x}[0][$d1];
 	my $dy1 = $length*$self->{corner_y}[0][$d1];
