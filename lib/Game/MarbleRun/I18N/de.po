@@ -332,6 +332,9 @@ msgstr "Seilbahn"
 msgid "Advent 21"
 msgstr ""
 
+msgid "Orientation"
+msgstr "Orientierung"
+
 msgid "Construction plan booklet"
 msgstr "Bauplanheft"
 

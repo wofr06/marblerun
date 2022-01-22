@@ -90,8 +90,27 @@ sub center_pos {
 
 sub orientations {
 	my ($self, $case) = @_;
+	my $start = 2;
+	my $shift = 6;
 	my $elems = { '0.5' => 'Orientation', 2 => 'C', 4 => 'Y,S', 6 => 'X',
-		8 => 'G,D', 10 => 'B', 12 => 'Straight Tile', 14 => 'xG'};
+		8 => 'G,D', 10 => 'Straight Tile', 12 => 'xG', 14 => 'B'};
+	$case ||= '';
+	if ($case eq 'balcony') {
+		$elems = { '0.5' => 'Orientation', 2 => 'B'};
+	} elsif ($case eq 'extra curves') {
+		$start = 5;
+		$shift = 9;
+		$elems = { '0.5' => 'Orientation', 2 => 'xC', 4 => 'yC', 6 => 'xW',
+		8 => 'yW', 10 => 'xY', 12 => 'yY', 14 => 'xX', 16 => 'yX', 18 => 'xI',
+		20 => 'yI', 22 => 'xQ', 24 => 'xV'};
+	} elsif ($case eq 'all') {
+		$start = 7;
+		$shift = 15;
+		$elems = { '0.5' => 'Orientation', 2 => 'C', 4 => 'Y,S', 6 => 'X',
+        8 => 'G,D', 10 => 'Straight Tile', 12 => 'xG', 14 => 'B', 16 => 'xC',
+		18 => 'yC', 20 => 'xW', 22 => 'yW', 24 => 'xY', 26 => 'yY', 28 => 'xX',
+		30 => 'yX', 32 => 'xI', 34 => 'yI', 36 => 'xQ', 38 => 'xV,yV'};
+	}
 	my %label;
 	my $size_y= 0;
 	for my $k (keys %$elems) {
@@ -104,11 +123,14 @@ sub orientations {
 		}
 		$size_y = $k if $k > $size_y;
 	}
+	$size_y = 20 if $size_y < 20;
 	$self->set_size(int $self->{screen_y}/($size_y + 2));
-	$self->put_text(3, $_, $label{$_}) for sort keys %label;
+	$elems->{'0.5'} = 'Symbol';
+	$self->put_text($start - 4, $_, $elems->{$_}) for sort keys %label;
+	$self->put_text($start, $_, $label{$_}) for sort keys %label;
 	delete $elems->{'0.5'};
 	for my $orient (0..5) {
-		my $x = 2*$orient + 7;
+		my $x = 2*$orient + $shift;
 		$self->put_text($x, 0.5, chr($orient+97));
 		$self->draw_tile($elems->{$_}, $x, $_, $orient) for sort keys %$elems;
 	}
@@ -780,7 +802,7 @@ sub put_TipTube {
 }
 
 sub put_BasicTile {
-	my ($self, $x, $y, $orient, $element) = @_;
+	my ($self, $x, $y, $orient) = @_;
 	my $thickness = (1 - $self->{twoby3})/2.;
 	$self->put_hexagon($x, $y);
 	$self->put_hexagon($x, $y, $self->{twoby3}, {fill=>'white'});
@@ -1020,7 +1042,7 @@ sub do_run {
 		# switch
 		} elsif ($sym =~ /^[SU]/) {
 			$state->{"$x,$y"}{$z} = $detail;
-		} elsif ($sym =~ /xM|xV/) {
+		} elsif ($sym =~ /xM|yV/) {
 			$state->{"$x,$y"}{$z} = 0;
 		} elsif ($sym =~/[\d^+]/) {
 			$i_tile++;

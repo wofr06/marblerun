@@ -168,7 +168,7 @@ EOF
 		xC=>'Curve 3x small', yC=>'Curve 2x large',
 		xI=>'Straight with 2 Curves', xX=>'Straight 3x', xW=>'2x 2 in 1 left',
 		yW=>'2x 2 in 1 right', xY=>'2 in 1 left with Curve',
-		yY=>'2 in 1 right with Curve', yX=>'3 Curves, 2 cross',
+		yY=>'2 in 1 right with Curve', yX=>'3 Curves, 2 crossing',
 		yI=>'Cross Straight and Curve',
 		# Rails
 		s=>'Rail Short', m=>'Rail Medium', l=>'Rail Long', b=>'Rail Bernoulli',
@@ -1078,9 +1078,10 @@ sub initial_actions {
 	push @{$m{$_->[0]}}, [$_->[1], $_->[2]] for @$marble;
 	my $ball = loc($self->{elem_name}{'o'});
 	for my $t (@$tile) {
-		# start, (tunnel)switch, cannon, catapult, bridge, flip, hammer, jumper
-		# cascade, zipline, tiptube, volcan, splinter, mixer, transfer
-		next if $t->[2] !~ /^[ASUMFHJKNP]$|^x[FKBATVMR]$|^yT$/;
+		# tiles with initial states: start, (tunnel)switch, cannon, flip,
+		# hammer, jumper, cascade,vvolcan, splash, lift, catapult, bridge,
+		# zipline, tiptube, mixer, transfer, turntable, splitter
+		next if $t->[2] !~ /^[ASUMFHJKNP]$|^x[FKBATMR]$|^y[TV]$/;
 		my ($id, $sym, $x, $y, $dir, $detail, $l) = @{$t}[0,2,3,4,6,7,8];
 		# bridges can unfold with 2 elements only
 		next if $sym eq 'xB' and $detail != 2;
@@ -1104,6 +1105,7 @@ sub initial_actions {
 		$pos = loc('At %1', loc('Level') . " $l ") . loc('pos') . ' '
 			. ($y - $dxy->[$l][1]) . ($x - $dxy->[$l][0]) if $l and $self->{relative};
 				$pos .= ' (' . loc($elem) . ') ' if $sym;
+		# symbols where marbles can start
 		if ($sym =~ /^[AMNP]$|x[AFT]/) {
 			next if ! exists $m{$id};
 			my ($count, $marbles);
