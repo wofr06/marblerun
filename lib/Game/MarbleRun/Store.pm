@@ -70,21 +70,30 @@ sub find_to_tile {
 		return undef;
 	} else {
 		@ids = grep {$_->[1] !~ /L/} @ids;
+	my @from = grep {$rail->[0] == $_->[0]} @$seen;
+	my $from = $from[0]->[1];
 		# generate entries for tiles with connections at more than one z:
-		# lift, helix, tiptube, mixer, dispenser
-		my @id2 = grep {$_->[1] =~ /x[FHMTV]/} @ids;
+		# lift, spiral, dispenser, tiptube, helix, turntable
+		my @id2 = grep {$_->[1] =~ /x[FHMT]|y[HVT]/} @ids;
 		my @t;
+		my $sign = 1;
+		if (grep {$_ eq $from} qw(xM yH yT yV)) {
+			@id2 = @ids;
+			$sign = -1;
+		}
+
 		for my $tile (@id2) {
 			push @t, $_ for @$tile;
-			if ($t[1] eq 'xM' or $t[1] eq 'xV') {
-				$t[4] = $t[4] + 7;
-			} elsif ($t[1] eq 'xT') {
-				$t[4] = $t[4] + 2;
-			} elsif ($t[1] eq 'xH') {
-				$t[4] = $t[4] + $t[5];
-			} elsif ($t[1] eq 'xF') {
+			my $comp = $sign > 0 ? $t[1] : $from;
+			if (grep {$_ eq $comp} qw(xM yH yT yV)) {
+				$t[4] = $t[4] + 7*$sign;
+			} elsif ($comp eq 'xT') {
+				$t[4] = $t[4] + 2*$sign;
+			} elsif ($comp eq 'xH') {
+				$t[4] = $t[4] + $t[5]*$sign;
+			} elsif ($comp eq 'xF') {
 				my $n = $1 if $t[5] =~ /(\d)/;
-				$t[4] = $t[4] + 4*$n - 1;
+				$t[4] = $t[4] + (4*$n - 1)*$sign;
 			}
 			push @ids, [@t];
 		}
@@ -94,9 +103,10 @@ sub find_to_tile {
 		}
 		# vertical tunnel needs 2 ids at the same position, 1st has dz=0
 		shift @ids if $r eq 't';
-		my %dz0 = (t=>7, a=>5, b=>14, c=>5, d=>5, xT=>2, xM=>7, xV=>7, xt=>7);
+		my %dz0 = (t=>7, a=>5, b=>14, c=>5, d=>5, xT=>2, xM=>7, yH=>7, yT=>7,
+			yV=>7, xt=>7);
 		my %dz1 = (s =>5, m=>7, l=>8, t=>7, a=>7, b=>18, c=>7, d=>7, g=>7,
-			q=>7, xT=>2, xM=>7, xV=>7, xt=>7);
+			q=>7, xT=>2, xM=>7, yH=>7, yT=>7, yV=>7, xt=>7);
 		return undef if ! @ids;
 		my $zdiff = abs($z - $ids[0]->[4]);
 		my $zmin = exists $dz0{$r} ? $dz0{$r} : 0;
@@ -1134,7 +1144,7 @@ sub parse_run {
 					$marbles += $count;
 
 					push @$f, ['o', $orient, $color] for 1 .. $count;
-					$self->error("%1 marbles seen, 3 is maximum", $marbles)
+					$self->error("%1 marbles seen, 6 is maximum", $marbles)
 						if $marbles > 3 and $tile ne 'xF';
 				} elsif (s/^(x?[A-Za-w])//) {
 				# all known rails (exists and range of small letters)
@@ -1169,15 +1179,17 @@ sub parse_run {
 						my ($x2, $y2) =
 							$self->rail_xy($r, $x1, $y1, $dir, $w_detail);
 						if (exists $rails->{$dir}) {
+							my $levels = 1;
+							$levels = 2 if grep {$_ eq $tile} qw(xM yH yT);
 							$self->error("Rail direction %1 already seen", $dir)
-								if ! $is_wall;
+								if ! $is_wall and $rails->{$dir} > $levels;
 						}
 						if ($tile) {
 							push @$f, [$x2, $y2, $r, $dir, $w_detail];
 						} else {
 							push @{$rules->[-1]}, [$x2, $y2, $r, $dir, $w_detail];
 						}
-						$rails->{$dir} = 1 if ! $detail;
+						$rails->{$dir}++ if ! $detail;
 					} elsif (s/(.)//) {
 						$self->error("Wrong rail direction '%1'", $1);
 					} elsif (! $_) {
@@ -1192,7 +1204,7 @@ sub parse_run {
 				}
 			}
 			my $n = scalar (keys %$rails);
-			$self->error("%1 rail data seen, 3 is maximum", $n) if $n > 3;
+			$self->error("%1 rail data seen, 6 is maximum", $n) if $n > 6;
 			push @$rules, $f;
 			$self->marble_orients($marbles, $rules->[-1]) if $marbles;
 		}

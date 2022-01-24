@@ -576,7 +576,7 @@ sub put_lever {
 	$scale ||= 1.;
 	my ($xc, $yc) = $self->to_position($posx, $posy, 0, 0.3*$scale);
 	my ($x, $y) = $self->center_pos($xc, $yc);
-	my %c = (q => 50, lg => 45, r => 27.5, ly => 375, lx => 10);
+	my %c = (q => 50, lg => 45, r => 22.5, ly => 375, lx => 10);
 	$_ *= $self->{size}/600.*$scale for values %c; # scale coordinates
 	my $q2 = 2*$c{q};
 	my $q4 = 2*$q2;
@@ -588,13 +588,15 @@ sub put_lever {
 	my $dx_bez = $q2 + $lg2 - 0.5*$c{lx};
 	my $dy_bez = $c{ly} - $c{q};
 	my $angle = 60 * (($orient + 3) % 6);
-	$angle += $detail ? ($detail eq '+' ? 15 : -15) : 0;
+	$detail = $detail ? ($detail eq '+' ? 15 : -15) : 0;
 	my ($xm, $ym) = $self->center_pos($posx, $posy);
-	$svg->path(d =>"M $l0x $l1y A $c{r} $c{r} 0 0 1 $l0x $l0y l $lg2 -$c{lg}
+	my $g = $svg->group(id => 'small lever', style => {fill => 'url(#mygreen)'},
+		transform => "rotate($angle, $xm, $ym)");
+	$g->path(d =>"M $l0x $l1y A $c{r} $c{r} 0 0 1 $l0x $l0y l $lg2 -$c{lg}
 		q $q2 -$c{q} $q4 0 l $lg2 $c{lg} A $c{r} $c{r} 0 0 1 $l2x $l1y
 		c -$dx_bez $c{q} -$dx_bez $yc -$dx_bez $c{ly} l -$c{lx} 0
 		c 0 -$c{ly} -$q2 -$dy_bez -$dx_bez -$c{ly}",
-		transform => "rotate($angle, $xm, $ym)", fill => 'url(#mygreen)');
+		transform => "rotate($detail, $xm, $l1y)");
 }
 
 sub put_Looptile {
@@ -775,16 +777,40 @@ sub put_Dipper {
 	my $len = 0.25;
 	my $r = 0.7*$self->{width3};
 	my ($xc, $yc) = $self->center_pos($x, $y);
-	my ($x1, $x2, $y1, $y2);
-	($x1, $y1) = $self->put_through_line($x, $y, $orient - 1 , $len);
-	$x2 = int($xc + 0.5*$self->{middle_x}[($orient+3) % 6]);
-	$y2 = int($yc + 0.5*$self->{middle_y}[($orient+3) % 6]);
-	$svg->path(d => "M $x2 $y2 A $r $r 0 0 0 $x1 $y1", class => 'tile');
-	($x1, $y1) = $self->put_through_line($x, $y, $orient + 1 , $len);
-	$x2 = int($xc + 0.5*$self->{middle_x}[($orient+3) % 6]);
-	$y2 = int($yc + 0.5*$self->{middle_y}[($orient+3) % 6]);
-	$svg->path(d => "M $x1 $y1 A $r $r 0 0 0 $x2 $y2", class => 'tile');
-	$self->put_lever($x, $y, $orient + 3, $detail, 2/3.);
+	my $dx = $self->{middle_x}[($orient-1) % 6];
+	my $dy = $self->{middle_y}[($orient-1) % 6];
+	my ($x1, $x2, $y1, $y2) = ($xc + $dx, $xc - $dx, $yc + $dy, $yc - $dy);
+	$x2 = $x1 + ($x2 - $x1)*$len;
+	$y2 = $y1 + ($y2 - $y1)*$len;
+	my $x3 = int($xc + 0.5*$self->{middle_x}[($orient+3) % 6]);
+	my $y3 = int($yc + 0.5*$self->{middle_y}[($orient+3) % 6]);
+	$dx = $self->{middle_x}[($orient+1) % 6];
+	$dy = $self->{middle_y}[($orient+1) % 6];
+	my ($x4, $x5, $y4, $y5) = ($xc + $dx, $xc - $dx, $yc + $dy, $yc - $dy);
+	$x5 = $x4 + ($x5 - $x4)*$len;
+	$y5 = $y4 + ($y5 - $y4)*$len;
+	$svg->path(d => "M $x1 $y1 L $x2 $y2 A $r $r 0 0 1 $x3 $y3 A $r $r 0 0 1 $x5 $y5 L $x4 $y4", class => 'tile');
+	$self->put_small_lever($x, $y, $orient + 3, $detail);
+}
+
+sub put_small_lever {
+	my ($self, $x, $y, $orient, $detail) = @_;
+	my $svg = $self->{svg};
+	my %c = (r => 65, short => 4, long => 380, shift => 170);
+	$_ *= $self->{size}/600. for values %c; # scale coordinates
+	my $sin45 = 1./sqrt(2.); # 45 °sin = cos, tan = 1
+	my ($x0, $y0) = $self->center_pos($x, $y);
+	my ($x1, $y1) = ($x0 - $c{r}*$sin45, $y0 + $c{r}*$sin45 - $c{shift});
+	my $x2 = $x0 + $c{r}*$sin45;
+	my $y3 = $y1 + $c{r};
+	my ($x4, $y4) = ($x0 + $c{short}/2., $y1 + $c{long} - $c{r}*(1+$sin45));
+	my $x5 = $x0 - $c{short}/2.;
+	my $y5 = $y4 - $c{r};
+	my $angle = 60 * (($orient + 3) % 6);
+	$detail = $detail ? ($detail eq '+' ? 15 : -15) : 0;
+	my $g = $svg->group(id => 'small lever', style => {fill => 'url(#mygreen)'},
+		transform => "rotate($angle, $x0, $y0)");
+    $g->path(d => "M $x1 $y1 A $c{r} $c{r} 0 1 1 $x2 $y1 C $x0 $y3 $x4 $y4 $x4 $y4 L $x5, $y4 C $x5 $y5 $x0 $y3 $x1 $y1", transform => "rotate($detail, $x0, $y1)");
 }
 
 sub put_Spiral {
@@ -989,9 +1015,9 @@ sub features {
 		['xT',  5,  '',  2,   0,    ''],
 		['xT',  5,  '',  2,   0,  'o0'],
 		['xT',  5,   0,  2,   0,  '2o0',  '3o0'],
-		['xV', 'M',  0,  7,   0,      0,      4],
-		['xV', 'M',  4,  7,   0,      4,      2],
-		['xV', 'M',  2,  7,   0,      2,      0],
+		['yV', 'M',  0,  7,   0,      0,      4],
+		['yV', 'M',  4,  7,   0,      4,      2],
+		['yV', 'M',  2,  7,   0,      2,      0],
 		['xZ',  3,   0,  0,   0,   'o0',   'o0'],
 	];
 	# Rails
