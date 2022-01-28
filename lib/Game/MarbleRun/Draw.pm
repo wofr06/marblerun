@@ -137,8 +137,9 @@ sub orientations {
 }
 
 sub board {
-	my ($self, $board_y, $board_x, $run_id, $fill_coord) = @_;
+	my ($self, $board_y, $board_x, $run_id, $fill_coord, $excl) = @_;
 	return if ! $self->{svg};
+	my $svg = $self->{svg};
 	if (! $board_x) {
 	# get width and height of ground plane from run
 		if ($run_id) {
@@ -195,6 +196,21 @@ sub board {
 				$self->put_text($x, $y, $pos) if $fill_coord and ! $shape;
 			}
 		}
+	}
+	# clear regions that are marked as to be excluded
+	$size = $self->{size};
+	for my $xy_excl (@$excl) {
+		my ($x, $y) = (6*$xy_excl->[0], 5*$xy_excl->[1]);
+		my ($x0, $y0) = $self->center_pos($x - 5, $y - 4);
+		my ($x1, $y1) = $self->center_pos($x, $y);
+		($x0, $y0) = ($x0 - $self->{width3}, $y0 - 0.5*$size);
+		($x1, $y1) = ($x1 + $self->{width3}, $y1);
+		$x0 += 0.1*$size if $xy_excl->[0] > 1;
+		$x1 -= 0.1*$size if $xy_excl->[0] < $board_x;
+		my $points = $svg->get_path(x => [$x0, $x0, $x1, $x1],
+			y => [$y0, $y1, $y1, $y0], -closed => 1, -type => 'polygon');
+		$svg->polygon(%$points, style => {fill => 'white', stroke =>'none'},
+			class =>'tile');
 	}
 	return 1;
 }
@@ -590,7 +606,7 @@ sub put_lever {
 	my $angle = 60 * (($orient + 3) % 6);
 	$detail = $detail ? ($detail eq '+' ? 15 : -15) : 0;
 	my ($xm, $ym) = $self->center_pos($posx, $posy);
-	my $g = $svg->group(id => 'small lever', style => {fill => 'url(#mygreen)'},
+	my $g = $svg->group(class => 'lever', style => {fill => 'url(#mygreen)'},
 		transform => "rotate($angle, $xm, $ym)");
 	$g->path(d =>"M $l0x $l1y A $c{r} $c{r} 0 0 1 $l0x $l0y l $lg2 -$c{lg}
 		q $q2 -$c{q} $q4 0 l $lg2 $c{lg} A $c{r} $c{r} 0 0 1 $l2x $l1y
@@ -643,6 +659,7 @@ sub put_arc_or_bezier {
 	# difference between end points is length, curvature is defined by r
 	my ($self, $xm, $ym, $dir, $offset, $length, $r, $closed, $bezier) = @_;
 	my $svg = $self->{svg};
+	$dir %= 6;
 	my $d2 = ($dir + 2) % 6;
 	my $z = $closed ? 'z' : '';
 	my ($x, $y) = $self->center_pos($xm, $ym);
@@ -685,6 +702,7 @@ sub put_Balls {
 		if ($offset) {
 			my ($x1, $y1) = $self->center_pos($self->to_position($xm,$ym,$dir,1));
 			if (ref $offset) {
+				next if ! @$offset;
 				$cnt++;
 				my ($offx, $offy) = @{shift @$offset};
 				($x, $y) = ($x0+$offx*($x1-$x0)+$offy*($y1-$y0),
@@ -694,9 +712,9 @@ sub put_Balls {
 				($x, $y) = ($x0+$frac*($x1-$x0), $y0+$frac*($y1-$y0));
 			}
 		}
-		my $g = $svg->group(id => "marble$id");
+		my $g = $svg->group(class => "marble$id");
 		$g->circle(cx=>$x, cy=>$y, r=>$r, style=>{fill=>$srgb{$color}});
-		my $tag = $g->gradient(-type => 'radial', id => "radial$id",
+		my $tag = $g->gradient(-type => 'radial', class => "radial$id",
 			gradientUnits => 'userSpaceOnUse', cx => $x, cy => $y, r => $r,
 			fy => $y - 0.4*$r, fx => $x - 0.4*$r);
 		$tag->stop(style=>{"stop-color"=>"#fff"});
@@ -808,7 +826,7 @@ sub put_small_lever {
 	my $y5 = $y4 - $c{r};
 	my $angle = 60 * (($orient + 3) % 6);
 	$detail = $detail ? ($detail eq '+' ? 15 : -15) : 0;
-	my $g = $svg->group(id => 'small lever', style => {fill => 'url(#mygreen)'},
+	my $g = $svg->group(class => 'small lever', style => {fill => 'url(#mygreen)'},
 		transform => "rotate($angle, $x0, $y0)");
     $g->path(d => "M $x1 $y1 A $c{r} $c{r} 0 1 1 $x2 $y1 C $x0 $y3 $x4 $y4 $x4 $y4 L $x5, $y4 C $x5 $y5 $x0 $y3 $x1 $y1", transform => "rotate($detail, $x0, $y1)");
 }
@@ -1276,6 +1294,7 @@ sub neighbor {
 	for my $m (@$balls) {
 		$ball++;
 		while ($m) {
+			last if ! defined $m->[0];
 			my ($z_elem, $dir_elem, $dir_out, $color) = @$m[1..4];
 			my $t = $tiles->[$m->[0]];
 			@dirs = ();
@@ -1288,7 +1307,7 @@ sub neighbor {
 				my ($elem, $in, $out, $z_in, $z_out, $cond) = @$_;
 				# check incoming direction
 				@dirs = ('M'), last if $out eq 'M';
-
+				next if ! $in;
 				next if $dir_elem =~/\d/ and ($dir_elem != ($in + $dir) % 6);
 				# marbles present
 				if ($cond and $cond =~ /o(\d)/) {
@@ -1661,7 +1680,7 @@ Wolfgang Friebel, E<lt>wp.friebel@gmail.comE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2020,2021 by Wolfgang Friebel
+Copyright (C) 2020-2022 by Wolfgang Friebel
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.28.1 or,

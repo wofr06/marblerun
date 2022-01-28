@@ -43,7 +43,7 @@ contribute code or patches then I would like to hear from you as well.
 
 ## COPYRIGHT AND LICENCE
 
-Copyright (C) 2020, 2021 by Wolfgang Friebel
+Copyright (C) 2020-2022 by Wolfgang Friebel
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.28.1 or,

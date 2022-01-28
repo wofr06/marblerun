@@ -58,10 +58,10 @@ $g->{quiet} = $opt{q} || $opt{n};
 $g->{fill} = $opt{f};
 $g->{relative} = $opt{r};
 if ($opt{a}) {
-	my $input = Game::MarbleRun::Store->new(%attr);
-	$input->{verbose} = $opt{v};
 	if (@ARGV) {
 		for (@ARGV) {
+			my $input = Game::MarbleRun::Store->new(%attr);
+			$input->{verbose} = $opt{v};
 			if (-d $_) {
 				my @list = glob "$_/*";
 				$input->process_input($_) for @list;
@@ -76,6 +76,8 @@ if ($opt{a}) {
 			}
 		}
 	} else {
+		my $input = Game::MarbleRun::Store->new(%attr);
+		$input->{verbose} = $opt{v};
 		$input->process_input();
 	}
 } elsif ($opt{e}) {
@@ -86,6 +88,7 @@ if ($opt{a}) {
 	my $id = $g->owner_of_set_id($opt{i} || $opt{u});
 	$g->inventory($id);
 } else {
+    $g = Game::MarbleRun::Draw->new(%attr);
 	$g->{outputfile} = $opt{o} if $opt{o};
 	my $person_id = $g->owner_of_set_id($opt{u});
 	my @ids = $g->list_marble_runs($person_id, @ARGV);

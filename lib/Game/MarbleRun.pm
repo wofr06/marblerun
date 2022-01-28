@@ -8,10 +8,10 @@ use DBI;
 use Game::MarbleRun::I18N;
 use Locale::Maketext::Simple (Style => 'gettext');
 
-$Game::MarbleRun::VERSION = '0.991';
+$Game::MarbleRun::VERSION = '1.00';
 my $homedir = $ENV{HOME} || $ENV{HOMEPATH} || die "unknown homedir\n";
 $Game::MarbleRun::DB_FILE = "$homedir/.gravi.db";
-$Game::MarbleRun::DB_SCHEMA_VERSION = 6;
+$Game::MarbleRun::DB_SCHEMA_VERSION = 7;
 
 sub new {
 	my ($class, %attr) = @_;
@@ -48,7 +48,7 @@ sub connect_db {
 	my $sth = $dbh->table_info(undef, '%', 'config', 'TABLE');
 	my $res = $sth->fetchall_arrayref();
 	($vers) = @{($dbh->selectall_array("SELECT vers FROM config"))[0]} if @$res;
-	if ($vers != $Game::MarbleRun::DB_SCHEMA_VERSION) {
+	if ($vers < $Game::MarbleRun::DB_SCHEMA_VERSION) {
 		$self->error("The current DB schema version is %1, you have only %2\n",
 		$Game::MarbleRun::DB_SCHEMA_VERSION, $vers);
 		my $yn = $self->prompt(loc("Upgrade the DB now?"));
@@ -142,6 +142,11 @@ CREATE TABLE IF NOT EXISTS `run_comment` (
 	run_id INTEGER,
 	tile_id INTEGER,
 	comment
+);
+CREATE TABLE IF NOT EXISTS `run_no_elements` (
+	run_id INTEGER,
+	board_x INTEGER,
+	board_y INTEGER
 );
 EOF
 	# use arrayrefs to keep the ordering (letters 'cwy' unused)
@@ -526,7 +531,9 @@ sub fetch_run_data {
 	push @$res_rail, @$res_rail2 if @$res_rail2;
 	$sql = "SELECT tile_id,orient,color FROM run_marble WHERE run_id=$id";
 	my $res_marble = $self->{dbh}->selectall_arrayref($sql);
-	return ($res_meta, $res_tile, $res_rail, $res_marble);
+	$sql = "SELECT board_x,board_y FROM run_no_elements WHERE run_id=$id";
+	my $res_excl = $self->{dbh}->selectall_arrayref($sql);
+	return ($res_meta, $res_tile, $res_rail, $res_marble, $res_excl);
 }
 
 sub get_file_name {
@@ -855,7 +862,7 @@ sub display_run {
 	my $svg = $self->{svg};
 	my %pos;
 	my $tp_pos = [[0,0]];
-	my ($meta, $tile, $rail, $marble) = $self->fetch_run_data($run_id);
+	my ($meta, $tile, $rail, $marble, $excl) = $self->fetch_run_data($run_id);
 	# meta: id name digest date source person_id size_x size_y layers marble
 	#       0  1    2      3    4      5         6      7      8      9
 	my $bx = int(($meta->[6] + 5)/6);
@@ -870,7 +877,7 @@ sub display_run {
 		loc("ENTER to continue without svg")) || '' if $svg;
 
 	# SVG #
-	my $ok = $self->board($by, $bx, $run_id, $self->{fill}) if $svg;
+	my $ok = $self->board($by, $bx, $run_id, $self->{fill}, $excl) if $svg;
 	# SVG end #
 
 	# sort tiles and rails based on ground plane numbers first column, then row
@@ -1641,7 +1648,7 @@ Wolfgang Friebel, E<lt>wp.friebel@gmail.comE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2020, 2021 by Wolfgang Friebel
+Copyright (C) 2020-2022 by Wolfgang Friebel
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.28.1 or,
