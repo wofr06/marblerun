@@ -16,27 +16,6 @@ sub new {
 		verbose => $attr{verbose} || 0,
 		db => $attr{db} || $Game::MarbleRun::DB_FILE,
 	};
-	# possible rail directions for tiles with orientation a at z=0
-	$self->{conn0} = {
-		A => [0, 2, 4], C => [0, 1, 2, 4], D => [0], F => [0], G => [0],
-		H => [0, 3], I => [0, 3], J => [0, 3], K => [3], M => [0, 3],
-		N => [0, 1, 3, 5], P => [0, 2, 4], Q => [0, 3], S => [0, 2, 4],
-		T => [0, 4], U => [0, 2, 4], V => [0, 3], W => [0, 2, 3, 4],
-		X => [0, 1, 3, 4], Y => [0, 2, 4], Z => [0, 2, 4], xA => [0, 3],
-		xB => [0, 3], xC => [qw(0 1 2 3 4 5)], xD => [1, 5], xF => [0],
-		xH => [0], xI => [qw(0 1 2 3 4 5)], xK => [3],
-		xM => [0, 2, 4], xQ => [0, 3], xR => [0, 3],
-		xS => [qw(0 1 2 3 4 5)],
-		xT => [0], xV => [0, 2, 4], xW => [0, 1, 3, 4],
-		xX => [qw(0 1 2 3 4 5)], xY => [qw(0 1 2 3 4)], xZ => [0, 3],
-		yC => [qw(0 1 3 4)], yH => [qw(0 1 2 3 4 5)], yI => [qw(0 1 3 5)],
-		yT => [qw(0 1 2 3 4 5)], yV => [0, 3], yW => [qw(0 2 3 5)],
-		yX => [qw(0 1 2 3 4 5)], yY => [qw(0 2 3 4 5)],
-	};
-	# rail direction at level ...->[0], v means variable direction
-	$self->{conn1} = {xF => ['v', 'v'], xH => ['v', 'v'], xM => [7, 0, 2, 4],
-		xT => [2, 5], yH => [qw(7 0 1 2 3 4 5)], yT => [qw(7 0 1 2 3 4 5)],
-		yV => [7, 1, 2, 4, 5]};
 	bless $self => $class;
 	$self->config();
 }
@@ -127,7 +106,7 @@ sub find_to_tile {
 		# vertical tunnel needs 2 ids at the same position, 1st has dz=0
 		shift @ids if $r eq 't';
 		my %dz0 = (t=>7, a=>5, b=>14, c=>5, d=>5, xT=>2, xM=>7, yH=>7, yT=>7,
-			yV=>7, xt=>7);
+			yV=>7, xt=>6);
 		my %dz1 = (s =>5, m=>7, l=>8, t=>7, a=>7, b=>18, c=>7, d=>7, g=>7,
 			q=>7, xT=>2, xM=>7, yH=>7, yT=>7, yV=>7, xt=>7);
 		return undef if ! @ids;
@@ -226,7 +205,7 @@ sub verify_rail_endpoints {
 					}
 					if ($tile eq 'xH') {
 						# direction in for spiral depends on number of elements
-						$case2->{xH}[0] = (2*$t->[4] - 1 - $dir) % 6;
+						$case2->{xH}[0] = (2*$t->[4] - 2 - $dir) % 6;
 					} elsif ($tile eq 'xF') {
 						# direction out for lift is stored in detail
 						$case2->{xF}[0] = ord($1) - 97 if $t->[4] =~ /([a-f])/;
@@ -235,15 +214,15 @@ sub verify_rail_endpoints {
 					# skip height tiles
 					next if ! $tile;
 					my $my_dir = $r->[3];
-					$my_dir = $r->[4] if defined $r->[4] and $r->[2] ne 'xb';
 					$ok = 1 if defined $dir
 						and grep {$my_dir == ($_+$dir)%6} @{$cases->{$tile}};
 					if ($tile and exists $self->{conn1}{$tile}) {
 						$ok = 1 if defined $dir
 							and grep {$my_dir==($_+$dir)%6} @{$case2->{$tile}};
 					}
+					my $reverse = 0;
 					# special case vertical tube (not all situations covered)
-					last if $r->[2] eq 't' and keys %{$t_pos{$from}} == 2 and ! $ok;
+					#last if $r->[2] eq 't' and keys %{$t_pos{$from}} == 2 and ! $ok;
 					last if $ok;
 
 				}
@@ -265,7 +244,7 @@ sub verify_rail_endpoints {
 					if ($tile eq 'xH') {
 						my ($h) = grep {$_->[0] eq 'xH' and $r->[0] == $_->[1]
 							and $r->[1] == $_->[2]} @$data;
-						$case2->{xH}[0] = (2*$h->[4] - 1 -$dir) % 6;
+						$case2->{xH}[0] = (2*$h->[4] + 1 - $dir) % 6;
 					} elsif ($tile eq 'xF') {
 						my ($f) = grep {$_->[0] eq 'xF' and $r->[0] == $_->[1]
 							and $r->[1] == $_->[2]} @$data;
@@ -273,7 +252,7 @@ sub verify_rail_endpoints {
 						$case2->{xF}[0] = ($case2->{xF}[0] - $dir) % 6;
 					}
 					my $reverse = 3;
-					# vertical rail: no reverse, curved rail: adjust
+					# vertical rail: no reverse, curved rail, flextube: adjust
 					if ($r->[2] eq 't') {
 						$reverse = 0;
 					} elsif ($r->[2] eq 'c') {
@@ -613,7 +592,7 @@ sub plane_lines {
 			$level = 0;
 			$level_pos = 0;
 		# analyse level line
-		} elsif (/^\d+\s+[=^#]*(?:level|$loc_level)(?:[:=\s]+|$)(.*)/i) {
+		} elsif (/^\d+\s+[^#]*(?:level|$loc_level)(?:[:=\s]+|$)(.*)/i) {
 			$level = $1;
 			if ($level !~ /^\d+$/) {
 				my $bad = $level || '';
@@ -638,6 +617,7 @@ sub plane_lines {
 			$level_pos = 0;
 		}
 	}
+	#use Data::Dumper;print Dumper $lines;exit;
 }
 
 sub get_offsets {

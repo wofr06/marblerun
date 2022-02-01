@@ -71,9 +71,6 @@ sub set_size {
 	$self->{corner_y} = [$corner_y, [@$corner_y[2..5]], [@$corner_y[0..2,5]]];
 	# diameter of rail bars, thickness of transparent planes etc.
 	$self->{small_width} = 0.05*$size;
-	# fraction of size for green hexagon in tile
-	$self->{twoby3} = 2/3.;
-	$self->{r_ball} = 0.1;
 }
 
 sub center_pos {
@@ -606,7 +603,7 @@ sub put_lever {
 	my $angle = 60 * (($orient + 3) % 6);
 	$detail = $detail ? ($detail eq '+' ? 15 : -15) : 0;
 	my ($xm, $ym) = $self->center_pos($posx, $posy);
-	my $g = $svg->group(class => 'lever', style => {fill => 'url(#mygreen)'},
+	my $g = $svg->group(id => "lever$posx$posy", style => {fill => 'url(#mygreen)'},
 		transform => "rotate($angle, $xm, $ym)");
 	$g->path(d =>"M $l0x $l1y A $c{r} $c{r} 0 0 1 $l0x $l0y l $lg2 -$c{lg}
 		q $q2 -$c{q} $q4 0 l $lg2 $c{lg} A $c{r} $c{r} 0 0 1 $l2x $l1y
@@ -712,9 +709,9 @@ sub put_Balls {
 				($x, $y) = ($x0+$frac*($x1-$x0), $y0+$frac*($y1-$y0));
 			}
 		}
-		my $g = $svg->group(class => "marble$id");
+		my $g = $svg->group(id => "marble$id");
 		$g->circle(cx=>$x, cy=>$y, r=>$r, style=>{fill=>$srgb{$color}});
-		my $tag = $g->gradient(-type => 'radial', class => "radial$id",
+		my $tag = $g->gradient(-type => 'radial', id => "radial$id",
 			gradientUnits => 'userSpaceOnUse', cx => $x, cy => $y, r => $r,
 			fy => $y - 0.4*$r, fx => $x - 0.4*$r);
 		$tag->stop(style=>{"stop-color"=>"#fff"});
@@ -826,7 +823,7 @@ sub put_small_lever {
 	my $y5 = $y4 - $c{r};
 	my $angle = 60 * (($orient + 3) % 6);
 	$detail = $detail ? ($detail eq '+' ? 15 : -15) : 0;
-	my $g = $svg->group(class => 'small lever', style => {fill => 'url(#mygreen)'},
+	my $g = $svg->group(id => "small lever$x$y", style => {fill => 'url(#mygreen)'},
 		transform => "rotate($angle, $x0, $y0)");
     $g->path(d => "M $x1 $y1 A $c{r} $c{r} 0 1 1 $x2 $y1 C $x0 $y3 $x4 $y4 $x4 $y4 L $x5, $y4 C $x5 $y5 $x0 $y3 $x1 $y1", transform => "rotate($detail, $x0, $y1)");
 }
@@ -947,134 +944,10 @@ sub put_Splash {
 	$self->put_arc_or_bezier($x, $y, $orient + 5, $self->{twoby3}, 1/3, $r);
 }
 
-sub features {
-	my ($self) = @_;
-	# Tiles
-	# symbol dir_in dir_out z_in z_out cond result speed
-	#      0      1       2    3     4    5      6     7
-	# direction M means middle (in or out), e.g. for vortex, drop, catcher
-	# cond = [n]o[dir] n marbles, direction dir must be present,
-	# cond = n z difference at least n
-	# cond = s one time action, cond becomes S after the action
-	# cond + or - state (detail for S, U) changes to opposite char
-	# cond = n1 and result = n2 state n1 becomes state n2 (xM, xV)
-	# result = n: state after marble entered tile o[dir]: outgoing marble
-	my $tile = [
-		# sym din dout zin zout   cond result
-		['A',  '',   0,  0,   0,  'o0', 'o0'],
-		['A',  '',   2,  0,   0,  'o2', 'o2'],
-		['A',  '',   4,  0,   0,  'o4', 'o4'],
-		['C',   0,   4,  0,   0,     0],
-		['C',   1,   2,  0,   0,     0],
-		['C',   2,   1,  0,   0,     0],
-		['C',   4,   0,  0,   0,     0],
-		['D',   0, 'M',  0,   0,     4],
-		['F',   3,   0,  0,   6,   's'],
-		['G', 'M',   0,  0,   0,     0],
-		['H',   3,   0,  0,   0,   's'],
-		['I',   3,   0,  0,   0,     0],
-		['J',   3,   0,  0, 6-7,   's'],
-		['K',   3,   0,  0,   9,   's'],
-		['M',   3,  '',  0,   0, '2o0',  'o0'],
-		['N',   0,   1,  0,   0,   's',  'o0'],
-		['N',   0,   3,  0,   0,   's',  'o2'],
-		['N',   0,   5,  0,   0,   's',  'o4'],
-		['O', 'M', 'M',  0,   0,    3],
-		['P', 'M',   0,  0,   0,   's',  'o0'],
-		['P', 'M',   2,  0,   0,   's',  'o2'],
-		['P', 'M',   4,  0,   0,   's',  'o4'],
-		['Q',   3,   0,  0,  0,     0],
-		['R',   3,   0, '>= 3', '>= 0', 0],
-		['S',   0,   2,  0,   0,   '-'],
-		['S',   0,   4,  0,   0,   '+'],
-		['S',   4,   0,  0,   0,   '-'],
-		['S',   2,   0,  0,   0,   '+'],
-		['T',   0,   4,  0,   0,     0],
-		['T',   1,   2,  0,   0,     0],
-		['T',   2,   1,  0,   0,     0],
-		['T',   4,   0,  0,   0,     0],
-		['U',   0,   2,  0,   0,   '-'],
-		['U',   0,   4,  0,   0,   '+'],
-		['U',   4,   0,  0,   0,   '-'],
-		['U',   2,   0,  0,   0,   '+'],
-		['V',   0, 'M',  0,   0,     4],
-		['V',   3, 'M',  0,   0,     4],
-		['W',   2,   0,  0,   0,     0],
-		['W',   3,   0,  0,   0,     0],
-		['W',   4,   0,  0,   0,     0],
-		['W',   0,   3,  0,   0,     0],
-		['X',   0,   3,  0,   0,     0],
-		['X',   1,   4,  0,   0,     0],
-		['X',   3,   0,  0,   0,     0],
-		['X',   4,   1,  0,   0,     0],
-		['Y',   2,   0,  0,   0,     0],
-		['Y',   4,   0,  0,   0,     0],
-		['Y',   0,   2,  4,   0,     0],
-		['Z',   0,  '',  0,   0,     0],
-		['Z',   2,  '',  0,   0,     0],
-		['Z',   4,  '',  0,   0,     0],
-		['xA',  3,   0, 3-10, 3-10,'o0',   'o0'],
-		['xB',  3,   0,  0,   0,     0],
-		['xD',  0,   1,  6-7,   0, '+'],
-		['xD',  0,   5,  6-7,   0, '-'],
-		['xF', 'detail2', '7+8*(detail1 -2)', 0, 0, '3*(detail1 -2)', 0],
-		['xH', 'detail %6', 0, 'detail', 0, 0],
-		['xK',  3,   0,  0,  15,   's'],
-		['xM',  0,   3,  7,   7, 'fast', 'fast'],
-		['xM',  0,   2,  7,   0,      0,      3],
-		['xM',  0,   5,  7,   0,      3,      0],
-		['xR',  3,   0, 10, 8-9,   's'],
-		['xS',  '',   0,  0,   0,  'o0', 'o0'],
-		['xS',  '',   0,  0,   0,  'o1', 'o1'],
-		['xS',  '',   0,  0,   0,  'o2', 'o2'],
-		['xS',  '',   0,  0,   0,  'o3', 'o3'],
-		['xS',  '',   0,  0,   0,  'o4', 'o4'],
-		['xS',  '',   0,  0,   0,  'o5', 'o5'],
-		['xT',  5,  '',  2,   0,    ''],
-		['xT',  5,  '',  2,   0,  'o0'],
-		['xT',  5,   0,  2,   0,  '2o0',  '3o0'],
-		['yV', 'M',  0,  7,   0,      0,      4],
-		['yV', 'M',  4,  7,   0,      4,      2],
-		['yV', 'M',  2,  7,   0,      2,      0],
-		['xZ',  3,   0,  0,   0,   'o0',   'o0'],
-	];
-	# Rails
-	# symbol length z_min z_max special
-	#      0      1     2     3       4
-	my $rail = [
-		['a', 2, 6, 7,],
-		['b', 4, 12, 16,],
-		['c', 2, 5, 7, '-'],
-		['d', 2, 5, 7, '+'],
-		['e', 1, 0, 0,],
-		['g', 5, 0, 7,],
-		['l', 4, 0, 8,],
-		['m', 3, 0, 7,],
-		['q', 5, 0, 7,],
-		['s', 2, 0, 5,],
-		['t', 0, 7, 7,],
-		['u', 4, 0, 9, 'hole'],
-		['v', 4, 0, 9, 'hole'],
-		['xa', 4, 3, 10,],
-		['xb', 5, 0, 0, 'detail'],
-	];
-	#Position of marbles on tiles
-	my %offset = (A => 0.25, 'xF' => 0, M => 2*$self->{r_ball},
-		N => 1./24.+$self->{r_ball}, P => 1./12.+$self->{r_ball},
-		xA => 2*$self->{r_ball}, xZ => 2*$self->{r_ball},
-		xB => [[-0.3, -0.25], [-0.3, 0.25]], Z => 1.5*$self->{r_ball},
-		xK => [[-0.2, -0.3], [-0.2, 0.3], [0.2, -0.3], [0.2, 0.3]],
-	);
-	push @{$self->{tile}{$_->[0]}}, $_ for @$tile;
-	$self->{rail}{$_->[0]} = $_ for @$rail;
-	$self->{offset}{$_} = $offset{$_} for keys %offset;
-}
-
 sub do_run {
 	my ($self, $run_id) = @_;
 	my ($meta, $tiles, $rails, $marbles) = $self->fetch_run_data($run_id);
 	my ($t_pos, $t_id, $state, $marble);
-	$self->features();
 	my $i_tile = 0;
 	my $ball = 0;
 	# check if the code for animation is already working
@@ -1120,10 +993,11 @@ sub do_run {
 		$t_pos->{"$x,$y"}{$z} = $i_tile++;
 	}
 # temporary check whether animation is already working
-if ($animate) {
+	if ($animate) {
 	# begin is at start tile or lift
 	my @colors = map {$_->[4]} @$marble;
 	my $xyz = $self->neighbor($marble, $t_pos, $t_id, $tiles, $rails, $state);
+	#print Dumper $xyz;exit;
 	return if ! $xyz;
 	my (@begin, @dur, @path, @p);
 	my $i = 0;
@@ -1148,8 +1022,10 @@ if ($animate) {
 		for my $z (keys %{$state->{$s}}) {
 			next if $state->{$s}{$z} !~ /o[RGBS](\d|x)/;
 			my @pos = grep {/^[RGBS](\d|x)$/} split /o/, $state->{$s}{$z};
+			#say "### @pos";
 			my ($sym, $x, $y) = @{$tiles->[$t_pos->{$s}{$z}]}[2,3,4];
 			my $desc = [map {[0, substr($_, 1, 1), substr($_, 0, 1)]} @pos];
+			#print Dumper $desc;
 			$self->put_Balls($x, $y, $self->{offset}{$sym}, $desc, 0, 1);
 		}
 	}
@@ -1159,6 +1035,7 @@ sub generate_path {
 	my ($self, $ball, $xyz) = @_;
 	my ($x0, $y0) = $self->center_pos($xyz->[0][1], $xyz->[0][2]);
 	# start tile needs an offset in marble direction
+	#print Dumper $xyz; exit;
 	if ($xyz->[0][0] eq 'A') {
 		my $dir = $xyz->[0][5];
 		my ($dx, $dy) = (2*$self->{middle_x}[$dir], 2*$self->{middle_y}[$dir]);
@@ -1168,6 +1045,7 @@ sub generate_path {
 	my $path = "M 0 0";
 	my $len = 0;
 	for (my $i = 1; $i < @$xyz; $i++) {
+		#print Dumper $xyz->[$i];
 		my ($sym, $x, $y, $z, $dir) = @{$xyz->[$i]};
 		last if ! $sym;
 		if ($dir eq 'M') {
@@ -1196,6 +1074,7 @@ sub generate_path {
 			my ($x,$y) = $self->center_pos($x, $y);
 			my $out = $xyz->[$i+1][4];
 			$out = $xyz->[$i][5] if exists $xyz->[$i][5];
+			#say "$sym in $dir out $out";
 			$out = $dir if ! defined $out;
 			my ($dx, $dy) = ($self->{middle_x}[$out], $self->{middle_y}[$out]);
 			$x += $dx - $x0;
@@ -1256,8 +1135,11 @@ sub rule_check {
 	my @dirs;
 	my ($z_in, $dir_in, $dir_out) = @$elem_in[1..3];
 	my $tile = $tiles->[$elem_in->[0]];
+	#say "tile id ? sym x y z dir @$tile";
 
 	my ($id, $sym, $x, $y, $z, $dir) = @$tile[0, 2..6];
+	#say "$ball: In next tile $id $sym at xyz=$x,$y,$z, orient $dir ",
+	#	"from z=$z_in dir $dir_in to dir $dir_out";
 	for (@{$self->{tile}{$sym}}) {
 		my ($r_in, $r_out, $r_zin, $r_zout, $r_cond) = @$_[1..$#$_];
 		# drop, vortex, ...
@@ -1265,13 +1147,19 @@ sub rule_check {
 			@dirs = ('M') if ($z -$z_in) >= $r_cond;
 			return @dirs;
 		}
+		#say "rule?$sym in=$r_in, out=$r_out z $r_zin -> $r_zout cond ",$r_cond||'';
 		next if $r_in =~ /\d/ and $r_in != ($dir_in - $dir) % 6;
+		#say "rule=$sym in=$r_in, out=$r_out z $r_zin -> $r_zout cond ",$r_cond||'';
 		# marbles present
 		if ($r_cond and $r_cond =~ /o(\d)/) {
-			next if $1 ne $dir_out;
+			my $r_cond_out = ($1 + $dir) % 6;
+			next if $r_cond_out ne $dir_out;
+		print "dir_out=$1\n";
 			if ($state->{"$x,$y"}{$z} =~ /($dir_out)|(x)/) {
 				my $odir = defined $1 ? $1 : $2;
+				print "dir_out ok\n";
 				push @dirs, $dir_out;
+				$state->{"$x,$y"}{$z} =~ s/$odir/-1/;
 			}
 		} else {
 			# landing tile, finish track
@@ -1281,9 +1169,11 @@ sub rule_check {
 				last;
 			}
 			my $odir = ($dir + $r_out) % 6;
+			#say "$sym: in $r_in out: $r_out, dir=$dir odir=$odir";
 			push @dirs, $odir;
 		}
 	}
+	#say "return @dirs";
 	return @dirs;
 }
 
@@ -1294,14 +1184,17 @@ sub neighbor {
 	for my $m (@$balls) {
 		$ball++;
 		while ($m) {
+			#say "ball $ball = id z dir in dir out col @$m";
 			last if ! defined $m->[0];
 			my ($z_elem, $dir_elem, $dir_out, $color) = @$m[1..4];
 			my $t = $tiles->[$m->[0]];
 			@dirs = ();
 			my ($id, $sym, $x, $y, $z, $dir) = @$t[0, 2..6];
+			#say "$ball: In tile $id $sym at xyz=$x,$y,$z, orient $dir ball in dir=", $dir_elem || '';
 			push @{$xyz->[$ball]}, [$sym, $x, $y, $z, $dir_elem];
 			# check condition
 			my @res = $self->rule_check($ball, $tiles, $m, $state, $xyz);
+			#say "out dirs = @res";
 			$m = undef;
 			for (@{$self->{tile}{$sym}}) {
 				my ($elem, $in, $out, $z_in, $z_out, $cond) = @$_;
@@ -1336,8 +1229,10 @@ sub neighbor {
 				my $tnew = $tile_pos->{"$x,$y"}{$znew};
 				($id, $sym, $x, $y, $z, $dir) = @{$tiles->[$tnew]}[0, 2..6];
 				$m = [$tile_pos->{"$x,$y"}{$z}, $z, 'M', $dir, $color];
+				#say "$ball: $sym z=$z out=$dir, was ", $xyz->[$ball][-1][5] || -1;
 				next;
 			}
+			#say "$ball: $sym dirs=@dirs";
 			$xyz->[$ball][-1][5] = $dirs[0] if @dirs and @dirs == 1;
 
 			for my $d (@dirs) {
@@ -1348,11 +1243,13 @@ sub neighbor {
 					if (exists $tile_pos->{$xy}{$z_elem} or $z_elem < 0) {
 						$z_elem = $z if $z_elem < 0;
 						$m = [$tile_pos->{$xy}{$z_elem}, $z, ($d+3)%6, $d, $color];
+						#say "$ball: $sym z=$z out=$d, was ", $xyz->[$ball][-1][5] || -1;
 						$xyz->[$ball][-1][5] = $d;
 						last;
 					}
 				}
 				# check rails
+				#print Dumper $rails;exit;
 				for my $r (@$rails) {
 					# outgoing dir for a rail is the from direction
 					my ($t_id, $d_from);
@@ -1363,6 +1260,7 @@ sub neighbor {
 					} else {
 						next;
 					}
+					#say "check rail $r->[0] on $id: conn at $r->[2],$r->[4], dir $r->[1]";
 					# finish line, end of track
 					if ($r->[0] eq 'e') {
 						my ($x, $y) = $self->to_position($x, $y, $d, 1);
@@ -1376,6 +1274,7 @@ sub neighbor {
 					if ($dz < $chk->[2] or $dz > $chk->[3]) {
 						say "$chk->[2] <= $dz <= $chk->[3] not true (should not happen)";
 					}
+					#say "$ball: $sym In rail $r->[0] dir $d z=$z -> $tiles->[$t_id][5] ";
 					push @{$xyz->[$ball]}, [$r->[0],
 						@{$tiles->[$t_id]}[3,4,5], $d];
 					$m = [$t_id, -1, $d_from, $d, $color];
@@ -1383,6 +1282,7 @@ sub neighbor {
 			}
 		}
 	}
+	#print Dumper $xyz;exit;
 	return $xyz;
 }
 

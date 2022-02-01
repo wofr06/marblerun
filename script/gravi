@@ -60,6 +60,7 @@ $g->{relative} = $opt{r};
 if ($opt{a}) {
 	if (@ARGV) {
 		for (@ARGV) {
+			$g = Game::MarbleRun::Draw->new(%attr);
 			my $input = Game::MarbleRun::Store->new(%attr);
 			$input->{verbose} = $opt{v};
 			if (-d $_) {

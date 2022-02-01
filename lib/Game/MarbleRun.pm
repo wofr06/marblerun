@@ -34,7 +34,216 @@ sub config {
 	$self->{elem_name} = $self->query_table('char,name', 'element');
 	$self->{people} = $self->query_table('id,name', 'person');
 	$self->{run_ids} = $self->query_table('digest,id', 'run');
+	$self->features();
 	return $self;
+}
+
+sub features {
+	my ($self) = @_;
+	# Tiles
+	# symbol dir_in dir_out z_in z_out cond result speed
+	#      0      1       2    3     4    5      6     7
+	# direction M means middle (in or out), e.g. for vortex, drop, catcher
+	# cond = [n]o[dir] n marbles, direction dir must be present,
+	# cond = n z difference at least |n|
+	# cond = 's' one time action, cond becomes S after the action
+	# cond = '+' or '-' state (detail for S, U) changes to opposite char
+	# cond = n1 and result = n2 state n1 becomes state n2 (xM, xV)
+	# cond = 'x' din, dout cannot be reversed
+	# cond = 0 din, dout and zin, zout can be reversed if din != M, dout != ''
+	# result = n: state after marble entered tile o[dir]: outgoing marble
+	my $tile = [
+		# sym   din dout    zin    zout    cond  result
+		[ 'A',  '',   0,      0,      0,   'o0', 'o0'],
+		[ 'A',  '',   2,      0,      0,   'o2', 'o2'],
+		[ 'A',  '',   4,      0,      0,   'o4', 'o4'],
+		[ 'C',   0,   4,      0,      0,     0],
+		[ 'C',   1,   2,      0,      0,     0],
+		[ 'D',   0, 'M',      0,      0,    -4],
+		[ 'F',   0,   3,      0,      6,   's'],
+		[ 'G', 'M',   0,      0,      0,     0],
+		[ 'G',   0,   0,      0,      0,     0],
+		[ 'H',   3,   0,      0,      0,   's'],
+		[ 'I',   3,   0,      0,      0,     0],
+		[ 'J',   3,   0,      0,    6-7,   's'],
+		[ 'K',   3,   0,      0,      9,   's'],
+		[ 'M',   3,   0,      0,      0, '2o0o3', 'o0'],
+		[ 'N',   0,   1,      0,      0,    's',  'o0'],
+		[ 'N',   0,   3,      0,      0,    's',  'o2'],
+		[ 'N',   0,   5,      0,      0,    's',  'o4'],
+		[ 'O', 'M', 'M',      0,      0,    -3],
+		[ 'P', 'M',   0,      0,      0,    's',  'o0'],
+		[ 'P', 'M',   2,      0,      0,    's',  'o2'],
+		[ 'P', 'M',   4,      0,      0,    's',  'o4'],
+		[ 'Q',   3,   0,      0,      0,     0],
+		[ 'R',   3,   0,      0,    0-8,     3],
+		[ 'S',   0,   2,      0,      0,   '-'],
+		[ 'S',   0,   4,      0,      0,   '+'],
+		[ 'S',   4,   0,      0,      0,   '-'],
+		[ 'S',   2,   0,      0,      0,   '+'],
+		[ 'T',   0,   4,      0,      0,     0],
+		[ 'U',   0,   2,      0,      0,   '-'],
+		[ 'U',   0,   4,      0,      0,   '+'],
+		[ 'U',   4,   0,      0,      0,   '-'],
+		[ 'U',   2,   0,      0,      0,   '+'],
+		[ 'V',   0, 'M',      0,      0,    -4],
+		[ 'V',   3, 'M',      0,      0,    -4],
+		[ 'W',   2,   0,      0,      0,   'x'],
+		[ 'W',   3,   0,      0,      0,   'x'],
+		[ 'W',   4,   0,      0,      0,   'x'],
+		[ 'W',   0,   3,      0,      0,   'x'],
+		[ 'X',   0,   3,      0,      0,     0],
+		[ 'X',   1,   4,      0,      0,     0],
+		[ 'Y',   2,   0,      0,      0,   'x'],
+		[ 'Y',   4,   0,      0,      0,   'x'],
+		[ 'Y',   0,   2,      0,      0,   'x'],
+		[ 'Z',   0,  '',      0,      0,     0],
+		[ 'Z',   2,  '',      0,      0,     0],
+		[ 'Z',   4,  '',      0,      0,     0],
+		['xA',   3,   0,      0,      0, 'o0o3',  'o0'],
+		['xB',   3,   0,      0,      0,     1,      0],
+		['xB',   0,   3,      0,      0,     0,      0],
+		['xC',   0,   1,      0,      0,     0],
+		['xC',   2,   3,      0,      0,     0],
+		['xC',   4,   5,      0,      0,     0],
+		['xD',   0,   1,    6-7,      0,   '+'],
+		['xD',   0,   5,    6-7,      0,   '-'],
+		['xF', 'detail2', 0,  0, '7+8*(detail1 -2)', '3*(detail1 -2)', 'o0'],
+		['xH', 'detail %6', 0, 'detail',  0, 0],
+		['xI',   0,   3,      0,      0,     0],
+		['xI',   1,   2,      0,      0,     0],
+		['xI',   4,   5,      0,      0,     0],
+		['xK',   3,   0,      0,   0-15,   's'],
+		['xM',   0,   3,      7,      7, 'fast', 'fast'],
+		['xM',   0,   2,      7,      0,      0,      3],
+		['xM',   0,   5,      7,      0,      3,      0],
+		['xQ',   0,   1,      0,      0,     0],
+		['xR',   3,   0,     10,    8-9,   's'],
+		['xS',  '',   0,      0,      0,   'o0',  'o0'],
+		['xS',  '',   1,      0,      0,   'o1',  'o1'],
+		['xS',  '',   2,      0,      0,   'o2',  'o2'],
+		['xS',  '',   3,      0,      0,   'o3',  'o3'],
+		['xS',  '',   4,      0,      0,   'o4',  'o4'],
+		['xS',  '',   5,      0,      0,   'o5',  'o5'],
+		['xT',   5,  '',      2,      0,    ''],
+		['xT',   5,  '',      2,      0,  'o0'],
+		['xT',   5,   0,      2,      0,  '2o0', '3o0'],
+		['xV',   0, 'M',      0,      0,    -4],
+		['xV',   2, 'M',      0,      0,    -4],
+		['xV',   4, 'M',      0,      0,    -4],
+		['xW',   0,   3,      0,      0,     0],
+		['xW',   1,   3,      0,      0,   'x'],
+		['xW',   4,   0,      0,      0,   'x'],
+		['xX',   0,   3,      0,      0,     0],
+		['xX',   1,   4,      0,      0,     0],
+		['xX',   2,   5,      0,      0,     0],
+		['xY',   0,   3,      0,      0,     0],
+		['xY',   1,   2,      0,      0,     0],
+		['xY',   4,   0,      0,      0,   'x'],
+		['xZ',   3,   0,      0,      0, 'o0o3',  'o0'],
+		['yC',   0,   4,      0,      0,     0],
+		['yC',   1,   3,      0,      0,     0],
+		['yH',   0,   3,      7,      0,     0],
+		['yH',   1,   4,      7,      0,     0],
+		['yH',   2,   5,      7,      0,     0],
+		['yH',   2,   0,      7,      0,     0],
+		['yH',   3,   1,      7,      0,     0],
+		['yH',   4,   2,      7,      0,     0],
+		['yI',   0,   3,      0,      0,     0],
+		['yI',   1,   5,      0,      0,     0],
+		['yT',   0,   3,      0,      0,     0],
+		['yT',   1,   4,      0,      0,     1],
+		['yT',   2,   5,      0,      0,     2],
+		['yT',   0,   5,      7,      0,      2,     1],
+		['yT',   0,   5,      7,      0,      1,     0],
+		['yT',   1,   0,      7,      0,      2,     1],
+		['yT',   1,   0,      7,      0,      0,     5],
+		['yT',   2,   1,      7,      0,      1,     0],
+		['yT',   2,   1,      7,      0,      0,     5],
+		['yT',   3,   2,      7,      0,      2,     1],
+		['yT',   3,   2,      7,      0,      1,     0],
+		['yT',   4,   3,      7,      0,      2,     1],
+		['yT',   4,   3,      7,      0,      0,     5],
+		['yT',   5,   4,      7,      0,      1,     0],
+		['yT',   5,   4,      7,      0,      0,     5],
+		['yV',  0,  'M',      7,      0,      0,     4],
+		['yV',  4,  'M',      7,      0,      4,     2],
+		['yV',  2,  'M',      7,      0,      2,     0],
+		['yW',   2,   0,      0,      0,   'x'],
+		['yW',   5,   3,      0,      0,   'x'],
+		['yW',   0,   3,      0,      0,     0],
+		['yX',   0,   4,      0,      0,     0],
+		['yX',   1,   5,      0,      0,     0],
+		['yX',   2,   3,      0,      0,     0],
+		['yY',   0,   3,      0,      0,     0],
+		['yY',   4,   5,      0,      0,     0],
+		['yY',   2,   0,      0,      0,   'x'],
+	];
+	# Rails
+	# symbol length z_min z_max special
+	#      0      1     2     3       4
+	my $rail = [
+		['a', 2, 6, 7,],
+		['b', 4, 12, 16,],
+		['c', 2, 5, 7, '-'],
+		['d', 2, 5, 7, '+'],
+		['e', 1, 0, 0,],
+		['g', 5, 0, 7,],
+		['l', 4, 0, 8,],
+		['m', 3, 0, 7,],
+		['q', 5, 0, 7,],
+		['s', 2, 0, 5,],
+		['t', 0, 7, 7,],
+		['u', 4, 0, 9, 'hole'],
+		['v', 4, 0, 9, 'hole'],
+		['xa', 4, 3, 10,],
+		['xb', 5, 0, 0, 'detail'],
+	];
+	# fraction of size for green hexagon in tile
+	$self->{twoby3} = 2/3.;
+	$self->{r_ball} = 0.1;
+	#Position of marbles on tiles
+	my %offset = (A => 0.25, 'xF' => 0, M => 2*$self->{r_ball},
+		N => 1./24.+$self->{r_ball}, P => 1./12.+$self->{r_ball},
+		xA => 2*$self->{r_ball}, xZ => 2*$self->{r_ball},
+		xB => [[-0.3, -0.25], [-0.3, 0.25]], Z => 1.5*$self->{r_ball},
+		xK => [[-0.2, -0.3], [-0.2, 0.3], [0.2, -0.3], [0.2, 0.3]],
+	);
+	push @{$self->{tile}{$_->[0]}}, $_ for @$tile;
+	$self->{rail}{$_->[0]} = $_ for @$rail;
+	$self->{offset}{$_} = $offset{$_} for keys %offset;
+	# possible rail directions for tiles with orientation a at z=0
+	$self->{conn0} = {
+		A => [0, 2, 4], C => [0, 1, 2, 4], D => [0], F => [0], G => [0],
+		H => [0, 3], I => [0, 3], J => [0, 3], K => [3], M => [0, 3],
+		N => [0, 1, 3, 5], P => [0, 2, 4], Q => [0, 3], S => [0, 2, 4],
+		T => [0, 4], U => [0, 2, 4], V => [0, 3], W => [0, 2, 3, 4],
+		X => [0, 1, 3, 4], Y => [0, 2, 4], Z => [0, 2, 4], xA => [0, 3],
+		xB => [0, 3], xC => [qw(0 1 2 3 4 5)], xD => [1, 5], xF => [0],
+		xH => [0], xI => [qw(0 1 2 3 4 5)], xK => [3],
+		xM => [0, 2, 4], xQ => [0, 1], xR => [0, 3],
+		xS => [qw(0 1 2 3 4 5)],
+		xT => [0], xV => [0, 2, 4], xW => [0, 1, 3, 4],
+		xX => [qw(0 1 2 3 4 5)], xY => [qw(0 1 2 3 4)], xZ => [0, 3],
+		yC => [qw(0 1 3 4)], yH => [qw(0 1 2 3 4 5)], yI => [qw(0 1 3 5)],
+		yT => [qw(0 1 2 3 4 5)], yV => [0, 3], yW => [qw(0 2 3 5)],
+		yX => [qw(0 1 2 3 4 5)], yY => [qw(0 2 3 4 5)],
+	};
+	my ($conn0, $conn1);
+	for my $t (@$tile) {
+		my ($elem, $din, $dout, $z1, $z2, $cond, $res) = @$t;
+		$conn0->{$elem}{$din} = 1 if $din !~ /^$|M|detail/ and $z1 eq '0';
+		$conn0->{$elem}{$dout} = 1 if $dout !~ /^$|M|detail/ and $z2 eq '0';
+		$conn1->{$elem}{$din} = 1 if $din !~ /^$|M|detail/ and $z1 ne '0';
+		$conn1->{$elem}{$dout} = 1 if $dout !~ /^$|M|detail/ and $z2 ne '0';
+	}
+	$conn0->{$_} = [sort keys %{$conn0->{$_}}] for keys %$conn0;
+	$conn1->{$_} = [sort keys %{$conn1->{$_}}] for keys %$conn1;
+	# rail direction at level ...->[0], v means variable direction
+	$self->{conn1} = {xF => ['v', 'v'], xH => ['v', 'v'], xM => [7, 0, 2, 4],
+		xT => [2, 5], yH => [qw(7 0 1 2 3 4 5)], yT => [qw(7 0 1 2 3 4 5)],
+		yV => [7, 1, 2, 4, 5]};
+
 }
 
 sub connect_db {
