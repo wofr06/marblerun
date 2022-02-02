@@ -617,7 +617,6 @@ sub plane_lines {
 			$level_pos = 0;
 		}
 	}
-	#use Data::Dumper;print Dumper $lines;exit;
 }
 
 sub get_offsets {
@@ -781,7 +780,7 @@ sub balcony_height {
 		# adjust z of tiles on top of balcony
 		if ($elem ne 'B') {
 			$_->[3] += $inc if $inc;
-			$_->[6] = $l_max;
+			$_->[6] = $l_max if $elem !~ /^[=^]$/;
 			next;
 		}
 		# treat balconies, set a default for the detail, if not given
@@ -799,7 +798,7 @@ sub balcony_height {
 			if ($pillar < @$z) {
 				$inc = $z->[$pillar] - 14;
 				$_->[3] = 2*$hole + $inc;
-				$_->[6] = $l_max;
+				$_->[6] = $l_max if $elem !~ /^[=^]$/;
 				# store in addition wallnumber in detail
 				$_->[4] += 100*$wall_num;
 			} else {
@@ -836,7 +835,7 @@ sub doublebalcony_height {
 	for (grep {($_->[0] eq 'E' or $_->[0] eq 'line') and ! $_->[3]} @$rules) {
 		$self->{line} = $_->[1] if $_->[0] eq 'line';
 		next if $_->[0] ne 'E' or $_->[3];
-		$_->[6] = $l_max;
+		$_->[6] = $l_max if $_->[0] !~ /^[=^]$/;
 		my ($x2, $y2, $detail, $dir) = ($_->[1], $_->[2], $_->[4], $_->[5]);
 		my ($x, $y) = $self->to_position($x2, $y2, 3 + $dir, 1);
 		$detail ||= 1;
@@ -861,7 +860,7 @@ sub doublebalcony_height {
 			$past_E = 1;
 			next if $self->no_rail_connection($_->[0]);
 			$_->[3] += $e_z{"$x,$y"}->[$detail - 1][1] || 0;
-			$_->[6] = $l_max;
+			$_->[6] = $l_max if $_->[0] !~ /^[=^]$/;
 			$past_E = 0;
 		}
 	}
