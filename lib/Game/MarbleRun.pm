@@ -205,7 +205,7 @@ sub features {
 	#Position of marbles on tiles
 	my %offset = (A => 0.25, 'xF' => 0, M => 2*$self->{r_ball},
 		N => 1./24.+$self->{r_ball}, P => 1./12.+$self->{r_ball},
-		xA => 2*$self->{r_ball}, xZ => 2*$self->{r_ball},
+		xA => 2*$self->{r_ball}, xS => 0.375, xZ => 2*$self->{r_ball},
 		xB => [[-0.3, -0.25], [-0.3, 0.25]], Z => 1.5*$self->{r_ball},
 		xK => [[-0.2, -0.3], [-0.2, 0.3], [0.2, -0.3], [0.2, 0.3]],
 	);
@@ -1297,7 +1297,7 @@ sub initial_actions {
 		# tiles with initial states: start, (tunnel)switch, cannon, flip,
 		# hammer, jumper, cascade,vvolcan, splash, lift, catapult, bridge,
 		# zipline, tiptube, mixer, transfer, turntable, splitter
-		next if $t->[2] !~ /^[ASUMFHJKNP]$|^x[FKBATMR]$|^y[TV]$/;
+		next if $t->[2] !~ /^[ASUMFHJKNP]$|^x[FKBASTMR]$|^y[TV]$/;
 		my ($id, $sym, $x, $y, $dir, $detail, $l) = @{$t}[0,2,3,4,6,7,8];
 		# bridges can unfold with 2 elements only
 		next if $sym eq 'xB' and $detail != 2;
@@ -1322,7 +1322,7 @@ sub initial_actions {
 			. ($y - $dxy->[$l][1]) . ($x - $dxy->[$l][0]) if $l and $self->{relative};
 				$pos .= ' (' . loc($elem) . ') ' if $sym;
 		# symbols where marbles can start
-		if ($sym =~ /^[AMNP]$|x[AFT]/) {
+		if ($sym =~ /^[AMNP]$|x[AFST]/) {
 			next if ! exists $m{$id};
 			my ($count, $marbles);
 			# combine repeated marble string (can compare undef values)

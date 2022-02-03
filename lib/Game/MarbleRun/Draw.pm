@@ -219,6 +219,8 @@ sub draw_tile {
 		$self->put_Start($x, $y, $orient);
 	} elsif ($elem eq 'Z') {
 		$self->put_Landing($x, $y, $orient);
+	} elsif ($elem eq 'xS') {
+		$self->put_Spinner($x, $y);
 	} elsif ($elem eq 'M') {
 		$self->put_Cannon($x, $y, $orient);
 	} elsif (($_) = grep {$elem eq $_} qw(xA xZ H J K M Q)) {
@@ -681,7 +683,8 @@ sub put_Balls {
 	my ($self, $xm, $ym, $offset, $marble, $begin, $dur, $path) = @_;
 	# balls are displayed in its initial state for 1s then the animation starts
 	$path ||= 'M 0 0';
-	my %srgb = (S=>'#d5d5d5', R=>'#d54545', G=>'#45d545', B=>'#45d5d5');
+	my %srgb = (S=>'#d5d5d5', R=>'#d54545', G=>'#45d545', B=>'#45d5d5',
+		A=>'#ffd700');
 	my $svg = $self->{svg};
 	my $cnt = 0;
 	my $r = $self->{r_ball}*$self->{size};
@@ -876,6 +879,16 @@ sub put_BasicTile {
 	$self->put_through_line($x, $y, $orient + 4, $thickness);
 }
 
+sub put_Spinner {
+	my ($self, $x, $y) = @_;
+	my $thickness = (1 - $self->{twoby3})/2.;
+	$self->put_hexagon($x, $y);
+	$self->put_hexagon($x, $y, $self->{twoby3}, {fill=>'white'});
+	$self->put_through_line($x, $y, $_, $thickness) for 0 .. 5;
+	$self->put_circle($x, $y, 0.4, {fill => 'url(#mygreen)'});
+	$self->put_circle($x, $y, 0.1, {fill => 'url(#mygreen)'});
+}
+
 sub put_Start {
 	my ($self, $x, $y, $orient) = @_;
 	$self->put_BasicTile($x, $y, $orient);
@@ -960,7 +973,7 @@ sub do_run {
 			$state->{"$x,$y"}{$z} = 1;
 		}
 		# marbles
-		if ($sym =~ /^[AMNP]|x[ABFKTZ]/) {
+		if ($sym =~ /^[AMNP]|x[ABFKSTZ]/) {
 			my $balls = [grep {$t->[0] == $_->[0]} @$marbles];
 			if (!@$balls) {
 				my $n=ref $self->{offset}{$sym} ? @{$self->{offset}{$sym}} : 1;
@@ -1020,8 +1033,8 @@ sub do_run {
 	# display the balls which have not moved
 	for my $s (keys %$state) {
 		for my $z (keys %{$state->{$s}}) {
-			next if $state->{$s}{$z} !~ /o[RGBS](\d|x)/;
-			my @pos = grep {/^[RGBS](\d|x)$/} split /o/, $state->{$s}{$z};
+			next if $state->{$s}{$z} !~ /o[RGBSA](\d|x)/;
+			my @pos = grep {/^[RGBSA](\d|x)$/} split /o/, $state->{$s}{$z};
 			#say "### @pos";
 			my ($sym, $x, $y) = @{$tiles->[$t_pos->{$s}{$z}]}[2,3,4];
 			my $desc = [map {[0, substr($_, 1, 1), substr($_, 0, 1)]} @pos];

@@ -695,6 +695,8 @@ sub marble_orients {
 		if ($tile =~ /^M|x[AFTZ]/) {
 			$r->[1] = $dir;
 			next;
+		} elsif ($tile eq 'xS') {
+			next; # all orientations are allowed
 		} elsif ($tile =~ /^[ANP]/) {
 			if (defined $r->[1] and exists $orient{$r->[1]}) {
 				delete $orient{$r->[1]};
@@ -1143,6 +1145,9 @@ sub parse_run {
 			for (@items) {
 				# marbles
 				my $count = 1;
+				my $max_marbles = 3;
+				$max_marbles = 6 if $tile eq 'xS';
+				$max_marbles = 20 if $tile eq 'xF';
 				$count = $1 if s/^(\d+)o/o/;
 				if (s/^o(.*)/$1/) {
 					my ($orient, $color);
@@ -1150,10 +1155,12 @@ sub parse_run {
 						if (s/([a-f])//) {
 							$orient = ord($1) - 97;
 						}
-						if (s/([RGBS])//) {
+						if (s/([RGBSA])//) {
 							$color = $1;
 						} elsif ($tile =~ /^[ANP]/) {
 							$color = substr('RGB', ($marbles||0) % 3, 1);
+						} elsif ($tile eq 'xS') {
+							$color = substr('RGBRGB', ($marbles||0) % 6, 1);
 						}
 						$self->error("%quant(%1,Excessive char) '%2'",
 							length $_, $_) if $_;
@@ -1162,8 +1169,8 @@ sub parse_run {
 					$marbles += $count;
 
 					push @$f, ['o', $orient, $color] for 1 .. $count;
-					$self->error("%1 marbles seen, 6 is maximum", $marbles)
-						if $marbles > 3 and $tile ne 'xF';
+					$self->error("%1 marbles seen, %2 is maximum", $marbles,
+						$max_marbles) if $marbles > $max_marbles;
 				} elsif (s/^(x?[A-Za-w])//) {
 				# all known rails (exists and range of small letters)
 					$r = $1;
