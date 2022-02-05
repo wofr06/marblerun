@@ -12,12 +12,9 @@ use Digest::MD5 qw(md5_base64);
 
 sub new {
 	my ($class, %attr) = @_;
-	my $self = {
-		verbose => $attr{verbose} || 0,
-		db => $attr{db} || $Game::MarbleRun::DB_FILE,
-	};
+	my $self = {};
 	bless $self => $class;
-	$self->config();
+	$self->config(%attr);
 }
 
 sub process_input {
@@ -70,32 +67,38 @@ sub find_to_tile {
 		return undef;
 	} else {
 		@ids = grep {$_->[1] !~ /L/} @ids;
-	my @from = grep {$rail->[0] == $_->[0]} @$seen;
-	my $from = $from[0]->[1];
+		my @from = grep {$rail->[0] == $_->[0]} @$seen;
+		my $from = $from[0]->[1];
 		# generate entries for to tiles with connections at more than one z:
 		# lift, spiral, dispenser, tiptube, helix, turntable
 		my @t;
 		my @id2 = grep {exists $self->{conn1}{$_->[1]}} @ids;
 		for my $tile (@id2) {
-			push @t, $_ for @$tile;
-			if ($self->{conn1}{$t[1]}[0] ne 'v') {
-				$t[4] += $self->{conn1}{$t[1]}[0]
-			} elsif ($t[1] eq 'xF') {
-				my $n = $1 if $t[5] =~ /(\d)/;
-				$t[4] += 4*$n - 1;
-			} elsif ($t[1] eq 'xH') {
-				$t[4] += $t[5];
+			my @keys = keys %{$self->{conn1}{$tile->[1]}};
+			for my $k (@keys) {
+				push @t, $_ for @$tile;
+				if ($k =~ /^\d+$/) {
+					$t[4] += $k;
+				} elsif ($t[1] eq 'xF') {
+					my $n = $1 if $t[5] =~ /(\d)/;
+					$t[4] += 7 + 8*($n - 2);
+				} elsif ($t[1] eq 'xH') {
+					$t[4] += $t[5];
+				}
+				push @ids, [@t];
 			}
-			push @ids, [@t];
 		}
 
 		# generate entry for from tile
 		if (exists $self->{conn1}{$from}) {
-			@id2 = @ids if $self->{conn1}{$from}[0] ne 'v';
-			for my $tile (@id2) {
-				push @t, $_ for @$tile;
-				$t[4] -= $self->{conn1}{$from}[0];
-				push @ids, [@t];
+			my @keys = keys %{$self->{conn1}{$from}};
+			for my $k (@keys) {
+				@id2 = @ids if $k =~ /^\d+$/;
+				for my $tile (@id2) {
+					push @t, $_ for @$tile;
+					$t[4] -= $k;
+					push @ids, [@t];
+				}
 			}
 		}
 
@@ -105,10 +108,10 @@ sub find_to_tile {
 		}
 		# vertical tunnel needs 2 ids at the same position, 1st has dz=0
 		shift @ids if $r eq 't';
-		my %dz0 = (t=>7, a=>5, b=>14, c=>5, d=>5, xT=>2, xM=>7, yH=>7, yT=>7,
-			yV=>7, xt=>6);
+		my %dz0 = (t=>7, a=>5, b=>14, c=>5, d=>5, xT=>2, xM=>7, yH=>7, yS=>7,
+			yT=>7, xt=>6);
 		my %dz1 = (s =>5, m=>7, l=>8, t=>7, a=>7, b=>18, c=>7, d=>7, g=>7,
-			q=>7, xT=>2, xM=>7, yH=>7, yT=>7, yV=>7, xt=>7);
+			q=>7, xT=>2, xM=>7, yH=>7, yS=>7, yT=>7, xt=>7);
 		return undef if ! @ids;
 		my $zdiff = abs($z - $ids[0]->[4]);
 		my $zmin = exists $dz0{$r} ? $dz0{$r} : 0;
@@ -200,16 +203,19 @@ sub verify_rail_endpoints {
 					($tile, $dir) = @{$t_pos{$from}{$k}};
 					my $case2;
 					if ($tile and exists $self->{conn1}{$tile}) {
-						push @{$case2->{$tile}},$_ for @{$self->{conn1}{$tile}};
-						shift @{$case2->{$tile}};
+						for my $k (keys %{$self->{conn1}{$tile}}) {
+							push @{$case2->{$tile}}, $_
+								for @{$self->{conn1}{$tile}{$k}};
+						}
 					}
 					if ($tile eq 'xH') {
 						# direction in for spiral depends on number of elements
 						$case2->{xH}[0] = (2*$t->[4] - 2 - $dir) % 6;
-					} elsif ($tile eq 'xF') {
-						# direction out for lift is stored in detail
-						$case2->{xF}[0] = ord($1) - 97 if $t->[4] =~ /([a-f])/;
-						$case2->{xF}[0] = ($case2->{xF}[0] - $dir) % 6;
+					}
+					if ($tile eq 'xF') {
+						# direction in for lift at z=0 is stored in detail
+						$cases->{xF}[0] = ord($1) - 97 if $t->[4] =~ /([a-f])/;
+						$cases->{xF}[0] = ($cases->{xF}[0] - $dir) % 6;
 					}
 					# skip height tiles
 					next if ! $tile;
@@ -235,8 +241,10 @@ sub verify_rail_endpoints {
 					($tile, $dir) = @{$t_pos{$to}{$k}};
 					my $case2;
 					if ($tile and exists $self->{conn1}{$tile}) {
-						push @{$case2->{$tile}},$_ for @{$self->{conn1}{$tile}};
-						shift @{$case2->{$tile}};
+						for my $k (keys %{$self->{conn1}{$tile}}) {
+							push @{$case2->{$tile}}, $_
+								for @{$self->{conn1}{$tile}{$k}};
+						}
 					}
 					# skip height tiles, missing dir was already reported
 					next if ! $tile;
@@ -245,12 +253,14 @@ sub verify_rail_endpoints {
 						my ($h) = grep {$_->[0] eq 'xH' and $r->[0] == $_->[1]
 							and $r->[1] == $_->[2]} @$data;
 						$case2->{xH}[0] = (2*$h->[4] + 1 - $dir) % 6;
-					} elsif ($tile eq 'xF') {
+					}
+					if ($tile eq 'xF') {
 						my ($f) = grep {$_->[0] eq 'xF' and $r->[0] == $_->[1]
 							and $r->[1] == $_->[2]} @$data;
-						$case2->{xF}[0] = ord($1) - 97 if $f->[4] =~ /([a-f])/;
-						$case2->{xF}[0] = ($case2->{xF}[0] - $dir) % 6;
+						$cases->{xF}[0] = ord($1) - 97 if $f->[4] =~ /([a-f])/;
+						$cases->{xF}[0] = ($cases->{xF}[0] - $dir) % 6;
 					}
+
 					my $reverse = 3;
 					# vertical rail: no reverse, curved rail, flextube: adjust
 					if ($r->[2] eq 't') {
@@ -1231,7 +1241,10 @@ sub parse_run {
 			my $n = scalar keys(%$rails) - $num_walls;
 			my $nmax = 0;
 			$nmax = @{$self->{conn0}{$tile}} if exists $self->{conn0}{$tile};
-			$nmax += @{$self->{conn1}{$tile}}-1 if exists $self->{conn1}{$tile};
+			if (exists $self->{conn1}{$tile}) {
+				my $key0 = (keys %{$self->{conn1}{$tile}})[0];
+				$nmax += @{$self->{conn1}{$tile}{$key0}};
+			}
 			$self->error("%1 rail data seen, %2 is maximum for tile %3",
 				$n, $nmax, $tile) if $n > $nmax;
 			push @$rules, $f;

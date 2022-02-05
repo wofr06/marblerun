@@ -1,4 +1,6 @@
 Revision history for Perl extension Game::MarbleRun
+    - Symbol for splinter changed to yS. Code cleanup, fix option handling
+	- Lift handling corrected. Animation broken.
 1.00  Thu Jan 27 2022
     - new elements can be used in runs and get drawn
     - non rectangular ground planes can be visualized

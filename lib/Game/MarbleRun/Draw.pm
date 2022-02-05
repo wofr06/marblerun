@@ -1,6 +1,8 @@
 package Game::MarbleRun::Draw;
 $Game::MarbleRun::Draw::VERSION = $Game::MarbleRun::VERSION;
 
+use Data::Dumper;
+
 use v5.14;
 use strict;
 use warnings;
@@ -13,12 +15,10 @@ use List::Util qw(min);
 sub new {
 	my ($class, %attr) = @_;
 	my $self = {
-		verbose => $attr{verbose} || 0,
 		screen_x => $attr{screen_x} || 800,
 		screen_y => $attr{screen_y} || 600,
 		# text adjust in svg if dominant-baseline not understood
 		text_offset => $attr{text_offset} ? 1 : 0,
-		db => $attr{db} || $Game::MarbleRun::DB_FILE,
 	};
 	bless $self => $class;
 	# set viewport workaround for: style => {'viewport-fill' => 'white'}
@@ -28,7 +28,7 @@ sub new {
 	# defs section in svg
 	$self->svg_defs();
 	# db initialization and preloading of frequently used data
-	$self->config();
+	$self->config(%attr);
 }
 
 sub svg_defs {
@@ -106,7 +106,7 @@ sub orientations {
 		$elems = { '0.5' => 'Orientation', 2 => 'C', 4 => 'Y,S', 6 => 'X',
         8 => 'G,D', 10 => 'Straight Tile', 12 => 'xG', 14 => 'B', 16 => 'xC',
 		18 => 'yC', 20 => 'xW', 22 => 'yW', 24 => 'xY', 26 => 'yY', 28 => 'xX',
-		30 => 'yX', 32 => 'xI', 34 => 'yI', 36 => 'xQ', 38 => 'xV,yV'};
+		30 => 'yX', 32 => 'xI', 34 => 'yI', 36 => 'xQ', 38 => 'xV,yS'};
 	}
 	my %label;
 	my $size_y= 0;
@@ -683,21 +683,19 @@ sub put_Balls {
 	my ($self, $xm, $ym, $offset, $marble, $begin, $dur, $path) = @_;
 	# balls are displayed in its initial state for 1s then the animation starts
 	$path ||= 'M 0 0';
-	my %srgb = (S=>'#d5d5d5', R=>'#d54545', G=>'#45d545', B=>'#45d5d5',
-		A=>'#ffd700');
 	my $svg = $self->{svg};
 	my $cnt = 0;
 	my $r = $self->{r_ball}*$self->{size};
 	my ($x0, $y0) = $self->center_pos($xm, $ym);
-	my $old_dir = 0;
-	my $mcnt=0;
+	my $old_dir = -1;
 	for my $m (@$marble) {
+		#print Dumper $xm,$ym,$m, $cnt;
+		my $id = $m->[0];
 		my $dir = $m->[1];
-		my $id = "$xm$ym$dir$cnt";
-		next if ! defined $dir;
-		$id = "run$id$cnt" if $path;
-		$cnt = 0 if $dir ne $old_dir;
 		my $color = $m->[2] || 'S';
+		next if ! defined $dir;
+		$cnt = 0 if $dir ne $old_dir;
+		$id = "run$id" if $path;
 		my ($x, $y) = ($x0, $y0);
 		if ($offset) {
 			my ($x1, $y1) = $self->center_pos($self->to_position($xm,$ym,$dir,1));
@@ -713,7 +711,7 @@ sub put_Balls {
 			}
 		}
 		my $g = $svg->group(id => "marble$id");
-		$g->circle(cx=>$x, cy=>$y, r=>$r, style=>{fill=>$srgb{$color}});
+		$g->circle(cx=>$x, cy=>$y, r=>$r, style=>{fill=>$self->{srgb}{$color}});
 		my $tag = $g->gradient(-type => 'radial', id => "radial$id",
 			gradientUnits => 'userSpaceOnUse', cx => $x, cy => $y, r => $r,
 			fy => $y - 0.4*$r, fx => $x - 0.4*$r);
@@ -781,8 +779,8 @@ sub put_Lift {
 	$self->put_through_line($x, $y, $orient, 0.5 - $r_tube);
 	$self->put_through_line($x, $y, $orient_out, 0.5 - $r_tube);
 	my ($cx, $cy) = $self->center_pos($x, $y);
-	$cx += 2*$off_btn*$self->{corner_x}[0][($orient_out+5) % 6];
-	$cy += 2*$off_btn*$self->{corner_y}[0][($orient_out+5) % 6];
+	$cx += 2*$off_btn*$self->{corner_x}[0][($orient+5) % 6];
+	$cy += 2*$off_btn*$self->{corner_y}[0][($orient+5) % 6];
 	my $svg = $self->{svg};
 	$svg->circle(cx => $cx, cy => $cy, r => $r_btn,
 		style => {fill=>'url(#mygreen)'});
@@ -887,6 +885,15 @@ sub put_Spinner {
 	$self->put_through_line($x, $y, $_, $thickness) for 0 .. 5;
 	$self->put_circle($x, $y, 0.4, {fill => 'url(#mygreen)'});
 	$self->put_circle($x, $y, 0.1, {fill => 'url(#mygreen)'});
+	my ($cx, $cy) = $self->center_pos($x, $y);
+	my $r = 7./60.*$self->{size};
+	my ($x2, $y2) = ($cx - $r, $cy - 0.375*$self->{size});
+	my ($x3, $y3) = ($cx + $r, $cy - 0.375*$self->{size});
+	my %half_circle = (d => "M $x2 $y2 A $r $r 0 0 0 $x3 $y3");
+	my $style = {stroke=>'black', fill=>'none'};
+	$self->{svg}->path(%half_circle, style => $style);
+	$self->{svg}->path(%half_circle, transform => "rotate($_, $cx, $cy)",
+		style => $style) for (60, 120, 180, 240,300);
 }
 
 sub put_Start {
@@ -996,7 +1003,7 @@ sub do_run {
 		# switch
 		} elsif ($sym =~ /^[SU]/) {
 			$state->{"$x,$y"}{$z} = $detail;
-		} elsif ($sym =~ /xM|yV/) {
+		} elsif ($sym =~ /xM|yS/) {
 			$state->{"$x,$y"}{$z} = 0;
 		} elsif ($sym =~/[\d^+]/) {
 			$i_tile++;
@@ -1010,7 +1017,7 @@ sub do_run {
 	# begin is at start tile or lift
 	my @colors = map {$_->[4]} @$marble;
 	my $xyz = $self->neighbor($marble, $t_pos, $t_id, $tiles, $rails, $state);
-	#print Dumper $xyz;exit;
+	#print Dumper $marble, $xyz;exit;
 	return if ! $xyz;
 	my (@begin, @dur, @path, @p);
 	my $i = 0;
@@ -1026,31 +1033,196 @@ sub do_run {
 	my %dur = map {$i++, $_} sort {$a <=> $b} @dur;
 	for my $k (sort {$a <=> $b} keys %dur) {
 		my ($sym, $x, $y, $dir) = @{$p[$k][0]}[0, 1, 2, 5];
-		$self->put_Balls($x, $y, $self->{offset}{$sym}, [[0, $dir, $colors[$k-1]]],
-			$begin[$k], $dur[$k], $path[$k]);
+		$dir = $p[$k][0]->[4] if ! defined $dir;
+		my $ball_id = ++$self->{balls};
+		$self->put_Balls($x, $y, $self->{offset}{$sym},
+			[[$ball_id, $dir, $colors[$k-1]]], $begin[$k], $dur[$k], $path[$k]);
 	}
 }
 	# display the balls which have not moved
+	my $i;
+	#say "not moved";
 	for my $s (keys %$state) {
 		for my $z (keys %{$state->{$s}}) {
 			next if $state->{$s}{$z} !~ /o[RGBSA](\d|x)/;
 			my @pos = grep {/^[RGBSA](\d|x)$/} split /o/, $state->{$s}{$z};
 			#say "### @pos";
 			my ($sym, $x, $y) = @{$tiles->[$t_pos->{$s}{$z}]}[2,3,4];
-			my $desc = [map {[0, substr($_, 1, 1), substr($_, 0, 1)]} @pos];
-			#print Dumper $desc;
+			my $ball_id = $self->{balls};
+			my $desc = [map {[++$ball_id, substr($_, 1, 1), substr($_, 0, 1)]} @pos];
+			$self->{balls} = $ball_id;
 			$self->put_Balls($x, $y, $self->{offset}{$sym}, $desc, 0, 1);
 		}
 	}
+	#say "not moved end";
+}
+
+sub rule_check {
+	my ($self, $ball, $tiles, $elem_in, $state, $xyz) = @_;
+	my @dirs;
+	my ($z_in, $dir_in, $dir_out) = @$elem_in[1..3];
+	my $tile = $tiles->[$elem_in->[0]];
+	#say "tile id ? sym x y z dir @$tile";
+
+	my ($id, $sym, $x, $y, $z, $dir) = @$tile[0, 2..6];
+	#say "$ball: In next tile $id $sym at xyz=$x,$y,$z, orient $dir ",
+	#	"from z=$z_in dir $dir_in to dir $dir_out";
+	for (@{$self->{tile}{$sym}}) {
+		my ($r_in, $r_out, $r_zin, $r_zout, $r_cond) = @$_[1..$#$_];
+		# drop, vortex, ...
+		if ($r_out eq 'M') {
+			@dirs = ('M') if ($z -$z_in) >= $r_cond;
+			return @dirs;
+		}
+		#say "rule?$sym in=$r_in, out=$r_out z $r_zin -> $r_zout cond ",$r_cond||'';
+		next if $r_in =~ /\d/ and $r_in != ($dir_in - $dir) % 6;
+		#say "rule=$sym in=$r_in, out=$r_out z $r_zin -> $r_zout cond ",$r_cond||'';
+		# marbles present
+		if ($r_cond and $r_cond =~ /o(\d)/) {
+			my $r_cond_out = ($1 + $dir) % 6;
+			next if $r_cond_out ne $dir_out;
+			if ($state->{"$x,$y"}{$z} =~ /($dir_out)|(x)/) {
+				my $odir = defined $1 ? $1 : $2;
+				push @dirs, $dir_out;
+				$state->{"$x,$y"}{$z} =~ s/$odir/-1/;
+			}
+		} else {
+			# landing tile, finish track
+			if ($r_out eq '') {
+				push @{$xyz->[$ball]}, [$sym, $x,$y, $z, -1];
+				undef $elem_in;
+				last;
+			}
+			my $odir = ($dir + $r_out) % 6;
+			#say "$sym: in $r_in out: $r_out, dir=$dir odir=$odir";
+			push @dirs, $odir;
+		}
+	}
+	#say "return @dirs";
+	return @dirs;
+}
+
+sub neighbor {
+	my ($self, $balls, $tile_pos, $tile_id, $tiles, $rails, $state) = @_;
+	my ($xyz, @dirs);
+	my $ball = 0;
+	for my $m (@$balls) {
+		$ball++;
+		while ($m) {
+			#say "ball $ball = id z dir in dir out col @$m";
+			last if ! defined $m->[0];
+			my ($z_elem, $dir_elem, $dir_out, $color) = @$m[1..4];
+			my $t = $tiles->[$m->[0]];
+			@dirs = ();
+			my ($id, $sym, $x, $y, $z, $dir) = @$t[0, 2..6];
+			#say "$ball: In tile $id $sym at xyz=$x,$y,$z, orient $dir ball in dir=", $dir_elem || '';
+			push @{$xyz->[$ball]}, [$sym, $x, $y, $z, $dir_out];
+			# check condition
+			my @res = $self->rule_check($ball, $tiles, $m, $state, $xyz);
+			#say "after rule check: dirs = @res";
+
+			$m = undef;
+			for (@{$self->{tile}{$sym}}) {
+				my ($elem, $in, $out, $z_in, $z_out, $cond) = @$_;
+				# check incoming direction
+				@dirs = ('M'), last if $out eq 'M';
+				next if ! $in;
+				next if $dir_elem =~/\d/ and ($dir_elem != ($in + $dir) % 6);
+				# marbles present
+				if ($cond and $cond =~ /o(\d)/) {
+					my $odir = ($1 + $dir) % 6;
+					next if $odir ne $dir_out;
+					if ($state->{"$x,$y"}{$z} =~ /($odir)|(x)/) {
+						$odir = defined $1 ? $1 : $2;
+						# now no marble at this position
+						push @dirs, $odir;
+						$state->{"$x,$y"}{$z} =~ s/$odir/-/;
+					}
+				} else {
+					# landing tile, finish track
+					if ($out eq '') {
+						undef $m;
+						last;
+					}
+					my $odir = ($dir + $out) % 6;
+					push @dirs, $odir if $dir_elem eq 'M' or $dir_elem != $odir;
+				}
+			}
+			#say "after tiles check: dirs = @dirs";
+			if (defined $dirs[0] and $dirs[0] eq 'M') {
+				# look for tiles below current tile
+				my $znew = $tile_pos->{"$x,$y"};
+				$znew = (grep {$_ < $z} sort {$b <=> $a} keys %$znew)[0];
+				my $tnew = $tile_pos->{"$x,$y"}{$znew};
+				($id, $sym, $x, $y, $z, $dir) = @{$tiles->[$tnew]}[0, 2..6];
+				$m = [$tile_pos->{"$x,$y"}{$z}, $z, 'M', $dir, $color];
+				#say "$ball: $sym z=$z out=$dir, was ", $xyz->[$ball][-1][5] || -1;
+				next;
+			}
+			#say "$ball: $sym dirs=@dirs";
+			$xyz->[$ball][-1][5] = $dirs[0] if @dirs and @dirs == 1;
+
+			my %dirs;
+			$dirs{$_} = 1 for @dirs, @res;
+			@dirs = keys %dirs;
+			for my $d (@dirs) {
+				my ($x2, $y2) = $self->to_position($x, $y, $d, 1);
+				my $xy = "$x2,$y2";
+				if (exists $tile_pos->{$xy}) {
+					# check z
+					if (exists $tile_pos->{$xy}{$z_elem} or $z_elem < 0) {
+						$z_elem = $z if $z_elem < 0;
+						$m = [$tile_pos->{$xy}{$z_elem}, $z, ($d+3)%6, $d, $color];
+						#say "$ball: $sym z=$z out=$d, was ", $xyz->[$ball][-1][5] || -1;
+						$xyz->[$ball][-1][5] = $d;
+						last;
+					}
+				}
+				# check rails
+				#print Dumper $rails;exit;
+				for my $r (@$rails) {
+					# outgoing dir for a rail is the from direction
+					my ($t_id, $d_from);
+					if ($r->[1] % 3 == $d % 3 and $r->[2] == $id) {
+						$t_id = $tile_id->{$r->[4]};
+					} elsif ($r->[1] % 3 == $d % 3 and $r->[4] == $id) {
+						$t_id = $tile_id->{$r->[2]};
+					} else {
+						next;
+					}
+					#say "check rail $r->[0] on $id: conn at $r->[2],$r->[4], dir $r->[1]";
+					# finish line, end of track
+					if ($r->[0] eq 'e') {
+						my ($x, $y) = $self->to_position($x, $y, $d, 1);
+						push @{$xyz->[$ball]}, ['e', $x, $y, $z, -1, -1];
+						undef $m;
+						last;
+					}
+					$d_from = ($d + 3) % 6;
+					my $chk = $self->{rail}{$r->[0]};
+					my $dz = abs($tiles->[$t_id][5] - $z);
+					if ($dz < $chk->[2] or $dz > $chk->[3]) {
+						say "$chk->[2] <= $dz <= $chk->[3] not true (should not happen)";
+					}
+					#say "$ball: $sym In rail $r->[0] dir $d z=$z -> $tiles->[$t_id][5] ";
+					push @{$xyz->[$ball]}, [$r->[0],
+						@{$tiles->[$t_id]}[3,4,5], $d, $d];
+					$m = [$t_id, -1, $d_from, $d, $color];
+				}
+			}
+		}
+	}
+	#print Dumper $xyz;exit;
+	return $xyz;
 }
 
 sub generate_path {
 	my ($self, $ball, $xyz) = @_;
 	my ($x0, $y0) = $self->center_pos($xyz->[0][1], $xyz->[0][2]);
 	# start tile needs an offset in marble direction
-	#print Dumper $xyz; exit;
+	#print Dumper $xyz;
 	if ($xyz->[0][0] eq 'A') {
-		my $dir = $xyz->[0][5];
+		my $dir = defined $xyz->[0][5] ? $xyz->[0][5] : $xyz->[0][4];
 		my ($dx, $dy) = (2*$self->{middle_x}[$dir], 2*$self->{middle_y}[$dir]);
 		$x0 += 0.25*$dx;
 		$y0 += 0.25*$dy;
@@ -1058,7 +1230,6 @@ sub generate_path {
 	my $path = "M 0 0";
 	my $len = 0;
 	for (my $i = 1; $i < @$xyz; $i++) {
-		#print Dumper $xyz->[$i];
 		my ($sym, $x, $y, $z, $dir) = @{$xyz->[$i]};
 		last if ! $sym;
 		if ($dir eq 'M') {
@@ -1093,6 +1264,7 @@ sub generate_path {
 			$x += $dx - $x0;
 			$y += $dy - $y0;
 			my $dir_diff = ($out - $dir) % 6;
+			#say "sym $sym out $out dir $dir";
 			if ($dir_diff == 3) {
 				$path .= " L $x $y";
 			} else {
@@ -1109,7 +1281,7 @@ sub generate_path {
 		}
 	}
 	$path =~ s/\.\d+ / /g;
-	return (1, $len/4., $path);
+	return (1, $len, $path);
 }
 
 sub spiral_path {
@@ -1141,162 +1313,6 @@ sub spiral_path {
 		$path .= " Q$x_ctrl $y_ctrl $new_p->[0] $new_p->[1]";
 	}
 	return $path;
-}
-
-sub rule_check {
-	my ($self, $ball, $tiles, $elem_in, $state, $xyz) = @_;
-	my @dirs;
-	my ($z_in, $dir_in, $dir_out) = @$elem_in[1..3];
-	my $tile = $tiles->[$elem_in->[0]];
-	#say "tile id ? sym x y z dir @$tile";
-
-	my ($id, $sym, $x, $y, $z, $dir) = @$tile[0, 2..6];
-	#say "$ball: In next tile $id $sym at xyz=$x,$y,$z, orient $dir ",
-	#	"from z=$z_in dir $dir_in to dir $dir_out";
-	for (@{$self->{tile}{$sym}}) {
-		my ($r_in, $r_out, $r_zin, $r_zout, $r_cond) = @$_[1..$#$_];
-		# drop, vortex, ...
-		if ($r_out eq 'M') {
-			@dirs = ('M') if ($z -$z_in) >= $r_cond;
-			return @dirs;
-		}
-		#say "rule?$sym in=$r_in, out=$r_out z $r_zin -> $r_zout cond ",$r_cond||'';
-		next if $r_in =~ /\d/ and $r_in != ($dir_in - $dir) % 6;
-		#say "rule=$sym in=$r_in, out=$r_out z $r_zin -> $r_zout cond ",$r_cond||'';
-		# marbles present
-		if ($r_cond and $r_cond =~ /o(\d)/) {
-			my $r_cond_out = ($1 + $dir) % 6;
-			next if $r_cond_out ne $dir_out;
-		print "dir_out=$1\n";
-			if ($state->{"$x,$y"}{$z} =~ /($dir_out)|(x)/) {
-				my $odir = defined $1 ? $1 : $2;
-				print "dir_out ok\n";
-				push @dirs, $dir_out;
-				$state->{"$x,$y"}{$z} =~ s/$odir/-1/;
-			}
-		} else {
-			# landing tile, finish track
-			if ($r_out eq '') {
-				push @{$xyz->[$ball]}, [$sym, $x,$y, $z, -1];
-				undef $elem_in;
-				last;
-			}
-			my $odir = ($dir + $r_out) % 6;
-			#say "$sym: in $r_in out: $r_out, dir=$dir odir=$odir";
-			push @dirs, $odir;
-		}
-	}
-	#say "return @dirs";
-	return @dirs;
-}
-
-sub neighbor {
-	my ($self, $balls, $tile_pos, $tile_id, $tiles, $rails, $state) = @_;
-	my ($xyz, @dirs);
-	my $ball = 0;
-	for my $m (@$balls) {
-		$ball++;
-		while ($m) {
-			#say "ball $ball = id z dir in dir out col @$m";
-			last if ! defined $m->[0];
-			my ($z_elem, $dir_elem, $dir_out, $color) = @$m[1..4];
-			my $t = $tiles->[$m->[0]];
-			@dirs = ();
-			my ($id, $sym, $x, $y, $z, $dir) = @$t[0, 2..6];
-			#say "$ball: In tile $id $sym at xyz=$x,$y,$z, orient $dir ball in dir=", $dir_elem || '';
-			push @{$xyz->[$ball]}, [$sym, $x, $y, $z, $dir_elem];
-			# check condition
-			my @res = $self->rule_check($ball, $tiles, $m, $state, $xyz);
-			#say "out dirs = @res";
-			$m = undef;
-			for (@{$self->{tile}{$sym}}) {
-				my ($elem, $in, $out, $z_in, $z_out, $cond) = @$_;
-				# check incoming direction
-				@dirs = ('M'), last if $out eq 'M';
-				next if ! $in;
-				next if $dir_elem =~/\d/ and ($dir_elem != ($in + $dir) % 6);
-				# marbles present
-				if ($cond and $cond =~ /o(\d)/) {
-					my $odir = ($1 + $dir) % 6;
-					next if $odir ne $dir_out;
-					if ($state->{"$x,$y"}{$z} =~ /($odir)|(x)/) {
-						$odir = defined $1 ? $1 : $2;
-						# now no marble at this position
-						push @dirs, $odir;
-						$state->{"$x,$y"}{$z} =~ s/$odir/-/;
-					}
-				} else {
-					# landing tile, finish track
-					if ($out eq '') {
-						undef $m;
-						last;
-					}
-					my $odir = ($dir + $out) % 6;
-					push @dirs, $odir if $dir_elem eq 'M' or $dir_elem != $odir;
-				}
-			}
-			if (defined $dirs[0] and $dirs[0] eq 'M') {
-				# look for tiles below current tile
-				my $znew = $tile_pos->{"$x,$y"};
-				$znew = (grep {$_ < $z} sort {$b <=> $a} keys %$znew)[0];
-				my $tnew = $tile_pos->{"$x,$y"}{$znew};
-				($id, $sym, $x, $y, $z, $dir) = @{$tiles->[$tnew]}[0, 2..6];
-				$m = [$tile_pos->{"$x,$y"}{$z}, $z, 'M', $dir, $color];
-				#say "$ball: $sym z=$z out=$dir, was ", $xyz->[$ball][-1][5] || -1;
-				next;
-			}
-			#say "$ball: $sym dirs=@dirs";
-			$xyz->[$ball][-1][5] = $dirs[0] if @dirs and @dirs == 1;
-
-			for my $d (@dirs) {
-				my ($x2, $y2) = $self->to_position($x, $y, $d, 1);
-				my $xy = "$x2,$y2";
-				if (exists $tile_pos->{$xy}) {
-					# check z
-					if (exists $tile_pos->{$xy}{$z_elem} or $z_elem < 0) {
-						$z_elem = $z if $z_elem < 0;
-						$m = [$tile_pos->{$xy}{$z_elem}, $z, ($d+3)%6, $d, $color];
-						#say "$ball: $sym z=$z out=$d, was ", $xyz->[$ball][-1][5] || -1;
-						$xyz->[$ball][-1][5] = $d;
-						last;
-					}
-				}
-				# check rails
-				#print Dumper $rails;exit;
-				for my $r (@$rails) {
-					# outgoing dir for a rail is the from direction
-					my ($t_id, $d_from);
-					if ($r->[1] % 3 == $d % 3 and $r->[2] == $id) {
-						$t_id = $tile_id->{$r->[4]};
-					} elsif ($r->[1] % 3 == $d % 3 and $r->[4] == $id) {
-						$t_id = $tile_id->{$r->[2]};
-					} else {
-						next;
-					}
-					#say "check rail $r->[0] on $id: conn at $r->[2],$r->[4], dir $r->[1]";
-					# finish line, end of track
-					if ($r->[0] eq 'e') {
-						my ($x, $y) = $self->to_position($x, $y, $d, 1);
-						push @{$xyz->[$ball]}, ['e', $x, $y, $z, -1];
-						undef $m;
-						last;
-					}
-					$d_from = ($d + 3) % 6;
-					my $chk = $self->{rail}{$r->[0]};
-					my $dz = abs($tiles->[$t_id][5] - $z);
-					if ($dz < $chk->[2] or $dz > $chk->[3]) {
-						say "$chk->[2] <= $dz <= $chk->[3] not true (should not happen)";
-					}
-					#say "$ball: $sym In rail $r->[0] dir $d z=$z -> $tiles->[$t_id][5] ";
-					push @{$xyz->[$ball]}, [$r->[0],
-						@{$tiles->[$t_id]}[3,4,5], $d];
-					$m = [$t_id, -1, $d_from, $d, $color];
-				}
-			}
-		}
-	}
-	#print Dumper $xyz;exit;
-	return $xyz;
 }
 
 sub emit_svg {
@@ -1412,7 +1428,7 @@ $g->put_Balls($x, $y, $offset, $marble, $t0, $t_dur, $path);
 
 Place balls at tile given by x and y. The marbles are by an offset away
 from the center of the tile, if given. The marble information is an arrayref
-with triples [$char, $orient, $color] for each marble to be drawn. The offset
+with triples [$id, $orient, $color] for each marble to be drawn. The offset
 is either a scalar valid for all marbles or an arrayref with tuples
 [$rel_x_off, $rel_y_off] for each marble defined.
 The balls get animated along $path starting at time t0 and lasting for t_dur

@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: 1.00\n"
 "Report-Msgid-Bugs-To: <wp.friebel@gmail.com>\n"
 "POT-Creation-Date: 2020-04-12 20:38+0200\n"
-"PO-Revision-Date: 2022-02-03 13:34+0100\n"
+"PO-Revision-Date: 2022-02-05 11:38+0100\n"
 "Last-Translator: Wolfgang Friebel <wp.friebel@gmail.com>\n"
 "Language-Team: de <wp.friebel@gmail.com>\n"
 "Language: de_DE.UTF8\n"
@@ -284,11 +284,11 @@ msgstr ""
 msgid "Cross Straight and Curve"
 msgstr "Gerade kreuzt Kurve"
 
-msgid "Turntable"
-msgstr ""
-
 msgid "Splinter"
 msgstr "Splitter"
+
+msgid "Turntable"
+msgstr ""
 
 msgid "2x 2 in 1 right"
 msgstr "2 mal 2 in 1 rechts"
@@ -347,202 +347,202 @@ msgstr "Bahn"
 msgid "Straight Tile"
 msgstr "gerader Stein"
 
-msgid "red"
-msgstr "rote"
-
-msgid "green"
-msgstr "grüne"
-
-msgid "blue"
-msgstr "blaue"
-
-msgid "silver"
-msgstr "silberne"
-
 msgid "orientation"
 msgstr "Orientierung"
 
-#: MarbleRun.pm:261
-msgid "The current DB schema version is %1, you have only %2\n"
-msgstr "Das derzeitige DB schema ist bei Version %1, Du hast nur Version %2\n"
-
-#: MarbleRun.pm:263
-msgid "Upgrade the DB now?"
-msgstr "Soll die DB erneuert werden"
-
-#: MarbleRun.pm:264
-msgid "Y"
-msgstr "J"
-
-#: MarbleRun.pm:495
-msgid "to all\n"
-msgstr "für alle\n"
-
-#: MarbleRun.pm:497
-msgid "N"
-msgstr ""
-
-#: MarbleRun.pm:506
-msgid "pos"
-msgstr "Feld"
-
-#: MarbleRun.pm:507
-msgid "plane"
-msgstr "Platte"
-
-#: MarbleRun.pm:523
-msgid " line %1"
-msgstr " Zeile %1"
-
-#: MarbleRun.pm:715
-msgid "%1Please enter an id from the list above\n"
-msgstr "%1Bitte wähle eine Nummer aus obiger Liste\n"
-
-#: MarbleRun.pm:727
-msgid "No run with id %1 existing\n"
-msgstr "Es existiert keine Bahn mit Nummer %1\n"
-
-#: MarbleRun.pm:753
-msgid "Please give file prefix for %1 output %2"
-msgstr "Bitte gib einen Namen für die %1 Ausgabe an (ohne .%1) %2"
-
-#: MarbleRun.pm:755
-msgid "Please enter a file name"
-msgstr "Bitte gib einen Dateinamen ein"
-
-#: MarbleRun.pm:761
-msgid "Name must start with an alphanum char"
-msgstr "Der Dateiname muss mit einem alphanumerischen Zeichen beginnen"
-
-#: MarbleRun.pm:767
-msgid "File %1 existing, overwrite it?"
-msgstr "Datei %1 existiert, überschreiben?"
-
-#: MarbleRun.pm:792
-msgid "Exporting %1\n"
-msgstr "Exportiere %1\n"
-
-#: MarbleRun.pm:793
-msgid "ENTER to write to STDOUT"
-msgstr "ENTER, um nach STDOUT zu schreiben"
-
-#: MarbleRun.pm:913
-msgid "really delete '%1'"
-msgstr "'%1' wrklich löschen"
-
-#: MarbleRun.pm:918
-msgid "Run %1 deleted\n"
-msgstr "Anleitung für Bahn %1 gelöscht\n"
-
-#: MarbleRun.pm:979
-msgid " id OK x*y*z title (source)"
-msgstr " Nr OK x*y*z Name (Quelle)"
-
-#: MarbleRun.pm:982
-msgid "List of registered marble runs"
-msgstr "Liste der in der Datenbank registrierten Kugelbahnen"
-
-#: MarbleRun.pm:989
-msgid "missing"
-msgstr "Es fehlt"
-
-#: MarbleRun.pm:1059
-msgid "Direction"
-msgstr "Richtung"
-
-#: MarbleRun.pm:1082
-msgid "Instructions for %1, board size %2"
-msgstr "Anleitung für %1 mit %2 Bodenplatten"
-
-#: MarbleRun.pm:1086
-msgid "ENTER to continue without svg"
-msgstr "oder ENTER ohne SVG"
-
-#: MarbleRun.pm:1109
-msgid "Incomplete data for level %1, skipping it"
-msgstr "Fehlende Daten für Ebene %1, wird ignoriert"
-
-#: MarbleRun.pm:1121
-msgid "Place %1 %2 with center at %3"
-msgstr "Lege die %1 %2 mit dem Mittelpunkt auf %3"
-
-#: MarbleRun.pm:1144
-msgid "At %1"
-msgstr "Auf %1"
-
-#: MarbleRun.pm:1186
-msgid "On "
-msgstr "Auf "
-
-#: MarbleRun.pm:1192
-msgid "with %1 bridge elements"
-msgstr "mit %1 Brückenelementen"
-
-#: MarbleRun.pm:1194
-msgid "with %1 green parts"
-msgstr "mit %1 grünen Teilen"
-
-#: MarbleRun.pm:1198
-msgid "with %1 transparent parts"
-msgstr "mit %1 Glasteilen"
-
-#: MarbleRun.pm:1199
-msgid "outlet in %1"
-msgstr "Auslass in %1"
-
-#: MarbleRun.pm:1214
-msgid "in wall %1 hole %2"
-msgstr "in Wand %1 Loch %2"
-
-#: MarbleRun.pm:1254
-msgid "Level"
-msgstr "Ebene"
-
-#: MarbleRun.pm:1266
-msgid "in pillar %1"
-msgstr "in Säule %1"
-
-#: MarbleRun.pm:1269
-msgid "From %1 to %2 %3 %4"
-msgstr "Von %1 nach %2 %3 %4"
-
-#: MarbleRun.pm:1291
+#: MarbleRun.pm:224
 msgid "red"
 msgstr "rote"
 
-#: MarbleRun.pm:1292
+#: MarbleRun.pm:225
+msgid "green"
+msgstr "grüne"
+
+#: MarbleRun.pm:226
+msgid "blue"
+msgstr "blaue"
+
+#: MarbleRun.pm:227
 msgid "silver"
 msgstr "silberne"
 
-#: MarbleRun.pm:1342
+#: MarbleRun.pm:228
+msgid "gold"
+msgstr "goldene"
+
+#: MarbleRun.pm:271
+msgid "The current DB schema version is %1, you have only %2\n"
+msgstr "Das derzeitige DB schema ist bei Version %1, Du hast nur Version %2\n"
+
+#: MarbleRun.pm:273
+msgid "Upgrade the DB now?"
+msgstr "Soll die DB erneuert werden"
+
+#: MarbleRun.pm:274
+msgid "Y"
+msgstr "J"
+
+#: MarbleRun.pm:505
+msgid "to all\n"
+msgstr "für alle\n"
+
+#: MarbleRun.pm:507
+msgid "N"
+msgstr ""
+
+#: MarbleRun.pm:516
+msgid "pos"
+msgstr "Feld"
+
+#: MarbleRun.pm:517
+msgid "plane"
+msgstr "Platte"
+
+#: MarbleRun.pm:533
+msgid " line %1"
+msgstr " Zeile %1"
+
+#: MarbleRun.pm:725
+msgid "%1Please enter an id from the list above\n"
+msgstr "%1Bitte wähle eine Nummer aus obiger Liste\n"
+
+#: MarbleRun.pm:737
+msgid "No run with id %1 existing\n"
+msgstr "Es existiert keine Bahn mit Nummer %1\n"
+
+#: MarbleRun.pm:763
+msgid "Please give file prefix for %1 output %2"
+msgstr "Bitte gib einen Namen für die %1 Ausgabe an (ohne .%1) %2"
+
+#: MarbleRun.pm:765
+msgid "Please enter a file name"
+msgstr "Bitte gib einen Dateinamen ein"
+
+#: MarbleRun.pm:771
+msgid "Name must start with an alphanum char"
+msgstr "Der Dateiname muss mit einem alphanumerischen Zeichen beginnen"
+
+#: MarbleRun.pm:777
+msgid "File %1 existing, overwrite it?"
+msgstr "Datei %1 existiert, überschreiben?"
+
+#: MarbleRun.pm:802
+msgid "Exporting %1\n"
+msgstr "Exportiere %1\n"
+
+#: MarbleRun.pm:803
+msgid "ENTER to write to STDOUT"
+msgstr "ENTER, um nach STDOUT zu schreiben"
+
+#: MarbleRun.pm:923
+msgid "really delete '%1'"
+msgstr "'%1' wrklich löschen"
+
+#: MarbleRun.pm:928
+msgid "Run %1 deleted\n"
+msgstr "Anleitung für Bahn %1 gelöscht\n"
+
+#: MarbleRun.pm:989
+msgid " id OK x*y*z title (source)"
+msgstr " Nr OK x*y*z Name (Quelle)"
+
+#: MarbleRun.pm:992
+msgid "List of registered marble runs"
+msgstr "Liste der in der Datenbank registrierten Kugelbahnen"
+
+#: MarbleRun.pm:999
+msgid "missing"
+msgstr "Es fehlt"
+
+#: MarbleRun.pm:1069
+msgid "Direction"
+msgstr "Richtung"
+
+#: MarbleRun.pm:1092
+msgid "Instructions for %1, board size %2"
+msgstr "Anleitung für %1 mit %2 Bodenplatten"
+
+#: MarbleRun.pm:1096
+msgid "ENTER to continue without svg"
+msgstr "oder ENTER ohne SVG"
+
+#: MarbleRun.pm:1119
+msgid "Incomplete data for level %1, skipping it"
+msgstr "Fehlende Daten für Ebene %1, wird ignoriert"
+
+#: MarbleRun.pm:1131
+msgid "Place %1 %2 with center at %3"
+msgstr "Lege die %1 %2 mit dem Mittelpunkt auf %3"
+
+#: MarbleRun.pm:1154
+msgid "At %1"
+msgstr "Auf %1"
+
+#: MarbleRun.pm:1196
+msgid "On "
+msgstr "Auf "
+
+#: MarbleRun.pm:1202
+msgid "with %1 bridge elements"
+msgstr "mit %1 Brückenelementen"
+
+#: MarbleRun.pm:1204
+msgid "with %1 green parts"
+msgstr "mit %1 grünen Teilen"
+
+#: MarbleRun.pm:1208
+msgid "with %1 transparent parts"
+msgstr "mit %1 Glasteilen"
+
+#: MarbleRun.pm:1209
+msgid "outlet in %1"
+msgstr "Auslass in %1"
+
+#: MarbleRun.pm:1224
+msgid "in wall %1 hole %2"
+msgstr "in Wand %1 Loch %2"
+
+#: MarbleRun.pm:1264
+msgid "Level"
+msgstr "Ebene"
+
+#: MarbleRun.pm:1276
+msgid "in pillar %1"
+msgstr "in Säule %1"
+
+#: MarbleRun.pm:1279
+msgid "From %1 to %2 %3 %4"
+msgstr "Von %1 nach %2 %3 %4"
+
+#: MarbleRun.pm:1350
 msgid "Switch state"
 msgstr "Weichenstellung"
 
-#: MarbleRun.pm:1344
+#: MarbleRun.pm:1352
 msgid "prepare for start"
 msgstr "Vorbereiten für Start"
 
-#: MarbleRun.pm:1346
+#: MarbleRun.pm:1354
 msgid "flap in %1"
 msgstr "Klappe in %1"
 
-#: MarbleRun.pm:1349
+#: MarbleRun.pm:1357
 msgid "%1 should leave tile in %2"
 msgstr "%1 soll Stein in %2 verlassen"
 
-#: MarbleRun.pm:1353
+#: MarbleRun.pm:1361
 msgid "Turntable rotor position"
 msgstr "Position des Rotors"
 
-#: Draw.pm:149
+#: Draw.pm:151
 msgid "Unknown board size, run_id or size_x not given"
 msgstr "Unbekannte Größe der Kugelbahn, run_id oder size_x nicht angegeben"
 
-#: Draw.pm:1308
+#: Draw.pm:1322
 msgid "ENTER to exit"
 msgstr "ENTER für Ende"
 
-#: Draw.pm:1320
+#: Draw.pm:1334
 msgid "Created %1"
 msgstr "%1 wurde erstellt"
 
@@ -554,259 +554,259 @@ msgstr "Die Datei ist zu groß, Stop"
 msgid "Not enough pillars for wall %1 at %2"
 msgstr "Zu wenige Säulen für Wand %1 auf %2"
 
-#: Store.pm:116
+#: Store.pm:122
 msgid "Warning: height difference %1 from z=%4 at %5 for rail %2 at %3 maybe too small\n"
 msgstr "Achtung: Höhendifferenz %1 von z=%4 für Schiene %2 auf %3 vielleicht zu klein\n"
 
-#: Store.pm:118
+#: Store.pm:124
 msgid "Warning: height difference %1 from z=%4 at %5 for rail %2 at %3 maybe too large\n"
 msgstr "Achtung: Höhendifferenz %1 von z=%4 für Schiene %2 auf %3 vielleicht zu groß\n"
 
-#: Store.pm:149
+#: Store.pm:155
 msgid "Position (%1,%2) is outside of board"
 msgstr "Das Feld (%1,%2) liegt außerhalb der Grundplatte"
 
-#: Store.pm:172
+#: Store.pm:178
 msgid "At %1 level %2 is already a tile %3"
 msgstr "Auf %1 Ebene %2 ist bereits ein Stein %3"
 
-#: Store.pm:193
+#: Store.pm:199
 msgid "Already a tile at end point of %1"
 msgstr "Auf Endpunkt %1 befindet sich schon ein Stein"
 
-#: Store.pm:231
+#: Store.pm:239
 msgid "No connection from tile %1 at %2 orientation %3 to rail %4%5"
 msgstr "Keine Verbindung von Stein %1 auf %2 Orientierung %3 und Schiene %4%5"
 
-#: Store.pm:275
+#: Store.pm:285
 msgid "No connection from rail %4%5 to tile %1 at %2 orientation %3"
 msgstr "Keine Verbindung von Schiene %4%5 zu Stein %1 auf %2 Orientierung %3"
 
-#: Store.pm:281
+#: Store.pm:291
 msgid "No tile at %1 %2 -> %3"
 msgstr "Fehlender Stein für %1 %2 -> %3"
 
-#: Store.pm:307
+#: Store.pm:317
 msgid "%quant(%1,Error) found in input!"
 msgstr "%quant(%1,Fehler,Fehler) im Input gefunden!"
 
-#: Store.pm:328
+#: Store.pm:338
 msgid "Checking material for %1"
 msgstr "Prüfe Material für %1"
 
-#: Store.pm:330
+#: Store.pm:340
 msgid "Registering material for %1"
 msgstr "Registriere Material für %1"
 
-#: Store.pm:377
+#: Store.pm:387
 msgid "You have %1 x '%2', add/store %3?"
 msgstr "Du hast %1 x '%2', addiere/speichere %3?"
 
-#: Store.pm:392
+#: Store.pm:402
 msgid "stored %1 x '%2' for id %3"
 msgstr "%1 x %2 für Person %3 wurde gespeichert"
 
-#: Store.pm:475
+#: Store.pm:485
 msgid "Marble run '%1' existing, replace it?"
 msgstr "Kugelbahn '%1' ist schon vorhanden, ersetzen?"
 
-#: Store.pm:480
+#: Store.pm:490
 msgid "Checking marble run '%1'"
 msgstr "Kugelbahn '%1' wird getestet"
 
-#: Store.pm:482
+#: Store.pm:492
 msgid "Registering marble run '%1'"
 msgstr "Kugelbahn '%1' wird gespeichert"
 
-#: Store.pm:538
+#: Store.pm:548
 msgid "Rail %1 already registered from %2 to %3"
 msgstr "Schiene %1 von %2 nach %3 wurde bereits registriert"
 
-#: Store.pm:545
+#: Store.pm:555
 msgid "No end point for rail %1 from %2 to %3"
 msgstr "Kein Endpunkt für Schiene %1 von %2 nach %3"
 
-#: Store.pm:552
+#: Store.pm:562
 msgid "No valid data found"
 msgstr "keine gültigen Anweisungen gefunden"
 
-#: Store.pm:575
+#: Store.pm:585
 msgid "Wrong tile position '%1'"
 msgstr "Falsche Feldangabe '%1' für den Stein"
 
-#: Store.pm:601
+#: Store.pm:611
 msgid "Wrong level number '%1' becomes level %2"
 msgstr "Falscher Nummer '%1' für Ebene wird Ebene %2"
 
-#: Store.pm:673
+#: Store.pm:683
 msgid "Level %1 already seen at %2"
 msgstr "Ebene %1 ist schon auf %2"
 
-#: Store.pm:704
+#: Store.pm:714
 msgid "marble on tile %1, dir %2 cannot be in position %3"
 msgstr "Die Kugel auf Stein %1, Richtung %2 kann nicht in Position %3 sein"
 
-#: Store.pm:708
+#: Store.pm:718
 msgid "No marbles should be placed on the %1 tile"
 msgstr "Auf dem Stein %1 sollten keine Kugeln liegen"
 
-#: Store.pm:807
+#: Store.pm:817
 msgid "Pillar %1 does not exist, number too large"
 msgstr "Säule %1 existiert nicht, Nummer ist zu groß"
 
-#: Store.pm:815
+#: Store.pm:825
 msgid "Change balcony direction %1 to %2 at %3 hole %4"
 msgstr "Ändere Balkon Orientierung von %1 auf Feld %3 Loch $4"
 
-#: Store.pm:820
+#: Store.pm:830
 msgid "No wall for balcony at %1 in hole %2"
 msgstr "Keine Wand für Balkon auf %1 im Loch %2"
 
-#: Store.pm:847
+#: Store.pm:857
 msgid "Wrong direction %1 for double balcony at %2"
 msgstr "Falsche Richtung %1 für Doppelbalkon auf %2"
 
-#: Store.pm:852
+#: Store.pm:862
 msgid "Double balcony %1 at %2 described but not seen at %3"
 msgstr "Doppelbalkon %1 auf %2 beschrieben, aber auf %3 nicht gesehen"
 
-#: Store.pm:876
+#: Store.pm:886
 msgid "Name"
 msgstr ""
 
-#: Store.pm:877
+#: Store.pm:887
 msgid "Author"
 msgstr "Autor"
 
-#: Store.pm:878
+#: Store.pm:888
 msgid "Source"
 msgstr "Quelle"
 
-#: Store.pm:879
+#: Store.pm:889
 msgid "Date"
 msgstr "Datum"
 
-#: Store.pm:881
+#: Store.pm:891
 msgid "Position"
 msgstr "Feld"
 
-#: Store.pm:921
+#: Store.pm:931
 msgid "Missing run name"
 msgstr "Der Name der Bahn fehlt"
 
-#: Store.pm:949
+#: Store.pm:959
 msgid "Incorrect ground plane numbering '%1'"
 msgstr "Falsche Nummerierung der Grundplatte '%1'"
 
-#: Store.pm:1019
+#: Store.pm:1029
 msgid "Wrong balcony height '%1'"
 msgstr "Falsche Höhenangabe %1 für Balkon"
 
-#: Store.pm:1029
+#: Store.pm:1039
 msgid "Direction missing for balcony %1"
 msgstr "Richtung für Balkon %1 fehlt"
 
-#: Store.pm:1061
+#: Store.pm:1071
 msgid "Helix must have at least 2 elements"
 msgstr "Die Spirale muss aus mindestens 2 Teilen bestehen"
 
-#: Store.pm:1066
+#: Store.pm:1076
 msgid "Even number of elements expected, not %1"
 msgstr "Eine gerade Anzahl von Elementen muss angegeben werden, nicht '%1'"
 
-#: Store.pm:1086
+#: Store.pm:1096
 msgid "For the mixer orientation %1 the direction %2 of the outgoing ball is not possible"
 msgstr "Für den Mixer Orientierung %1 ist die Richtung %2 der auslaufenden Kugel nicht möglich"
 
-#: Store.pm:1089
+#: Store.pm:1099
 msgid "Tile 'O' needs no height data"
 msgstr "Stein O braucht keine Höhenangabe"
 
-#: Store.pm:1097
+#: Store.pm:1107
 msgid "%quant(%1,Excessive char) '%2'"
 msgstr "%quant(%1,zusätzliches Zeichen,zusätzliche Zeichen) '%2'"
 
-#: Store.pm:1100
+#: Store.pm:1110
 msgid "Wrong orientation char '%1'"
 msgstr "Falsches Zeichen für Orientierung: '%1'"
 
-#: Store.pm:1107
+#: Store.pm:1117
 msgid "%1 '%2' is not a tile"
 msgstr "%1 '%2' ist kein Stein"
 
-#: Store.pm:1109
+#: Store.pm:1119
 msgid "Missing tile orientation for '%1'"
 msgstr "Die Richtungsangabe für '%1' fehlt"
 
-#: Store.pm:1111
+#: Store.pm:1121
 msgid "Tile '%1' needs no orientation"
 msgstr "Stein '%1' benötigt keine Orientierungsangabe"
 
-#: Store.pm:1114
+#: Store.pm:1124
 msgid "Wrong tile char '%1'"
 msgstr "Falsches Zeichen '%1' für den Stein"
 
-#: Store.pm:1116
+#: Store.pm:1126
 msgid "In %1 no tile data found"
 msgstr "In %1 keine Angaben zum Stein gefunden"
 
-#: Store.pm:1120
+#: Store.pm:1130
 msgid "Position without further data"
 msgstr "Feldangabe ohne weitere Daten"
 
-#: Store.pm:1139
+#: Store.pm:1149
 msgid "Unexpected data for %1: %2"
 msgstr "Unerwartete Angaben für %1: %2"
 
-#: Store.pm:1172
+#: Store.pm:1182
 msgid "%1 marbles seen, %2 is maximum"
 msgstr "%1 Kugeln gesehen, maximal %2 sind erlaubt"
 
-#: Store.pm:1187
+#: Store.pm:1197
 msgid "Wrong rail char '%1'"
 msgstr "Falsches Zeichen '%1' für Schiene"
 
-#: Store.pm:1192
+#: Store.pm:1202
 msgid "Flextube needs two directions"
 msgstr "Die Flextube benötigt zwei Richtungsangaben"
 
-#: Store.pm:1209
+#: Store.pm:1219
 msgid "Rail direction %1 already seen"
 msgstr "Richtungsangabe '%1' für Schiene bereits gesehen"
 
-#: Store.pm:1219
+#: Store.pm:1229
 msgid "Wrong rail direction '%1'"
 msgstr "Falsche Richtungsangabe '%1' für Schiene"
 
-#: Store.pm:1221
+#: Store.pm:1231
 msgid "Missing rail direction for '%1'"
 msgstr "Fehlende Richtungsangabe für Schiene %1: "
 
-#: Store.pm:1228
+#: Store.pm:1238
 msgid "Wrong rail data '%1'"
 msgstr "Falsche Daten für Schiene"
 
-#: Store.pm:1235
+#: Store.pm:1248
 msgid "%1 rail data seen, %2 is maximum for tile %3"
 msgstr "%1 Angaben für Schienen gesehen, maximal %2 sind für Stein %3 erlaubt"
 
-#: Store.pm:1281
+#: Store.pm:1294
 msgid "Owner"
 msgstr "Eigentümer"
 
-#: Store.pm:1292
+#: Store.pm:1305
 msgid "Unknown element %1"
 msgstr "Unbekanntes Element %1"
 
-#: Store.pm:1316
+#: Store.pm:1329
 msgid "Ambig set name '%1': %2"
 msgstr "Mehrdeutiger Bausatzname '%1': %2"
 
-#: Store.pm:1320
+#: Store.pm:1333
 msgid "Unknown set name '%1': "
 msgstr "Unbekannter Bausatzname '%1': "
 
-#: Store.pm:1323
+#: Store.pm:1336
 msgid "Unknown material line '%1'"
 msgstr "Unerwartete Zeile für Material '%1'"
 

@@ -8,7 +8,7 @@
 ##############################################################
 use warnings;
 use strict;
-
+use lib qw(/home/friebel/marblerun/lib);
 use DBI;
 use Getopt::Long;
 use Game::MarbleRun;
@@ -45,6 +45,10 @@ if ($lang) {
 }
 usage() if $opt{h} or ! $ok;
 my %attr = $opt{n} ? (db => ':memory:') : ();
+$attr{verbose} = $opt{v} if $opt{v};
+$attr{quiet} = $opt{q} if $opt{q};
+$attr{fill} = $opt{f} if $opt{f};
+$attr{relative} = $opt{r} if $opt{r};
 if (! -r $Game::MarbleRun::DB_FILE and ! $opt{n}) {
 	my $input = Game::MarbleRun::Store->new(%attr);
 	my $yn = $input->prompt(loc("store a demo track in the database?"));
@@ -53,16 +57,10 @@ if (! -r $Game::MarbleRun::DB_FILE and ! $opt{n}) {
 	$input->store_run($input->parse_run($demo)) if $yn =~ /^[y$Y]/i;
 }
 my $g = Game::MarbleRun::Draw->new(%attr);
-$g->{verbose} = $opt{v};
-$g->{quiet} = $opt{q} || $opt{n};
-$g->{fill} = $opt{f};
-$g->{relative} = $opt{r};
 if ($opt{a}) {
 	if (@ARGV) {
 		for (@ARGV) {
-			$g = Game::MarbleRun::Draw->new(%attr);
 			my $input = Game::MarbleRun::Store->new(%attr);
-			$input->{verbose} = $opt{v};
 			if (-d $_) {
 				my @list = glob "$_/*";
 				$input->process_input($_) for @list;
@@ -70,15 +68,16 @@ if ($opt{a}) {
 				$input->process_input($_);
 				if ($opt{n}) {
 					# in check mode produce optionally a SVG to help debugging
+					$g = Game::MarbleRun::Draw->new(%attr);
 					$g->{dbh} = $input->{dbh};
 					$g->{quiet} = 1;
+					$g->{relative} = $opt{r};
 					$g->display_run(1);
 				}
 			}
 		}
 	} else {
 		my $input = Game::MarbleRun::Store->new(%attr);
-		$input->{verbose} = $opt{v};
 		$input->process_input();
 	}
 } elsif ($opt{e}) {

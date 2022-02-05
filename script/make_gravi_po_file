@@ -47,10 +47,6 @@ $phrases->{z202} = 'Instruction booklet';
 $phrases->{z203} = 'track';
 $phrases->{z204} = 'run';
 $phrases->{z205} = 'Straight Tile';	# Draw.pm
-$phrases->{z207} = 'red';	# Marble colors
-$phrases->{z208} = 'green';
-$phrases->{z209} = 'blue';
-$phrases->{z210} = 'silver';
 $phrases->{z211} = 'orientation';
 
 say "msgid \"$phrases->{$_}\"\nmsgstr \"",loc2($phrases->{$_}),"\"\n" for sort keys %$phrases;

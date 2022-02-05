@@ -11,20 +11,23 @@ use Locale::Maketext::Simple (Style => 'gettext');
 $Game::MarbleRun::VERSION = '1.00';
 my $homedir = $ENV{HOME} || $ENV{HOMEPATH} || die "unknown homedir\n";
 $Game::MarbleRun::DB_FILE = "$homedir/.gravi.db";
-$Game::MarbleRun::DB_SCHEMA_VERSION = 7;
+$Game::MarbleRun::DB_SCHEMA_VERSION = 8;
 
 sub new {
 	my ($class, %attr) = @_;
-	my $self = {
-		verbose => $attr{verbose} || 0,
-		db => $attr{db} || $Game::MarbleRun::DB_FILE,
-	};
+	my $self = {};
 	bless $self => $class;
-	$self->config();
+	$self->config(%attr);
 }
 
 sub config {
-	my ($self) = @_;
+	my ($self, %attr) = @_;
+	my %def = (
+		db => $Game::MarbleRun::DB_FILE,
+		verbose => 0,
+		quiet => 0,
+		fill => 0);
+	$self->{$_} = $attr{$_} || $def{$_} for grep {exists $def{$_}} keys %attr;
 	my $db = $self->{db};
 	my $dbh = $self->connect_db($db) if ! exists $self->{dbh};
 	$self->{dbh} = $dbh;
@@ -44,6 +47,8 @@ sub features {
 	# symbol dir_in dir_out z_in z_out cond result speed
 	#      0      1       2    3     4    5      6     7
 	# direction M means middle (in or out), e.g. for vortex, drop, catcher
+	# direction R means reverse fly out (flip)
+	# direction F means fly in (dir 0)/out straight ahead (catapult, trampolin)
 	# cond = [n]o[dir] n marbles, direction dir must be present,
 	# cond = n z difference at least |n|
 	# cond = 's' one time action, cond becomes S after the action
@@ -54,19 +59,22 @@ sub features {
 	# result = n: state after marble entered tile o[dir]: outgoing marble
 	my $tile = [
 		# sym   din dout    zin    zout    cond  result
-		[ 'A',  '',   0,      0,      0,   'o0', 'o0'],
-		[ 'A',  '',   2,      0,      0,   'o2', 'o2'],
-		[ 'A',  '',   4,      0,      0,   'o4', 'o4'],
+		[ 'A',  '',   0,      0,      0,   '', 'o0'],
+		[ 'A',  '',   2,      0,      0,   '', 'o2'],
+		[ 'A',  '',   4,      0,      0,   '', 'o4'],
 		[ 'C',   0,   4,      0,      0,     0],
 		[ 'C',   1,   2,      0,      0,     0],
 		[ 'D',   0, 'M',      0,      0,    -4],
-		[ 'F',   0,   3,      0,      6,   's'],
+		[ 'F',   0, 'R',      0,      6,   's'],
 		[ 'G', 'M',   0,      0,      0,     0],
 		[ 'G',   0,   0,      0,      0,     0],
 		[ 'H',   3,   0,      0,      0,   's'],
 		[ 'I',   3,   0,      0,      0,     0],
-		[ 'J',   3,   0,      0,    6-7,   's'],
-		[ 'K',   3,   0,      0,      9,   's'],
+		[ 'J',   3,   0,      0,      6,     0,      1],
+		[ 'J',   3,   0,      0,      7,     0,      1],
+		[ 'J',   3,   0,      0,      0,     1,      1],
+		[ 'J',   3,   0,      9,      7,     1,      1],
+		[ 'K',   3, 'F',      0,      9,   's'],
 		[ 'M',   3,   0,      0,      0, '2o0o3', 'o0'],
 		[ 'N',   0,   1,      0,      0,    's',  'o0'],
 		[ 'N',   0,   3,      0,      0,    's',  'o2'],
@@ -76,7 +84,7 @@ sub features {
 		[ 'P', 'M',   2,      0,      0,    's',  'o2'],
 		[ 'P', 'M',   4,      0,      0,    's',  'o4'],
 		[ 'Q',   3,   0,      0,      0,     0],
-		[ 'R',   3,   0,      0,    0-8,     3],
+		[ 'R', 'F', 'F',      0,  '0-8',     3],
 		[ 'S',   0,   2,      0,      0,   '-'],
 		[ 'S',   0,   4,      0,      0,   '+'],
 		[ 'S',   4,   0,      0,      0,   '-'],
@@ -106,25 +114,33 @@ sub features {
 		['xC',   0,   1,      0,      0,     0],
 		['xC',   2,   3,      0,      0,     0],
 		['xC',   4,   5,      0,      0,     0],
-		['xD',   0,   1,    6-7,      0,   '+'],
-		['xD',   0,   5,    6-7,      0,   '-'],
+		['xD', 'F',   1,    6-7,      0,   '+'],
+		['xD', 'F',   5,    6-7,      0,   '-'],
+		['xD',   1,   5,      0,      0,   '-'],
 		['xF', 'detail2', 0,  0, '7+8*(detail1 -2)', '3*(detail1 -2)', 'o0'],
 		['xH', 'detail %6', 0, 'detail',  0, 0],
 		['xI',   0,   3,      0,      0,     0],
 		['xI',   1,   2,      0,      0,     0],
 		['xI',   4,   5,      0,      0,     0],
-		['xK',   3,   0,      0,   0-15,   's'],
-		['xM',   0,   3,      7,      7, 'fast', 'fast'],
-		['xM',   0,   2,      7,      0,      0,      3],
-		['xM',   0,   5,      7,      0,      3,      0],
+		['xK',   3, 'F',      0, '0-15',   's'],
+		['xM',  0,    0,      7,      0,      0,     4],
+		['xM',  0,    4,      7,      0,      4,     2],
+		['xM',  0,    2,      7,      0,      2,     0],
+		['xM',  2,    0,      7,      0,      0,     4],
+		['xM',  2,    4,      7,      0,      4,     2],
+		['xM',  2,    2,      7,      0,      2,     0],
+		['xM',  4,    0,      7,      0,      0,     4],
+		['xM',  4,    4,      7,      0,      4,     2],
+		['xM',  4,    2,      7,      0,      2,     0],
 		['xQ',   0,   1,      0,      0,     0],
-		['xR',   3,   0,     10,    8-9,   's'],
-		['xS',  '',   0,      0,      0,   'o0',  'o0'],
-		['xS',  '',   1,      0,      0,   'o1',  'o1'],
-		['xS',  '',   2,      0,      0,   'o2',  'o2'],
-		['xS',  '',   3,      0,      0,   'o3',  'o3'],
-		['xS',  '',   4,      0,      0,   'o4',  'o4'],
-		['xS',  '',   5,      0,      0,   'o5',  'o5'],
+		['xR', 'F', 'F',     10,      8,   's'],
+		['xR', 'F', 'F',     10,      9,   's'],
+		['xS',  '',   0,      0,      0,   '',  'o0'],
+		['xS',  '',   1,      0,      0,   '',  'o1'],
+		['xS',  '',   2,      0,      0,   '',  'o2'],
+		['xS',  '',   3,      0,      0,   '',  'o3'],
+		['xS',  '',   4,      0,      0,   '',  'o4'],
+		['xS',  '',   5,      0,      0,   '',  'o5'],
 		['xT',   5,  '',      2,      0,    ''],
 		['xT',   5,  '',      2,      0,  'o0'],
 		['xT',   5,   0,      2,      0,  '2o0', '3o0'],
@@ -146,11 +162,15 @@ sub features {
 		['yH',   0,   3,      7,      0,     0],
 		['yH',   1,   4,      7,      0,     0],
 		['yH',   2,   5,      7,      0,     0],
-		['yH',   2,   0,      7,      0,     0],
-		['yH',   3,   1,      7,      0,     0],
-		['yH',   4,   2,      7,      0,     0],
+		['yH',   3,   0,      7,      0,     0],
+		['yH',   4,   1,      7,      0,     0],
+		['yH',   5,   2,      7,      0,     0],
 		['yI',   0,   3,      0,      0,     0],
 		['yI',   1,   5,      0,      0,     0],
+		['yS',   0,   3,      7,      7, 'fast', 'fast'],
+		['yS',   1,   4,      7,      7, 'fast', 'fast'],
+		['yS',   0,   2,      7,      0,      0,      3],
+		['yS',   0,   5,      7,      0,      3,      0],
 		['yT',   0,   3,      0,      0,     0],
 		['yT',   1,   4,      0,      0,     1],
 		['yT',   2,   5,      0,      0,     2],
@@ -166,9 +186,6 @@ sub features {
 		['yT',   4,   3,      7,      0,      0,     5],
 		['yT',   5,   4,      7,      0,      1,     0],
 		['yT',   5,   4,      7,      0,      0,     5],
-		['yV',  0,  'M',      7,      0,      0,     4],
-		['yV',  4,  'M',      7,      0,      4,     2],
-		['yV',  2,  'M',      7,      0,      2,     0],
 		['yW',   2,   0,      0,      0,   'x'],
 		['yW',   5,   3,      0,      0,   'x'],
 		['yW',   0,   3,      0,      0,     0],
@@ -199,6 +216,19 @@ sub features {
 		['xa', 4, 3, 10,],
 		['xb', 5, 0, 0, 'detail'],
 	];
+	# colors
+	$self->{srgb} = {
+		S=>'#d5d5d5',
+		R=>'#d54545',
+		G=>'#45d545',
+		B=>'#45d5d5',
+		A=>'#ffd700'};
+	$self->{color} = {
+		R => loc('red'),
+		G => loc('green'),
+		B => loc('blue'),
+		S => loc('silver'),
+		A => loc('gold')};
 	# fraction of size for green hexagon in tile
 	$self->{twoby3} = 2/3.;
 	$self->{r_ball} = 0.1;
@@ -212,38 +242,21 @@ sub features {
 	push @{$self->{tile}{$_->[0]}}, $_ for @$tile;
 	$self->{rail}{$_->[0]} = $_ for @$rail;
 	$self->{offset}{$_} = $offset{$_} for keys %offset;
-	# possible rail directions for tiles with orientation a at z=0
-	$self->{conn0} = {
-		A => [0, 2, 4], C => [0, 1, 2, 4], D => [0], F => [0], G => [0],
-		H => [0, 3], I => [0, 3], J => [0, 3], K => [3], M => [0, 3],
-		N => [0, 1, 3, 5], P => [0, 2, 4], Q => [0, 3], S => [0, 2, 4],
-		T => [0, 4], U => [0, 2, 4], V => [0, 3], W => [0, 2, 3, 4],
-		X => [0, 1, 3, 4], Y => [0, 2, 4], Z => [0, 2, 4], xA => [0, 3],
-		xB => [0, 3], xC => [qw(0 1 2 3 4 5)], xD => [1, 5], xF => [0],
-		xH => [0], xI => [qw(0 1 2 3 4 5)], xK => [3],
-		xM => [0, 2, 4], xQ => [0, 1], xR => [0, 3],
-		xS => [qw(0 1 2 3 4 5)],
-		xT => [0], xV => [0, 2, 4], xW => [0, 1, 3, 4],
-		xX => [qw(0 1 2 3 4 5)], xY => [qw(0 1 2 3 4)], xZ => [0, 3],
-		yC => [qw(0 1 3 4)], yH => [qw(0 1 2 3 4 5)], yI => [qw(0 1 3 5)],
-		yT => [qw(0 1 2 3 4 5)], yV => [0, 3], yW => [qw(0 2 3 5)],
-		yX => [qw(0 1 2 3 4 5)], yY => [qw(0 2 3 4 5)],
-	};
+	# conn0/1: possible rail directions for tiles with orientation a at z=0/z!=0
 	my ($conn0, $conn1);
 	for my $t (@$tile) {
 		my ($elem, $din, $dout, $z1, $z2, $cond, $res) = @$t;
-		$conn0->{$elem}{$din} = 1 if $din !~ /^$|M|detail/ and $z1 eq '0';
-		$conn0->{$elem}{$dout} = 1 if $dout !~ /^$|M|detail/ and $z2 eq '0';
-		$conn1->{$elem}{$din} = 1 if $din !~ /^$|M|detail/ and $z1 ne '0';
-		$conn1->{$elem}{$dout} = 1 if $dout !~ /^$|M|detail/ and $z2 ne '0';
+		$conn0->{$elem}{$din} = 1 if $din !~ /^[FMR]?$/ and $z1 eq '0';
+		$conn0->{$elem}{$dout} = 1 if $dout !~ /^[FMR]?$/ and $z2 eq '0';
+		$conn1->{$elem}{$z1}{$din} = 1 if $din !~ /^[FMR]?$/ and $z1 ne '0';
+		$conn1->{$elem}{$z2}{$dout} = 1 if $dout !~ /^[FMR]?$/ and $z2 ne '0';
 	}
 	$conn0->{$_} = [sort keys %{$conn0->{$_}}] for keys %$conn0;
-	$conn1->{$_} = [sort keys %{$conn1->{$_}}] for keys %$conn1;
-	# rail direction at level ...->[0], v means variable direction
-	$self->{conn1} = {xF => ['v', 'v'], xH => ['v', 'v'], xM => [7, 0, 2, 4],
-		xT => [2, 5], yH => [qw(7 0 1 2 3 4 5)], yT => [qw(7 0 1 2 3 4 5)],
-		yV => [7, 1, 2, 4, 5]};
-
+	$self->{conn0} = $conn0;
+	for my $e (sort keys %$conn1) {
+		$conn1->{$e}{$_} = [sort keys %{$conn1->{$e}{$_}}] for keys %{$conn1->{$e}};
+	}
+	$self->{conn1} = $conn1;
 }
 
 sub connect_db {
@@ -377,7 +390,7 @@ EOF
 		xF=>'Lifter', f=>'Lift Tube Element', xi=>'Lift in', xj=>'Lift out',
 		xH=>'Spiral', i=>'Spiral in', j=>'Spiral out', h=>'Spiral Curve',
 		L=>'Pillar', xL=>'Tunnel Pillar', B=>'Balcony', E=>'Double Balcony',
-		xM=>'Dispenser', yV=>'Splinter', xD=>'Dipper', xS=>'Spinner',
+		xM=>'Dispenser', yS=>'Splinter', xD=>'Dipper', xS=>'Spinner',
 		yH=>'Helix', yT=>'Turntable', xQ=>'Loop Curve', xV=>'Vortex 3 in',
 		xC=>'Curve 3x small', yC=>'Curve 2x large',
 		xI=>'Straight with 2 Curves', xX=>'Straight 3x', xW=>'2x 2 in 1 left',
@@ -440,7 +453,7 @@ EOF
 		'Jumper', 20, [J=>1, l=>1, m=>2, s=>3],
 		'Tip Tube', 21, [xT=>1, l=>1, m=>2, s=>3],
 		'Spiral', 22, [xH=>1, i=>1, j=>1, h=>3],
-		'Splinter', 23, [yV=>1],
+		'Splinter', 23, [yS=>1],
 		'Dispenser', 24, [xM=>1],
 		'Catapult', 25, [xK=>1, o=>4],
 		# 2021
@@ -1288,16 +1301,14 @@ sub display_run {
 sub initial_actions {
 	my ($self, $tile, $marble, $dxy) = @_;
 	# marble placement and initial actions
-	my %color = (R => loc('red'), G => loc('green'), B => loc('blue'),
-		S => loc('silver'));
 	my %m;
 	push @{$m{$_->[0]}}, [$_->[1], $_->[2]] for @$marble;
 	my $ball = loc($self->{elem_name}{'o'});
 	for my $t (@$tile) {
 		# tiles with initial states: start, (tunnel)switch, cannon, flip,
 		# hammer, jumper, cascade,vvolcan, splash, lift, catapult, bridge,
-		# zipline, tiptube, mixer, transfer, turntable, splitter
-		next if $t->[2] !~ /^[ASUMFHJKNP]$|^x[FKBASTMR]$|^y[TV]$/;
+		# zipline, tiptube, mixer, transfer, splitter, turntable
+		next if $t->[2] !~ /^[ASUMFHJKNP]$|^x[FKBASTMR]$|^y[ST]$/;
 		my ($id, $sym, $x, $y, $dir, $detail, $l) = @{$t}[0,2,3,4,6,7,8];
 		# bridges can unfold with 2 elements only
 		next if $sym eq 'xB' and $detail != 2;
@@ -1333,7 +1344,7 @@ sub initial_actions {
 				use warnings;
 				next if $count > 1;
 				$marbles .= ', ' if $marbles;
-				$marbles .= "$color{$_->[1]||'S'} $ball";
+				$marbles .= "$self->{color}{$_->[1]||'S'} $ball";
 				$marbles .= ' ' . $self->dir_string($_->[0]) if defined $_->[0];
 			}
 			$pos .= ($count ? "$count x " : '') . $marbles;
@@ -1342,7 +1353,7 @@ sub initial_actions {
 			$pos .= loc("Switch state") . " $detail";
 		} elsif ($sym =~ /^[FHJKN]$|x[KBR]/) {
 			$pos .= loc('prepare for start');
-		} elsif ($sym eq 'yV') {
+		} elsif ($sym eq 'yS') {
 			$pos .= loc("flap in %1", $self->dir_string($dir, 1));
 		} elsif ($sym eq 'xM') {
 			next if ! defined $detail;
@@ -1542,7 +1553,7 @@ if the wall is not starting at the pillar closest to the ground plane.
 The last information is on <marbles>. Up to three marbles can be described
 for a tile (exception lifter, there is no restriction. The information
 starts with an 'o' (the marble type) followed by an optional
-color [RGBS] (red, green, blue, silver) and an optional orientation a..f.
+color [RGBSA] (red, green, blue, silver, gold) and an optional orientation.
 
 =head3 Exceptions
 
