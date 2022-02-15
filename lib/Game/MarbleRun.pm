@@ -26,8 +26,11 @@ sub config {
 		db => $Game::MarbleRun::DB_FILE,
 		verbose => 0,
 		quiet => 0,
+		motion => 0,
+		yes => 0,
+		outputfile => '',
 		fill => 0);
-	$self->{$_} = $attr{$_} || $def{$_} for grep {exists $def{$_}} keys %attr;
+	$self->{$_} = $attr{$_} || $def{$_} for keys %def;
 	my $db = $self->{db};
 	my $dbh = $self->connect_db($db) if ! exists $self->{dbh};
 	$self->{dbh} = $dbh;
@@ -43,7 +46,7 @@ sub config {
 
 sub features {
 	my ($self) = @_;
-	# Tiles
+	# Tile rules
 	# symbol dir_in dir_out z_in z_out cond result speed
 	#      0      1       2    3     4    5      6     7
 	# direction M means middle (in or out), e.g. for vortex, drop, catcher
@@ -51,170 +54,181 @@ sub features {
 	# direction F means fly in (dir 0)/out straight ahead (catapult, trampolin)
 	# cond = [n]o[dir] n marbles, direction dir must be present,
 	# cond = n z difference at least |n|
-	# cond = 's' one time action, cond becomes S after the action
-	# cond = '+' or '-' state (detail for S, U) changes to opposite char
-	# cond = n1 and result = n2 state n1 becomes state n2 (xM, xV)
-	# cond = 'x' din, dout cannot be reversed
-	# cond = 0 din, dout and zin, zout can be reversed if din != M, dout != ''
-	# result = n: state after marble entered tile o[dir]: outgoing marble
-	my $tile = [
+	# cond = n1 and result = n2 state n1 becomes state n2 (S, U, xM, xV)
+	# cond = 0 din, dout cannot be reversed
+	# cond = 'r' din, dout and zin, zout can be reversed
+	# result = [n]o[dir]: outgoing marble[s] in direction dir
+	# zout > 0 : change of z to new value n, zout < 0 change to zout <= -n
+	my $tile_r = [
 		# sym   din dout    zin    zout    cond  result
-		[ 'A',  '',   0,      0,      0,   '', 'o0'],
-		[ 'A',  '',   2,      0,      0,   '', 'o2'],
-		[ 'A',  '',   4,      0,      0,   '', 'o4'],
-		[ 'C',   0,   4,      0,      0,     0],
-		[ 'C',   1,   2,      0,      0,     0],
+		[ 'A',  '',   0,      0,      0,   'o0',   'o0'],
+		[ 'A',  '',   2,      0,      0,   'o2',   'o2'],
+		[ 'A',  '',   4,      0,      0,   'o4',   'o4'],
+		[ 'C',   0,   4,      0,      0,   'r'],
+		[ 'C',   1,   2,      0,      0,   'r'],
 		[ 'D',   0, 'M',      0,      0,    -4],
-		[ 'F',   0, 'R',      0,      6,   's'],
-		[ 'G', 'M',   0,      0,      0,     0],
+		[ 'F',   0, 'R',      0,      7,     0,       1],
+		[ 'G', 'M',   0,      0,      0,     4],
 		[ 'G',   0,   0,      0,      0,     0],
-		[ 'H',   3,   0,      0,      0,   's'],
-		[ 'I',   3,   0,      0,      0,     0],
-		[ 'J',   3,   0,      0,      6,     0,      1],
-		[ 'J',   3,   0,      0,      7,     0,      1],
-		[ 'J',   3,   0,      0,      0,     1,      1],
-		[ 'J',   3,   0,      9,      7,     1,      1],
-		[ 'K',   3, 'F',      0,      9,   's'],
-		[ 'M',   3,   0,      0,      0, '2o0o3', 'o0'],
-		[ 'N',   0,   1,      0,      0,    's',  'o0'],
-		[ 'N',   0,   3,      0,      0,    's',  'o2'],
-		[ 'N',   0,   5,      0,      0,    's',  'o4'],
+		[ 'H',   3,   0,      0,      0,     0,       1],
+		[ 'I',   3,   0,      0,      0,   'r'],
+		[ 'J',   3,   0,      0,      6,      0,      1],
+		[ 'J',   3,   0,      0,      7,      0,      1],
+		[ 'J',   3,   0,      0,      0,      1,      1],
+		[ 'J',   3,   0,      9,      7,      1,      1],
+		[ 'K',   3, 'F',      0,      7,      0,      1],
+		[ 'M',   3,  '',      0,      0,      0],
+		[ 'M',  '',   0,      0,      0, '2o0o3',  'o0'],
+		[ 'N',   0,   1,      0,      0,   'o0',   'o0'],
+		[ 'N',   0,   3,      0,      0,   'o2',   'o2'],
+		[ 'N',   0,   5,      0,      0,   'o4',   'o4'],
 		[ 'O', 'M', 'M',      0,      0,    -3],
-		[ 'P', 'M',   0,      0,      0,    's',  'o0'],
-		[ 'P', 'M',   2,      0,      0,    's',  'o2'],
-		[ 'P', 'M',   4,      0,      0,    's',  'o4'],
-		[ 'Q',   3,   0,      0,      0,     0],
-		[ 'R', 'F', 'F',      0,  '0-8',     3],
-		[ 'S',   0,   2,      0,      0,   '-'],
-		[ 'S',   0,   4,      0,      0,   '+'],
-		[ 'S',   4,   0,      0,      0,   '-'],
-		[ 'S',   2,   0,      0,      0,   '+'],
-		[ 'T',   0,   4,      0,      0,     0],
-		[ 'U',   0,   2,      0,      0,   '-'],
-		[ 'U',   0,   4,      0,      0,   '+'],
-		[ 'U',   4,   0,      0,      0,   '-'],
-		[ 'U',   2,   0,      0,      0,   '+'],
+		[ 'P', 'M',   0,      0,      0,   'o0',   'o0'],
+		[ 'P', 'M',   2,      0,      0,   'o2',   'o2'],
+		[ 'P', 'M',   4,      0,      0,   'o4',   'o4'],
+		[ 'Q',   3,   0,      0,      0,   'r'],
+		[ 'R', 'F', 'F',      0,     -8,     3],
+		[ 'S',   0,   2,      0,      0,      0,      1],
+		[ 'S',   0,   4,      0,      0,      1,      0],
+		[ 'S',   4,   0,      0,      0,      0,      1],
+		[ 'S',   2,   0,      0,      0,      1,      0],
+		[ 'T',   0,   4,      0,      0,   'r'],
+		[ 'U',   0,   2,      0,      0,      0,      1],
+		[ 'U',   0,   4,      0,      0,      1,      0],
+		[ 'U',   4,   0,      0,      0,      0,      1],
+		[ 'U',   2,   0,      0,      0,      1,      0],
 		[ 'V',   0, 'M',      0,      0,    -4],
 		[ 'V',   3, 'M',      0,      0,    -4],
-		[ 'W',   2,   0,      0,      0,   'x'],
-		[ 'W',   3,   0,      0,      0,   'x'],
-		[ 'W',   4,   0,      0,      0,   'x'],
-		[ 'W',   0,   3,      0,      0,   'x'],
-		[ 'X',   0,   3,      0,      0,     0],
-		[ 'X',   1,   4,      0,      0,     0],
-		[ 'Y',   2,   0,      0,      0,   'x'],
-		[ 'Y',   4,   0,      0,      0,   'x'],
-		[ 'Y',   0,   2,      0,      0,   'x'],
+		[ 'W',   2,   0,      0,      0,     0],
+		[ 'W',   3,   0,      0,      0,     0],
+		[ 'W',   4,   0,      0,      0,     0],
+		[ 'W',   0,   3,      0,      0,     0],
+		[ 'X',   0,   3,      0,      0,   'r'],
+		[ 'X',   1,   4,      0,      0,   'r'],
+		[ 'Y',   2,   0,      0,      0,     0],
+		[ 'Y',   4,   0,      0,      0,     0],
+		[ 'Y',   0,   2,      0,      0,     0],
 		[ 'Z',   0,  '',      0,      0,     0],
 		[ 'Z',   2,  '',      0,      0,     0],
 		[ 'Z',   4,  '',      0,      0,     0],
-		['xA',   3,   0,      0,      0, 'o0o3',  'o0'],
-		['xB',   3,   0,      0,      0,     1,      0],
-		['xB',   0,   3,      0,      0,     0,      0],
-		['xC',   0,   1,      0,      0,     0],
-		['xC',   2,   3,      0,      0,     0],
-		['xC',   4,   5,      0,      0,     0],
-		['xD', 'F',   1,    6-7,      0,   '+'],
-		['xD', 'F',   5,    6-7,      0,   '-'],
-		['xD',   1,   5,      0,      0,   '-'],
-		['xF', 'detail2', 0,  0, '7+8*(detail1 -2)', '3*(detail1 -2)', 'o0'],
-		['xH', 'detail %6', 0, 'detail',  0, 0],
-		['xI',   0,   3,      0,      0,     0],
-		['xI',   1,   2,      0,      0,     0],
-		['xI',   4,   5,      0,      0,     0],
-		['xK',   3, 'F',      0, '0-15',   's'],
-		['xM',  0,    0,      7,      0,      0,     4],
-		['xM',  0,    4,      7,      0,      4,     2],
-		['xM',  0,    2,      7,      0,      2,     0],
-		['xM',  2,    0,      7,      0,      0,     4],
-		['xM',  2,    4,      7,      0,      4,     2],
-		['xM',  2,    2,      7,      0,      2,     0],
-		['xM',  4,    0,      7,      0,      0,     4],
-		['xM',  4,    4,      7,      0,      4,     2],
-		['xM',  4,    2,      7,      0,      2,     0],
-		['xQ',   0,   1,      0,      0,     0],
-		['xR', 'F', 'F',     10,      8,   's'],
-		['xR', 'F', 'F',     10,      9,   's'],
-		['xS',  '',   0,      0,      0,   '',  'o0'],
-		['xS',  '',   1,      0,      0,   '',  'o1'],
-		['xS',  '',   2,      0,      0,   '',  'o2'],
-		['xS',  '',   3,      0,      0,   '',  'o3'],
-		['xS',  '',   4,      0,      0,   '',  'o4'],
-		['xS',  '',   5,      0,      0,   '',  'o5'],
+		[ 'e',   3,  '',      0,      0,     0],
+		['xA',   3,   0,      0,      0, 'o0o3',   'o0'],
+		['xB',   3,   0,      0,      0,      1,      0],
+		['xB',   0,   3,      0,      0,      0,      0],
+		['xC',   0,   1,      0,      0,   'r'],
+		['xC',   2,   3,      0,      0,   'r'],
+		['xC',   4,   5,      0,      0,   'r'],
+		['xD', 'F',   1,      6,      0,      1,      0],
+		['xD', 'F',   1,      7,      0,      1,      0],
+		['xD', 'F',   5,      6,      0,      0,      1],
+		['xD', 'F',   5,      7,      0,      0,      1],
+		['xD',   1,   5,      0,      0,      0,      1],
+		['xF', 'detail2', 0,  0, '7+8*(detail1 -2)', '3*(detail1 -2)o0', 'o0'],
+		['xH', 'detail %6', 0, 'detail', 0,  0],
+		['xI',   0,   3,      0,      0,   'r'],
+		['xI',   1,   2,      0,      0,   'r'],
+		['xI',   4,   5,      0,      0,   'r'],
+		['xK',   3, 'F',      0,    -15,      0,      1],
+		['xM',  0,    0,      7,      0,      0,      4],
+		['xM',  0,    4,      7,      0,      4,      2],
+		['xM',  0,    2,      7,      0,      2,      0],
+		['xM',  2,    0,      7,      0,      0,      4],
+		['xM',  2,    4,      7,      0,      4,      2],
+		['xM',  2,    2,      7,      0,      2,      0],
+		['xM',  4,    0,      7,      0,      0,      4],
+		['xM',  4,    4,      7,      0,      4,      2],
+		['xM',  4,    2,      7,      0,      2,      0],
+		['xQ',   0,   1,      0,      0,   'r'],
+		['xR', 'F', 'F',     10,      8,      0,      1],
+		['xR', 'F', 'F',     10,      9,      0,      1],
+		['xS',  '',   0,      0,      0,   'o0',   'o0'],
+		['xS',  '',   1,      0,      0,   'o1',   'o1'],
+		['xS',  '',   2,      0,      0,   'o2',   'o2'],
+		['xS',  '',   3,      0,      0,   'o3',   'o3'],
+		['xS',  '',   4,      0,      0,   'o4',   'o4'],
+		['xS',  '',   5,      0,      0,   'o5',   'o5'],
 		['xT',   5,  '',      2,      0,    ''],
 		['xT',   5,  '',      2,      0,  'o0'],
-		['xT',   5,   0,      2,      0,  '2o0', '3o0'],
+		['xT',   5,   0,      2,      0,  '2o0',  '3o0'],
 		['xV',   0, 'M',      0,      0,    -4],
 		['xV',   2, 'M',      0,      0,    -4],
 		['xV',   4, 'M',      0,      0,    -4],
-		['xW',   0,   3,      0,      0,     0],
-		['xW',   1,   3,      0,      0,   'x'],
-		['xW',   4,   0,      0,      0,   'x'],
-		['xX',   0,   3,      0,      0,     0],
-		['xX',   1,   4,      0,      0,     0],
-		['xX',   2,   5,      0,      0,     0],
-		['xY',   0,   3,      0,      0,     0],
-		['xY',   1,   2,      0,      0,     0],
-		['xY',   4,   0,      0,      0,   'x'],
-		['xZ',   3,   0,      0,      0, 'o0o3',  'o0'],
-		['yC',   0,   4,      0,      0,     0],
-		['yC',   1,   3,      0,      0,     0],
-		['yH',   0,   3,      7,      0,     0],
-		['yH',   1,   4,      7,      0,     0],
-		['yH',   2,   5,      7,      0,     0],
-		['yH',   3,   0,      7,      0,     0],
-		['yH',   4,   1,      7,      0,     0],
-		['yH',   5,   2,      7,      0,     0],
-		['yI',   0,   3,      0,      0,     0],
-		['yI',   1,   5,      0,      0,     0],
+		['xW',   0,   3,      0,      0,   'r'],
+		['xW',   1,   3,      0,      0,     0],
+		['xW',   4,   0,      0,      0,     0],
+		['xX',   0,   3,      0,      0,   'r'],
+		['xX',   1,   4,      0,      0,   'r'],
+		['xX',   2,   5,      0,      0,   'r'],
+		['xY',   0,   3,      0,      0,   'r'],
+		['xY',   1,   2,      0,      0,   'r'],
+		['xY',   4,   0,      0,      0,     0],
+		['xZ',   3,   0,      0,      0, 'o0o3',   'o0'],
+		['yC',   0,   4,      0,      0,   'r'],
+		['yC',   1,   3,      0,      0,   'r'],
+		['yH',   0,   3,      7,      0,   'r'],
+		['yH',   1,   4,      7,      0,   'r'],
+		['yH',   2,   5,      7,      0,   'r'],
+		['yH',   3,   0,      7,      0,   'r'],
+		['yH',   4,   1,      7,      0,   'r'],
+		['yH',   5,   2,      7,      0,   'r'],
+		['yI',   0,   3,      0,      0,   'r'],
+		['yI',   1,   5,      0,      0,   'r'],
 		['yS',   0,   3,      7,      7, 'fast', 'fast'],
 		['yS',   1,   4,      7,      7, 'fast', 'fast'],
 		['yS',   0,   2,      7,      0,      0,      3],
 		['yS',   0,   5,      7,      0,      3,      0],
-		['yT',   0,   3,      0,      0,     0],
+		['yT',   0,   3,      0,      0,   'r'],
 		['yT',   1,   4,      0,      0,     1],
 		['yT',   2,   5,      0,      0,     2],
-		['yT',   0,   5,      7,      0,      2,     1],
-		['yT',   0,   5,      7,      0,      1,     0],
-		['yT',   1,   0,      7,      0,      2,     1],
-		['yT',   1,   0,      7,      0,      0,     5],
-		['yT',   2,   1,      7,      0,      1,     0],
-		['yT',   2,   1,      7,      0,      0,     5],
-		['yT',   3,   2,      7,      0,      2,     1],
-		['yT',   3,   2,      7,      0,      1,     0],
-		['yT',   4,   3,      7,      0,      2,     1],
-		['yT',   4,   3,      7,      0,      0,     5],
-		['yT',   5,   4,      7,      0,      1,     0],
-		['yT',   5,   4,      7,      0,      0,     5],
-		['yW',   2,   0,      0,      0,   'x'],
-		['yW',   5,   3,      0,      0,   'x'],
-		['yW',   0,   3,      0,      0,     0],
-		['yX',   0,   4,      0,      0,     0],
-		['yX',   1,   5,      0,      0,     0],
-		['yX',   2,   3,      0,      0,     0],
-		['yY',   0,   3,      0,      0,     0],
-		['yY',   4,   5,      0,      0,     0],
-		['yY',   2,   0,      0,      0,   'x'],
+		['yT',   0,   5,      7,      0,      2,      1],
+		['yT',   0,   5,      7,      0,      1,      0],
+		['yT',   1,   0,      7,      0,      2,      1],
+		['yT',   1,   0,      7,      0,      0,      5],
+		['yT',   2,   1,      7,      0,      1,      0],
+		['yT',   2,   1,      7,      0,      0,      5],
+		['yT',   3,   2,      7,      0,      2,      1],
+		['yT',   3,   2,      7,      0,      1,      0],
+		['yT',   4,   3,      7,      0,      2,      1],
+		['yT',   4,   3,      7,      0,      0,      5],
+		['yT',   5,   4,      7,      0,      1,      0],
+		['yT',   5,   4,      7,      0,      0,      5],
+		['yW',   2,   0,      0,      0,     0],
+		['yW',   5,   3,      0,      0,     0],
+		['yW',   0,   3,      0,      0,   'r'],
+		['yX',   0,   4,      0,      0,   'r'],
+		['yX',   1,   5,      0,      0,   'r'],
+		['yX',   2,   3,      0,      0,   'r'],
+		['yY',   0,   3,      0,      0,   'r'],
+		['yY',   4,   5,      0,      0,   'r'],
+		['yY',   2,   0,      0,      0,     0],
 	];
+	# expand symmetric tile rules
+	for my $t (@$tile_r) {
+		if ($t->[5] eq 'r') {
+			$t->[5] = 0;
+			push @$tile_r, [$t->[0], $t->[2], $t->[1], $t->[4], $t->[3], 0];
+		}
+	}
 	# Rails
 	# symbol length z_min z_max special
 	#      0      1     2     3       4
 	my $rail = [
-		['a', 2, 6, 7,],
-		['b', 4, 12, 16,],
-		['c', 2, 5, 7, '-'],
-		['d', 2, 5, 7, '+'],
-		['e', 1, 0, 0,],
-		['g', 5, 0, 7,],
+		['a', 2, 5, 7,],
+		['b', 4, 14, 18,],
+		['c', 2, 5, 7, -1],
+		['d', 2, 5, 7, 1],
+		['e', 1, 0, 3],
+		['g', 5, 0, 7, 'fast'], # fast rail
 		['l', 4, 0, 8,],
 		['m', 3, 0, 7,],
-		['q', 5, 0, 7,],
+		['q', 5, 0, 7, 'slow'], # slow rail
 		['s', 2, 0, 5,],
 		['t', 0, 7, 7,],
 		['u', 4, 0, 9, 'hole'],
 		['v', 4, 0, 9, 'hole'],
 		['xa', 4, 3, 10,],
-		['xb', 5, 0, 0, 'detail'],
+		['xb', 5, 0, 0, 'length'], # detail: length
+		['xt', 2, 6, 7, 'dir'], # detail: direction
 	];
 	# colors
 	$self->{srgb} = {
@@ -229,6 +243,8 @@ sub features {
 		B => loc('blue'),
 		S => loc('silver'),
 		A => loc('gold')};
+	# initial time to move marbles across 1 tile
+	$self->{time0} = 10;
 	# fraction of size for green hexagon in tile
 	$self->{twoby3} = 2/3.;
 	$self->{r_ball} = 0.1;
@@ -239,12 +255,12 @@ sub features {
 		xB => [[-0.3, -0.25], [-0.3, 0.25]], Z => 1.5*$self->{r_ball},
 		xK => [[-0.2, -0.3], [-0.2, 0.3], [0.2, -0.3], [0.2, 0.3]],
 	);
-	push @{$self->{tile}{$_->[0]}}, $_ for @$tile;
+	push @{$self->{rules}{$_->[0]}}, $_ for @$tile_r;
 	$self->{rail}{$_->[0]} = $_ for @$rail;
 	$self->{offset}{$_} = $offset{$_} for keys %offset;
 	# conn0/1: possible rail directions for tiles with orientation a at z=0/z!=0
 	my ($conn0, $conn1);
-	for my $t (@$tile) {
+	for my $t (@$tile_r) {
 		my ($elem, $din, $dout, $z1, $z2, $cond, $res) = @$t;
 		$conn0->{$elem}{$din} = 1 if $din !~ /^[FMR]?$/ and $z1 eq '0';
 		$conn0->{$elem}{$dout} = 1 if $dout !~ /^[FMR]?$/ and $z2 eq '0';
@@ -503,7 +519,7 @@ sub prompt {
 	my $Y_or_N = loc('Y') . '/' . loc('N');
 	# always accept the english form y/n
 	(my $YN = $Y_or_N) =~ s/\//YN/;
-	my $answer = $self->{answer};
+	my $answer = $self->{yes} ? 'Y' : $self->{answer} ;
 	return $answer if $answer and $answer =~ /[$YN]/;
 	warn "$str ", lc ($Y_or_N), " ($Y_or_N) ", loc("to all\n");
 	$answer = <STDIN>;
@@ -745,12 +761,15 @@ sub fetch_run_data {
 		WHERE r.run_id=$id AND tile1_id=t1.id AND tile2_id=t2.id
 		AND t1.run_id=$id AND t2.run_id=$id";
 	my $res_rail = $self->{dbh}->selectall_arrayref($sql);
-	# handle finish line separately, it has no tile at the end
-	$sql = "SELECT r.element,r.direction,tile1_id,t.level,tile1_id,t.level
+	# treat finish line like a tile, it has no connection at the end
+	$sql = "SELECT r.id,r.run_id,r.element,posx,posy,posz,r.direction,r.detail,t.level
 		FROM run_rail AS r, run_tile AS t WHERE r.run_id=$id AND tile1_id=t.id
 		AND t.run_id=$id and r.element = 'e'";
-	my $res_rail2 = $self->{dbh}->selectall_arrayref($sql);
-	push @$res_rail, @$res_rail2 if @$res_rail2;
+	my $tiles_e = $self->{dbh}->selectall_arrayref($sql);
+	for my $t (@$tiles_e) {
+		($t->[3], $t->[4]) = $self->to_position($t->[3], $t->[4], $t->[6], 1);
+		push @$res_tile, $t;
+	}
 	$sql = "SELECT tile_id,orient,color FROM run_marble WHERE run_id=$id";
 	my $res_marble = $self->{dbh}->selectall_arrayref($sql);
 	$sql = "SELECT board_x,board_y FROM run_no_elements WHERE run_id=$id";
@@ -769,10 +788,10 @@ sub get_file_name {
 		}
 		$name = <STDIN>;
 		chomp $name;
-		return if ! $name;
+		return '' if ! $name;
 		if ($name !~ /^[\w\.\/]+/) {
 			$self->error("Name must start with an alphanum char");
-			return;
+			return '';
 		}
 	}
 	$name = $ext ? "$name.$ext" : $name;
@@ -781,7 +800,7 @@ sub get_file_name {
 		my $Y = loc('Y');
 		return '' if $yn !~ /^[y$Y]/i;
 	}
-	return $name;
+	return $name || '';
 }
 
 sub export_marble_run {
@@ -1044,7 +1063,7 @@ sub translate {
 sub to_position {
 	my ($self, $x1, $y1, $dir, $len) = @_;
 	my ($x2, $y2) = ($x1, $y1);
-	return ($x2, $y2) if ! $len;
+	return ($x2, $y2) if $dir eq 'M' or ! $len;
 	$dir = $dir % 6;
 	# bent rails
 	if ($len =~ /[+-]/) {
@@ -1094,12 +1113,14 @@ sub display_run {
 
 	say loc("Instructions for %1, board size %2",
 		$self->translate($meta->[1]), "${by}x$bx") if ! $quiet;
-	# ask for SVG output
-	$self->{outputfile} = $self->get_file_name('', '',
-		loc("ENTER to continue without svg")) || '' if $svg;
 
 	# SVG #
-	my $ok = $self->board($by, $bx, $run_id, $self->{fill}, $excl) if $svg;
+	if ($svg) {
+		# ask for SVG output
+		$self->{outputfile} = $self->get_file_name('', '',
+			loc("ENTER to continue without svg")) if ! $self->{outputfile};
+		$self->board($by, $bx, $run_id, $self->{fill}, $excl);
+	}
 	# SVG end #
 
 	# sort tiles and rails based on ground plane numbers first column, then row
@@ -1257,9 +1278,6 @@ sub display_run {
 				my $dir = $r->[1];
 				my ($x1, $y1) = @{$pos{$r->[2]}}[3,4];
 				my ($x2, $y2) = @{$pos{$r->[4]}}[3,4];
-				# special case finish line
-				($x2, $y2) = $self->to_position($x1, $y1, $r->[1], 1)
-					if $sym eq 'e';
 				my $pos1 = $self->num2pos($x1, $y1);
 				my $pos2 = $self->num2pos($x2, $y2);
 				if ($self->{relative}) {
@@ -1290,7 +1308,9 @@ sub display_run {
 		}
 		# display is complete, now start animation
 		if ($l == $meta->[8]) {
-			$self->do_run($run_id);
+			my $no_marbles = $self->do_run($run_id);
+			# do not display marbles that cannot start
+			$marble->[$_] = undef for @$no_marbles;
 			$l = '';
 		}
 		$self->emit_svg($file, $l) if $svg;
@@ -1302,7 +1322,7 @@ sub initial_actions {
 	my ($self, $tile, $marble, $dxy) = @_;
 	# marble placement and initial actions
 	my %m;
-	push @{$m{$_->[0]}}, [$_->[1], $_->[2]] for @$marble;
+	push @{$m{$_->[0]}}, [$_->[1], $_->[2]] for grep {$_} @$marble;
 	my $ball = loc($self->{elem_name}{'o'});
 	for my $t (@$tile) {
 		# tiles with initial states: start, (tunnel)switch, cannon, flip,

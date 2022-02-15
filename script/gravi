@@ -19,10 +19,11 @@ use Locale::Maketext::Simple (Style => 'gettext', Class => 'Game::MarbleRun');
 use vars qw(%opt);
 
 Getopt::Long::Configure ("bundling");
-my $ok = GetOptions(a => \$opt{a}, 'd' => \$opt{d}, e => \$opt{e}, f => \$opt{f},
-	h => \$opt{h}, 'i:s' => \$opt{i}, 'l=s' => \$opt{l}, n => \$opt{n},
-	'o=s' => \$opt{o}, q => \$opt{q}, r => \$opt{r}, s => \$opt{s},
-	v => \$opt{v}, 'u:s' => \$opt{u}, x => \$opt{x});
+my $ok = GetOptions(a => \$opt{a}, 'd' => \$opt{d}, e => \$opt{e},
+	f => \$opt{f}, h => \$opt{h}, 'i:s' => \$opt{i}, 'l=s' => \$opt{l},
+	m => \$opt{m}, n => \$opt{n}, 'o=s' => \$opt{o}, q => \$opt{q},
+	r => \$opt{r}, s => \$opt{s}, v => \$opt{v}, 'u:s' => \$opt{u},
+	x => \$opt{x}, y => \$opt{y},);
 my $lang = $ENV{LANG};
 if ($opt{l}) {
 	$lang = $opt{l};
@@ -49,6 +50,9 @@ $attr{verbose} = $opt{v} if $opt{v};
 $attr{quiet} = $opt{q} if $opt{q};
 $attr{fill} = $opt{f} if $opt{f};
 $attr{relative} = $opt{r} if $opt{r};
+$attr{yes} = $opt{y} if $opt{y};
+$attr{motion} = $opt{m} if $opt{m};
+$attr{outputfile} = $opt{o} if $opt{o};
 if (! -r $Game::MarbleRun::DB_FILE and ! $opt{n}) {
 	my $input = Game::MarbleRun::Store->new(%attr);
 	my $yn = $input->prompt(loc("store a demo track in the database?"));
@@ -89,7 +93,6 @@ if ($opt{a}) {
 	$g->inventory($id);
 } else {
     $g = Game::MarbleRun::Draw->new(%attr);
-	$g->{outputfile} = $opt{o} if $opt{o};
 	my $person_id = $g->owner_of_set_id($opt{u});
 	my @ids = $g->list_marble_runs($person_id, @ARGV);
 	exit if ! @ids;
@@ -137,6 +140,7 @@ sub usage {
     -f      fill all empty positions on ground plane with coordinate values (svg)
     -i      print inventory for a person (chosen by -u or for the main user)
     -l lang language name for output (e.g en_US, de_de, de_DE.UTF8)
+    -m      generate svg with moving marbles (visible e.g in web browser)
     -n      do not generate an svg image, with -a do not store run, check only
     -o name file name for export or svg image file prefix (without .svg)
     -q      quiet run, do only output svg image
@@ -145,6 +149,7 @@ sub usage {
     -u [id] chose a person to determine the available material
     -v      verbose output
     -x      export a single run to a file or to STDOUT
+    -y      answer always 'Y' to yes/no questions
 EOF
 	exit;
 }
