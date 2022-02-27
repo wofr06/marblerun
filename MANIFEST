@@ -1,7 +1,7 @@
-Changes
+ChangeLog
 Makefile.PL
 MANIFEST
-README
+README.md
 t/01_Store.t
 t/02_Store_Warnings.t
 t/03_DB_checks.t

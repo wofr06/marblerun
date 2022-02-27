@@ -213,9 +213,9 @@ sub verify_rail_endpoints {
 						$case2->{xH}[0] = (2*$t->[4] - 2 - $dir) % 6;
 					}
 					if ($tile eq 'xF') {
-						# direction in for lift at z=0 is stored in detail
-						$cases->{xF}[0] = ord($1) - 97 if $t->[4] =~ /([a-f])/;
-						$cases->{xF}[0] = ($cases->{xF}[0] - $dir) % 6;
+						# direction out for lift at z!=0 is stored in detail
+						$case2->{xF}[0] = ord($1) - 97 if $t->[4] =~ /([a-f])/;
+						$case2->{xF}[0] = ($cases->{xF}[0] - $dir) % 6;
 					}
 					# skip height tiles
 					next if ! $tile;
@@ -693,41 +693,6 @@ sub get_offsets {
 	return $off;
 }
 
-sub marble_orients {
-	my ($self, $marbles, $rule) = @_;
-	# silently add/correct orientations if possible
-	my ($tile, $dir) = @{$rule}[0,5];
-	my $off = $dir % 2;
-	$off = 1 - $off if $tile eq 'N';
-	my %orient = ($off => 1, $off+2 => 1, $off+4 =>1);
-	for my $r (grep {$_->[0] eq 'o'} map {$rule->[$_]} (7 .. $#$rule)) {
-		# silently add/correct orientations
-		if ($tile =~ /^M|x[AFTZ]/) {
-			$r->[1] = $dir;
-			next;
-		} elsif ($tile eq 'xS') {
-			next; # all orientations are allowed
-		} elsif ($tile =~ /^[ANP]/) {
-			if (defined $r->[1] and exists $orient{$r->[1]}) {
-				delete $orient{$r->[1]};
-			} elsif (defined $r->[1]) {
-				$self->error("marble on tile %1, dir %2 cannot be in position %3",
-				$tile, chr($dir + 97), chr($r->[1] + 97));
-			}
-		} else {
-			$self->error("No marbles should be placed on the %1 tile", $tile);
-		}
-	}
-	return if $tile !~ /^[ANP]/;
-	for my $r (grep {$_->[0] eq 'o'} map {$rule->[$_]} (7 .. $#$rule)) {
-		if (! defined $r->[1]) {
-			my $val = (keys %orient)[0];
-			delete $orient{$val};
-			$r->[1] = $val;
-		}
-	}
-}
-
 sub level_height {
 	my ($self, $rules, $off_xy, $h) = @_;
 	my $old_z = 0;
@@ -1131,57 +1096,22 @@ sub parse_run {
 			}
 			$f = [$tile, $x1, $y1, $z, $detail, $dir, $level];
 			next if ! defined $tile;
-			if (! @items or ! grep {/o/} @items) {
-				my @m1 = qw(oRa oGc oBe);
-				my @m2 = qw(oRb oGd oBf);
-				(my $dirchr = $dir || 0) =~ tr/0-5/a-f/;
-				push @items, @m1 if $tile =~ /^[AP]$/ and ! ($dir % 2);
-				push @items, @m2 if $tile =~ /^[AP]$/ and $dir % 2;
-				push @items, @m1 if $tile eq 'N' and ($dir % 2);
-				push @items, @m2 if $tile eq 'N' and ! $dir % 2;
-				push @items, "oS$dirchr", "oS$dirchr" if $tile eq 'M';
-				push @items, "oS$dirchr" if $tile =~ /x[AZ]/;
-				if ($tile eq 'xF') {
-					push @items, 'oS' for 1..(3 + 4*(substr($detail,0,1) - 2));
-				}
+			$self->check_marbles($tile, $dir, $detail, \@items);
+			# store marbles
+			for (grep {/^\d*o/} @items) {
+				my ($count, $color, $dir) = /^(\d*)o(.)(.)/;
+				push @$f, ['o', ord($dir) - 97, $color] for 1 .. ($count || 1);
 			}
 			if (@items and $tile =~ /[O^=]/) {
 				$self->error("Unexpected data for %1: %2", $tile_name,"@items");
 				next;
 			}
-			# rails and marbles
-			my ($marbles, $rails);
+			# rails
+			my $rails;
 			my $num_walls = grep {/x/} @items;
 			for (@items) {
-				# marbles
-				my $count = 1;
-				my $max_marbles = 3;
-				$max_marbles = 6 if $tile eq 'xS';
-				$max_marbles = 20 if $tile eq 'xF';
-				$count = $1 if s/^(\d+)o/o/;
-				if (s/^o(.*)/$1/) {
-					my ($orient, $color);
-					if ($_) {
-						if (s/([a-f])//) {
-							$orient = ord($1) - 97;
-						}
-						if (s/([RGBSA])//) {
-							$color = $1;
-						} elsif ($tile =~ /^[ANP]/) {
-							$color = substr('RGB', ($marbles||0) % 3, 1);
-						} elsif ($tile eq 'xS') {
-							$color = substr('RGBRGB', ($marbles||0) % 6, 1);
-						}
-						$self->error("%quant(%1,Excessive char) '%2'",
-							length $_, $_) if $_;
-					}
-					# no marbles for count = 0 !
-					$marbles += $count;
-
-					push @$f, ['o', $orient, $color] for 1 .. $count;
-					$self->error("%1 marbles seen, %2 is maximum", $marbles,
-						$max_marbles) if $marbles > $max_marbles;
-				} elsif (s/^(x?[A-Za-w])//) {
+				next if /^\d*o/; # marbles already handled
+				if (s/^(x?[A-Za-w])//) {
 				# all known rails (exists and range of small letters)
 					$r = $1;
 					my ($is_wall, $w_detail);
@@ -1194,7 +1124,7 @@ sub parse_run {
 					}
 					if ($r !~ /^(x?[a-egl-nqs-v])/
 							or ! exists $self->{elem_name}{$r}) {
-						$self->error("Wrong rail char '%1'", $1);
+						$self->error("Wrong rail char '%1'", $r);
 					} elsif (s/^([a-f])//i) {
 						$dir = $1;
 						if ($r eq 'xt') {
@@ -1248,7 +1178,6 @@ sub parse_run {
 			$self->error("%1 rail data seen, %2 is maximum for tile %3",
 				$n, $nmax, $tile) if $n > $nmax;
 			push @$rules, $f;
-			$self->marble_orients($marbles, $rules->[-1]) if $marbles;
 		}
 	}
 	unshift @$rules, ['name', $run_name];
@@ -1260,6 +1189,84 @@ sub parse_run {
 	$self->doublebalcony_height($rules);
 	undef $self->{line};
 	return $rules;
+}
+
+sub check_marbles {
+	my ($self, $tile, $dir, $detail, $items) = @_;
+	my @items = grep {/^\d*o/} @$items;
+	# add missing marbles where required (A, M, N, P, xF, xS)
+	my @m1 = grep {$_->[5] =~ /o/} @{$self->{rules}{$tile}};
+	my $colors = 'RGBSA';
+	my @chk;
+	for (@m1) {
+		my ($m_num, $m_dir) = ($_->[5] =~ /^(\d*[^o]*)o(.)/);
+		if (length $m_num > 1) { # xF
+			my ($parts, $m_dir) = split '', $detail;
+			$m_num = substr($m_num, 0, 1)*($parts - 1);
+			$m_dir = ord($m_dir) - 97 - $dir; # absolute dir
+		} else {
+			next if ! $_->[6] or $_->[5] !~ /$_->[6]/;
+		}
+		$colors =~ s/^(.)(..)/$2$1/; # rotate RGB color names
+		my $m_col = $#m1 ? $1 : 'S';
+		$m_dir = chr(97 + ($m_dir + $dir) % 6);
+		my $str = ($m_num || '') . "o$m_col$m_dir";
+		if (@items) {
+			push @chk, "o$m_col$m_dir" for 1 .. ($m_num || 1);
+		} else {
+			push @$items, $str;
+		}
+	}
+	return if ! @items;
+	if (! @chk) {
+		$self->error("No marbles should be placed on the %1 tile", $tile);
+		@$items = grep {! /^\d*o/} @$items;
+		return;
+	}
+	# check existing marbles and add color and/or orientation
+	for (@$items) {
+		my ($num, $str) = split /o/, $_;
+		$num ||= '';
+		my $color = $1 if $str and $str =~ s/([$colors])//;
+		my $cdir = $1 if $str and $str =~ s/([a-f])//;
+		if ($str) {
+			my $what = ($color and ! $cdir) ? ' position' :
+			($cdir and ! $color) ? ' color' : '';
+			$self->error("Illegal%1 char %2 in %3 for marble on tile %4",
+				$what, $str, $_, $tile);
+			next;
+		}
+		if ($color and $cdir) {
+			my @chk2 = grep {$_ =~ /$cdir/} @chk;
+			if (! @chk2) {
+				if ($self->{rules}{$tile}[0][1] eq '') {
+					warn loc("marble %1 on tile %2 will be started later\n",
+					$_, $tile);
+				} else {
+					$self->error("marble on tile %1 cannot be in position %2",
+						$tile, $cdir);
+				}
+				next;
+			} else {
+				my $found = shift @chk2;
+				@chk = grep {$_ ne $found} @chk;
+				push @chk, @chk2 if @chk2; # marbles with same dir and color
+			}
+		} elsif (! $color and ! $cdir) {
+			@$items = (@chk, grep {! /^\d*o/} @$items);
+			return;
+		} elsif (! $color) {
+			($_) = grep {/$cdir/} @chk;
+			next if $_;
+			$self->error("marble on tile %1 cannot be in position %2",
+				$tile, $cdir);
+			@$items = (@chk, grep {defined $_ and ! /^\d*o/} @$items);
+			return;
+		} elsif (! $cdir) {
+			my $m = shift @chk;
+			($_ = $m) =~ s/[$colors]/$color/;
+		}
+	}
 }
 
 sub parse_material {
@@ -1462,13 +1469,6 @@ input. Outputs an arrayref containing
 $offsets->[$level] = [column_off, row_off, type] for a given level. The
 plane type is 0, 2 or 3 for ground/small/large transparent plane. Adds
 level lines before the transparent plane line (^) if not already present.
-
-=head marble_orients
-
-$g->marble_orients($marbles, $rule);
-
-checks position of marbles and adds silently marbles if missing (e.g. two
-marbles for cannons).
 
 =head2 level_height
 

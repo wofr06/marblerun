@@ -8,7 +8,7 @@ use DBI;
 use Game::MarbleRun::I18N;
 use Locale::Maketext::Simple (Style => 'gettext');
 
-$Game::MarbleRun::VERSION = '1.00';
+$Game::MarbleRun::VERSION = '1.01';
 my $homedir = $ENV{HOME} || $ENV{HOMEPATH} || die "unknown homedir\n";
 $Game::MarbleRun::DB_FILE = "$homedir/.gravi.db";
 $Game::MarbleRun::DB_SCHEMA_VERSION = 8;
@@ -77,11 +77,10 @@ sub features {
 		[ 'J',   3,   0,      0,      0,      1,      1],
 		[ 'J',   3,   0,      9,      7,      1,      1],
 		[ 'K',   3, 'F',      0,      7,      0,      1],
-		[ 'M',   3,  '',      0,      0,      0],
-		[ 'M',  '',   0,      0,      0, '2o0o3',  'o0'],
-		[ 'N',   0,   1,      0,      0,   'o0',   'o0'],
-		[ 'N',   0,   3,      0,      0,   'o2',   'o2'],
-		[ 'N',   0,   5,      0,      0,   'o4',   'o4'],
+		[ 'M',   3,  '',      0,      0, '2o0o3',  'o0'],
+		[ 'N',   0,  '',      0,      0,   'o1',   'o1'],
+		[ 'N',   0,  '',      0,      0,   'o3',   'o3'],
+		[ 'N',   0,  '',      0,      0,   'o5',   'o5'],
 		[ 'O', 'M', 'M',      0,      0,    -3],
 		[ 'P', 'M',   0,      0,      0,   'o0',   'o0'],
 		[ 'P', 'M',   2,      0,      0,   'o2',   'o2'],
@@ -112,9 +111,10 @@ sub features {
 		[ 'Z',   2,  '',      0,      0,     0],
 		[ 'Z',   4,  '',      0,      0,     0],
 		[ 'e',   3,  '',      0,      0,     0],
-		['xA',   3,   0,      0,      0, 'o0o3',   'o0'],
-		['xB',   3,   0,      0,      0,      1,      0],
-		['xB',   0,   3,      0,      0,      0,      0],
+		['xA',   3,  '',      0,      0, 'o0o3',   'o0'],
+		['xB',   3,   0,      0,      0,      0,      1],
+		['xB',   3,   0,      0,      0,      1,      1],
+		['xB',   0,   3,      0,      0,      1,      1],
 		['xC',   0,   1,      0,      0,   'r'],
 		['xC',   2,   3,      0,      0,   'r'],
 		['xC',   4,   5,      0,      0,   'r'],
@@ -123,7 +123,7 @@ sub features {
 		['xD', 'F',   5,      6,      0,      0,      1],
 		['xD', 'F',   5,      7,      0,      0,      1],
 		['xD',   1,   5,      0,      0,      0,      1],
-		['xF', 'detail2', 0,  0, '7+8*(detail1 -2)', '3*(detail1 -2)o0', 'o0'],
+		['xF', 'detail2', 0,  0, '7*(detail1-1)', '3*(detail1-1)o0', 'o0'],
 		['xH', 'detail %6', 0, 'detail', 0,  0],
 		['xI',   0,   3,      0,      0,   'r'],
 		['xI',   1,   2,      0,      0,   'r'],
@@ -147,9 +147,10 @@ sub features {
 		['xS',  '',   3,      0,      0,   'o3',   'o3'],
 		['xS',  '',   4,      0,      0,   'o4',   'o4'],
 		['xS',  '',   5,      0,      0,   'o5',   'o5'],
-		['xT',   5,  '',      2,      0,    ''],
-		['xT',   5,  '',      2,      0,  'o0'],
-		['xT',   5,   0,      2,      0,  '2o0',  '3o0'],
+		['xT',   5,  '',      2,      0,    '',      ''],
+		['xT',   5,  '',      2,      0,  'o5',      ''],
+		['xT',   5,  '',      2,      0,  '2o5',     ''],
+		['xT',   5,  '',      2,      0,  '3o5',  '3o0'],
 		['xV',   0, 'M',      0,      0,    -4],
 		['xV',   2, 'M',      0,      0,    -4],
 		['xV',   4, 'M',      0,      0,    -4],
@@ -162,7 +163,7 @@ sub features {
 		['xY',   0,   3,      0,      0,   'r'],
 		['xY',   1,   2,      0,      0,   'r'],
 		['xY',   4,   0,      0,      0,     0],
-		['xZ',   3,   0,      0,      0, 'o0o3',   'o0'],
+		['xZ',   3,  '',      0,      0, 'o0o3',   'o0'],
 		['yC',   0,   4,      0,      0,   'r'],
 		['yC',   1,   3,      0,      0,   'r'],
 		['yH',   0,   3,      7,      0,   'r'],
@@ -213,22 +214,22 @@ sub features {
 	# symbol length z_min z_max special
 	#      0      1     2     3       4
 	my $rail = [
-		['a', 2, 5, 7,],
-		['b', 4, 14, 18,],
-		['c', 2, 5, 7, -1],
-		['d', 2, 5, 7, 1],
-		['e', 1, 0, 3],
-		['g', 5, 0, 7, 'fast'], # fast rail
-		['l', 4, 0, 8,],
-		['m', 3, 0, 7,],
-		['q', 5, 0, 7, 'slow'], # slow rail
-		['s', 2, 0, 5,],
-		['t', 0, 7, 7,],
-		['u', 4, 0, 9, 'hole'],
-		['v', 4, 0, 9, 'hole'],
-		['xa', 4, 3, 10,],
-		['xb', 5, 0, 0, 'length'], # detail: length
-		['xt', 2, 6, 7, 'dir'], # detail: direction
+		['a',  2,  5,  7,        0],
+		['b',  4, 14, 18,        0],
+		['c',  2,  5,  7,       -1],
+		['d',  2,  5,  7,        1],
+		['e',  1,  0,  3,        0],
+		['g',  5,  0,  7,   'fast'], # fast rail
+		['l',  4,  0,  8,        0],
+		['m',  3,  0,  7,        0],
+		['q',  5,  0,  7,   'slow'], # slow rail
+		['s',  2,  0,  5,        0],
+		['t',  0,  7,  7,        0],
+		['u',  4,  0,  9,   'hole'],
+		['v',  4,  0,  9,   'hole'],
+		['xa', 4,  3, 10,        0],
+		['xb', 5,  0,  0, 'length'], # detail: length
+		['xt', 2,  6,  7,    'dir'], # detail: direction
 	];
 	# colors
 	$self->{srgb} = {
@@ -254,6 +255,7 @@ sub features {
 		xA => 2*$self->{r_ball}, xS => 0.375, xZ => 2*$self->{r_ball},
 		xB => [[-0.3, -0.25], [-0.3, 0.25]], Z => 1.5*$self->{r_ball},
 		xK => [[-0.2, -0.3], [-0.2, 0.3], [0.2, -0.3], [0.2, 0.3]],
+		xT => -2*$self->{r_ball},
 	);
 	push @{$self->{rules}{$_->[0]}}, $_ for @$tile_r;
 	$self->{rail}{$_->[0]} = $_ for @$rail;
@@ -262,12 +264,13 @@ sub features {
 	my ($conn0, $conn1);
 	for my $t (@$tile_r) {
 		my ($elem, $din, $dout, $z1, $z2, $cond, $res) = @$t;
-		$conn0->{$elem}{$din} = 1 if $din !~ /^[FMR]?$/ and $z1 eq '0';
+		$conn0->{$elem}{$din} = 1 if $din !~ /^[FMRd]?$/ and $z1 eq '0';
+		$conn0->{$elem}{$1} = 1 if $res and $res =~ /^\d?o(.)$/ and $z2 eq '0';
 		$conn0->{$elem}{$dout} = 1 if $dout !~ /^[FMR]?$/ and $z2 eq '0';
 		$conn1->{$elem}{$z1}{$din} = 1 if $din !~ /^[FMR]?$/ and $z1 ne '0';
 		$conn1->{$elem}{$z2}{$dout} = 1 if $dout !~ /^[FMR]?$/ and $z2 ne '0';
 	}
-	$conn0->{$_} = [sort keys %{$conn0->{$_}}] for keys %$conn0;
+	$conn0->{$_} = [sort grep {/^\d$/} keys %{$conn0->{$_}}] for keys %$conn0;
 	$self->{conn0} = $conn0;
 	for my $e (sort keys %$conn1) {
 		$conn1->{$e}{$_} = [sort keys %{$conn1->{$e}{$_}}] for keys %{$conn1->{$e}};
@@ -1135,6 +1138,8 @@ sub display_run {
 			$tile->[$a->[2]][3] <=> $tile->[$b->[2]][3] ||
 			$tile->[$a->[2]][4] <=> $tile->[$b->[2]][4]} @$rail;
 	}
+	# calculate marble path
+	my ($marbles, $no_marbles) = $self->do_run($run_id);
 	for my $l (0 .. $meta->[8]) {
 		# handle transparent planes first
 		if ($l) {
@@ -1306,16 +1311,14 @@ sub display_run {
 				# SVG end #
 			}
 		}
-		# display is complete, now start animation
-		if ($l == $meta->[8]) {
-			my $no_marbles = $self->do_run($run_id);
-			# do not display marbles that cannot start
-			$marble->[$_] = undef for @$no_marbles;
-			$l = '';
-		}
-		$self->emit_svg($file, $l) if $svg;
+		# show intermediate steps
+		$self->emit_svg($file, $l) if $svg and $l != $meta->[8];
 	}
-	$self->initial_actions($tile, $marble, $tp_pos);
+	# do not display marbles that cannot start
+	$self->display_balls($marbles);
+	$self->emit_svg($file, '');
+	#$marble->[$_] = undef for @$no_marbles;
+	$self->initial_actions($tile, $marbles, $tp_pos);
 }
 
 sub initial_actions {

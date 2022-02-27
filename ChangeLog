@@ -1,4 +1,5 @@
 Revision history for Perl extension Game::MarbleRun
+	- marble animation with timing working for simple tracks
 1.01  Tue Feb 15 2022
     - Symbol for splinter changed to yS. Code cleanup, fix option handling
 	- Lift handling corrected. Animation working mostly, timing incorrect.

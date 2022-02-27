@@ -80,8 +80,8 @@ my $line = [
 	'no tile data' => ['33 3 sa' => qr/no tile data/i, 'run'], # 583
 	'no further data' => ['22' => qr/further data/i, 'run'], # 586
 	# marble data
-	'excess marble char' => ['33 Ca oSad' => qr/excess/i, 'run'], # 608
-	'max # of marbles' => ['44 Ca oa ob oc od oe' => qr/maximum/i, 'run'], # 613
+	#'excess marble char' => ['33 Ca oSad' => qr/excess/i, 'run'], # 608
+	#'max # of marbles' => ['44 Ca oa ob oc od oe' => qr/maximum/i, 'run'], # 613
 	# rail data
 	'wrong rail char' => ['22 Ca La' => qr/wrong rail char/i, 'run'], # 620
 	'duplicate rail' => ['42 Ca sd sd' => qr/seen/i, 'run'], # 629
