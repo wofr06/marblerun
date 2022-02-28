@@ -707,10 +707,9 @@ sub put_Balls {
 	$tag->stop(style=>{"stop-color"=>"#000"},"stop-opacity"=>0,offset=>.25);
 	$tag->stop(style=>{"stop-color"=>"#000"},"stop-opacity"=>0.7,offset=>1);
 	$g->circle(cx=>$x,cy=>$y,r=>$r, style=>{fill=>"url(#radial$id)"});
-	
 	for (my $i = 0; $i < @$path; $i++) {
 		$g->animate('-method' => 'Motion', path => $path->[$i],
-			dur => $dur->[$i], begin => $begin->[$i], fill => 'freeze');
+			dur => $dur->[$i] || 1, begin => $begin->[$i] || 0, fill=>'freeze');
 	}
 }
 
@@ -1012,13 +1011,15 @@ sub display_balls {
 		keys %{$self->{tiles}}) {
 		my ($sym, $x, $y) = @{$self->{tiles}{$t_id}}[0,1,2];
 		my $state = $self->{tiles}{$t_id}[7];
+		my %mult;
 		for my $str (split /:/, $state) {
 			next if ! $str;
 			my ($m_id, $dir, $color) = ($str =~ /^(\d+)o(.)(.)/);
 			next if defined $xyz->[$m_id][0];
 			say "$sym at $x,$y marble $m_id dir $dir, color $color" if $dbg;
+			$mult{$dir}++;
 			my $desc = [$m_id, $dir, $color];
-			$self->put_Balls($x, $y, $self->{offset}{$sym}, $desc);
+			$self->put_Balls($x, $y, $mult{$dir}*$self->{offset}{$sym}, $desc);
 		}
 	}
 }
@@ -1034,16 +1035,20 @@ sub get_moving_marbles {
 		$t_dir = 0 if $t->[0] eq 'xS';
 		for my $rule (@{$self->{rules}{$t->[0]}}) {
 			next if ! defined $rule->[6] or $rule->[6] !~ /o/;
-			my @dirs;
+			my %dirs;
 			for my $str (grep {defined $_} split /:/, $t->[7]) {
 				next if ! $str;
-				my ($num, $dir, $color) = ($str =~ /^(\d+)o(.)(.)/);
-				$dirs[($dir - $t_dir) % 6]++;
+				my ($num, $dir, $color) = ($str =~ /(\d+)o(.)(.)$/);
+				$dir eq 'M' ? $dirs{M}++ : $dirs{($dir - $t_dir) % 6}++;
 			}
-			my ($i, $comp) = (0, '');
-			defined $_ ? ($comp .= $_ . 'o' . $i++) : $i++ for @dirs;
-			$comp =~ s/1o(\d)/o$1/g;
-			if ($comp =~ /$rule->[5]/) {
+			my $match = 1;
+			my $cond = $rule->[5];
+			while ($cond =~ s/(\d?)o(.)//) {
+				my $num = $1 || 1;
+				$match = 0 if ! exists $dirs{$2} or $dirs{$2} < $num;
+			}
+			say "tile $t->[0] $t->[7] cond $rule->[5] match $match" if $dbg;
+			if ($match) {
 				my $dir = (substr($rule->[6], -1, 1) + $t_dir) % 6;
 				# reshuffle marbles (last in, first out with dir corrected)
 				if ($t->[0] eq 'xT') {
@@ -1057,9 +1062,11 @@ sub get_moving_marbles {
 					my ($num, $color) = ($1, $2);
 					$marbles = [grep {$_->[0] != $num} @$marbles];
 					say "start marble $num color $color dir $dir" if $dbg;
+					# inhibit emitting new marbles for 30 ticks
+					my $inc = $rule->[2] ne '' ? 30 : 0;
 					# id sym x y z dir_in dir_out total_time, inc_time
 					push @$marbles, [$num, $id, undef, @$t[1..3],
-						undef, $dir, $self->{ticks}, 0, $color];
+						undef, $dir, $self->{ticks} + $inc, 0, $color];
 					last if $t->[0] ne 'xT';
 					$self->{ticks} += 0.3;
 				}
@@ -1067,12 +1074,6 @@ sub get_moving_marbles {
 		}
 	}
 	#print Dumper $marbles,$self->{ticks};
-	# inhibit emitting new marbles for 30 ticks
-	for (@$marbles) {
-		my $t = $self->{tiles}{$_->[1]};
-		my $rules = $self->{rules}{$t->[0]};
-		$t->[8] = $self->{ticks} + 30 if $rules->[0][2] ne '';
-	}
 	#print Dumper $self->{tiles};
 	return $marbles;
 }
@@ -1128,6 +1129,7 @@ sub move_marbles {
 				}
 			}
 		}
+		$self->{ticks} = $m->[8];
 	}} while defined $marbles->[0];
 	return $no_marbles;
 }
@@ -1137,16 +1139,22 @@ sub tile_rule {
 	my $t = $self->{tiles};
 	for (grep {$self->{rules}{$t->{$_}[0]}} keys %$t) {
 		next if $x != $t->{$_}[1] or $y != $t->{$_}[2];
+		say "xy check ok" if $dbg;
 		my $t_id = $_;
 		my $tile_z = $t->{$t_id}[3];
+		$tile_z += $t->{$t_id}[5] if $t->{$t_id}[0] eq 'xH';
 		for (@{$self->{rules}{$t->{$t_id}[0]}}) {
+			say "zcheck z=$z, tile_z=$tile_z, rule: $_->[3] -> $_->[4]" if $dbg;
 			if ($dir eq 'M') {
 				next if $_->[5] !~ /o/ and abs($_->[5]) > abs($z - $tile_z);
 			} elsif ($_->[4] < 0) {
 				next if $tile_z - $z < $_->[4];
 			} else {
-				next if $z != $tile_z;
+				my $zin = $_->[3] =~ /^\d+$/ ? $z - $_->[3] : $z;
+				# allow for a step of 1 on the path
+				next if $zin != $tile_z and $zin != $tile_z + 1;
 			}
+			say "tile $t->{$t_id}[0] ok" if $dbg;
 			return $t_id;
 		}
 	}
@@ -1158,7 +1166,7 @@ sub update_marble {
 	my $t = $self->{tiles}{$marble->[1]};
 	say "$self->{ticks}: from $t->[0] xyz=@$t[1,2,3] dir $marble->[7]" if $dbg;
 	if (! exists $self->{xyz}[$m_id] ) {
-		say "start marble $m_id" if $dbg;
+		say "start marble $m_id at $self->{ticks}" if $dbg;
 		push @{$self->{xyz}[$m_id]}, [@$t[0 .. 3], $marble->[7],
 			$self->{ticks}];
 	}
@@ -1197,19 +1205,21 @@ sub update_marble {
 sub next_dir {
 	my ($self, $marble) = @_;
 	my $t = $self->{tiles}{$marble->[1]};
+	# outgoing direction for spiral is stored in incoming dir
+	return $t->[4] if $t->[0] eq 'xH';
 	#print "tile", Dumper $t, $marble, $marble->[6],$t->[4] if $t->[0] eq 'S';
 	for my $rule (@{$self->{rules}{$t->[0]}}) {
 		say "rule $rule->[0] $rule->[1] -> $rule->[2]" if $dbg;
 		# handle state, set new state;
 		if (defined $rule->[6] and $rule->[6] =~ /^[0-5]$/) {
 			# store initial state if not yet done
-			if (! defined $t->[8]) {
-				($t->[8] = $t->[5]) =~ tr/-+/01/ if $t->[0] =~ /^[SU]$/;
+			if (! defined $t->[8] and defined $t->[5]) {
+				($t->[8] = $t->[5]) =~ tr/-+/01/ if $t->[5] =~ /^[+-]$/;
 			}
 			my $state = $t->[8] || 0;
 			next if $state ne $rule->[5];
 			$t->[8] = $rule->[6];
-			say "state $state -> $rule->[6]";
+			say "state $state -> $rule->[6]" if $dbg;
 		}
 		# outgoing direction: middle
 		if ($rule->[2] eq 'M') {
@@ -1218,13 +1228,17 @@ sub next_dir {
         } elsif ($rule->[1] eq 'M') {
 			return ($rule->[2] + $t->[4]) % 6 if $rule->[2] =~ /^[0-5]$/;
 		# outgoing direction: flying (no connection for rails)
-        } elsif ($rule->[2] eq 'F' or $rule->[2] eq 'R') {
+        } elsif ($rule->[2] =~ /^[FR]$/) {
 			$marble->[5] += ($rule->[4] - $rule->[3]) if $rule->[4] =~ /^\d$/;
 			return $rule->[2] eq 'F' ? $marble->[7] : $marble->[6];
-		} elsif ($rule->[1] =~ /^[0-5]$/
-			and $rule->[1] == ($marble->[6] - $t->[4]) % 6) {
+		} elsif ($rule->[1] eq 'F' or ($rule->[1] =~ /^[0-5]$/
+			and $rule->[1] == ($marble->[6] - $t->[4]) % 6)) {
+			# update z if required
+			$marble->[5] += $rule->[4] if $rule->[4] > 0;
+			#$marble->[5] -= $rule->[3] if $rule->[3] > 0;
+			say "### new z $marble->[5]" if $rule->[3] and $dbg;
 			return ($rule->[2] + $t->[4]) % 6 if $rule->[2] =~ /^[0-5]$/;
-        }
+		}
 	}
 	return undef;
 }
@@ -1245,7 +1259,6 @@ sub generate_path {
 		$y0 += $offset*$dy;
 	}
 	my $path = "M 0 0";
-	my $len = 0;
 	my $start;
 	for (my $i = 1; $i < @$xyz; $i++) {
 		$start = $xyz->[$i][5] || 0 if ! defined $start;
@@ -1258,7 +1271,9 @@ sub generate_path {
 			$path .= " L " . ($x - $x0) . ' ' . ($y - $y0);
 		} elsif ($dir < 0 || $dir eq '') {
 			my $balls = -$dir || 1;
-			$dir = ($xyz->[$i - 1][4] + 3) % 6;
+			$dir = $xyz->[$i - 1][4];
+			$dir = $xyz->[$i - 2][4] if $dir eq 'M';
+			$dir = ($dir + 3) % 6;
 			say "finish: xyz=$xc $yc $z dir=$dir" if $dbg;
 			my $frac = 3*$self->{r_ball};
 			# end of path finish line and tiptube (e, xT)
@@ -1277,14 +1292,13 @@ sub generate_path {
 			my ($dx, $dy) = ($self->{middle_x}[$dir], $self->{middle_y}[$dir]);
 			my $to = ($x - $x0 + $frac*$dx) . ' ' . ($y - $y0+ $frac*$dy);
 			$path .= " L $to";
-			$path =~ s/\.\d+ / /g;
+			$path =~ s/(\.d)\d+ /$1 /g;
 			push @$paths, $path;
 			push @$starts, ($start + 10)/$self->{speed};
 			push @$lengths, ($xyz->[$i][5] - $start)/$self->{speed};
 			$path = " M $to";
 			$start = undef;
-		} elsif ($sym =~ /^[a-w]$/) {
-			$len += $self->{rail}{$sym}[1];
+		} elsif ($sym =~ /[a-w]$/) {
 			last if ! exists $xyz->[$i+1];
 			my ($x, $y) = $self->center_pos($xyz->[$i+1][1], $xyz->[$i+1][2]);
 			$dir = ($dir + $self->{rail}{$sym}[4]) % 6 if $sym =~ /^[cd]$/;
@@ -1302,9 +1316,7 @@ sub generate_path {
 			my $r = 0.2*$self->{size};
 			my $turns= 2.5;
 			$path .= spiral_path($x - $x0, $y -$y0, $r, $turns, $dir);
-			$len += 2;
 		} elsif ($sym !~ /^[ADMZ]$|^xT$/) {
-			$len++;
 			my $out = $xyz->[$i+1][4];
 			$out = $dir if ! defined $out or $out !~ /^\d$/;
 			my ($dx, $dy) = ($self->{middle_x}[$out], $self->{middle_y}[$out]);
@@ -1323,7 +1335,11 @@ sub generate_path {
 			}
 		}
 	}
-	#return ($start, $len/4., $path);
+	if (! $paths) {
+		push @$paths, $path;
+		push @$starts, 10/$self->{speed};
+		push @$lengths, $xyz->[-2][5]/$self->{speed};
+	}
 	return ($starts, $lengths, $paths);
 }
 

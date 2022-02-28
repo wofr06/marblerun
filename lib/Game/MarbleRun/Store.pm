@@ -1100,6 +1100,7 @@ sub parse_run {
 			# store marbles
 			for (grep {/^\d*o/} @items) {
 				my ($count, $color, $dir) = /^(\d*)o(.)(.)/;
+				($color, $dir) = ($dir, $color) if $dir !~ /[a-f]/;
 				push @$f, ['o', ord($dir) - 97, $color] for 1 .. ($count || 1);
 			}
 			if (@items and $tile =~ /[O^=]/) {
@@ -1240,7 +1241,7 @@ sub check_marbles {
 			my @chk2 = grep {$_ =~ /$cdir/} @chk;
 			if (! @chk2) {
 				if ($self->{rules}{$tile}[0][1] eq '') {
-					warn loc("marble %1 on tile %2 will be started later\n",
+					print loc("marble %1 on tile %2 will be started later\n",
 					$_, $tile);
 				} else {
 					$self->error("marble on tile %1 cannot be in position %2",
