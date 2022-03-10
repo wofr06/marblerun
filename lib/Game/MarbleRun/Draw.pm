@@ -12,7 +12,7 @@ use Locale::Maketext::Simple (Style => 'gettext', Class => 'Game::MarbleRun');
 use SVG;
 use List::Util qw(min);
 
-my $dbg = 0;
+my $dbg = 1;
 
 sub new {
 	my ($class, %attr) = @_;
@@ -261,9 +261,6 @@ sub draw_tile {
 		$self->put_Balcony($x, $y, $orient);
 	} elsif ($elem eq '^' or $elem eq '=') {
 		$self->put_TransparentPlane($x, $y, $elem);
-	# finish line
-	} elsif ($elem eq 'e') {
-		$self->put_FinishLine($x, $y, $orient);
 	# height tiles
 	} elsif (($_) = grep {$elem eq $_} qw(1 + L xL)) {
 		$self->put_1($x, $y, $elem);
@@ -349,6 +346,9 @@ sub draw_rail {
 		$self->put_arc($xc, $yc, 2, $dir - $inc - 2);
 		return;
 	# flextube
+	} elsif ($elem eq 'e') {
+		my ($xc, $yc) = $self->to_position($posx1, $posy1, $dir, 1);
+		$self->put_FinishLine($xc, $yc, $dir);
 	} elsif ($elem eq 'xt') {
 		my ($xc, $yc) = $self->to_position($posx1, $posy1, $detail + 3, 1);
 		my ($x1, $y1) = $self->center_pos($posx1, $posy1);
@@ -1042,12 +1042,13 @@ sub get_moving_marbles {
 				$dir eq 'M' ? $dirs{M}++ : $dirs{($dir - $t_dir) % 6}++;
 			}
 			my $match = 1;
+			(my $num_r) = ($rule->[5] =~ /(\d?)o(.)/);
+			$num_r ||= 1;
 			my $cond = $rule->[5];
 			while ($cond =~ s/(\d?)o(.)//) {
 				my $num = $1 || 1;
 				$match = 0 if ! exists $dirs{$2} or $dirs{$2} < $num;
 			}
-			say "tile $t->[0] $t->[7] cond $rule->[5] match $match" if $dbg;
 			if ($match) {
 				my $dir = (substr($rule->[6], -1, 1) + $t_dir) % 6;
 				# reshuffle marbles (last in, first out with dir corrected)
@@ -1058,17 +1059,25 @@ sub get_moving_marbles {
 					$self->{ticks} += 0.3;
 				}
 				# now no marble at orientation $dir
+				my $inc = 0;
 				while ($t->[7] =~ s/:(\d+)o$dir(.)//) {
 					my ($num, $color) = ($1, $2);
 					$marbles = [grep {$_->[0] != $num} @$marbles];
-					say "start marble $num color $color dir $dir" if $dbg;
-					# inhibit emitting new marbles for 30 ticks
-					my $inc = $rule->[2] ne '' ? 30 : 0;
-					# id sym x y z dir_in dir_out total_time, inc_time
+					say "start marble $num at ", $self->{ticks} + $inc,
+						" $self->{color}{lc $color} ($self->{dirchr}[$dir])"
+						if $dbg;
+					# id sym x y z dir_in dir_out total_time inc_time len
+					my $len = 0.5;
+					$len -= $self->{offset}{$t->[0]}
+						if exists $self->{offset}{$t->[0]};
 					push @$marbles, [$num, $id, undef, @$t[1..3],
-						undef, $dir, $self->{ticks} + $inc, 0, $color];
-					last if $t->[0] ne 'xT';
-					$self->{ticks} += 0.3;
+						undef, $dir, $self->{ticks} + $inc, 0, $color, $len];
+					# inhibit emitting new marbles for 30 ticks
+					$inc += 30 if $rule->[2] ne '';
+					$self->{ticks} += 0.3 if $t->[0] eq 'xT';
+					my $left = $t->[7] =~ s/(o$dir)/$1/g;
+					say "### num $num left $left num_r $num_r";
+					last if ! $left or $left < $num_r;
 				}
 			}
 		}
@@ -1087,14 +1096,12 @@ sub move_marbles {
 		my $m = (sort {$a->[8] <=> $b->[8]} @$marbles)[0];
 		last if ! defined $m->[0];
 		$self->{ticks} = $m->[8];
-		say "marble $m->[0] ticks $m->[8]" if $dbg;
 		if (! defined $m->[7]) {
 			say "marble $m->[0] path finished or paused" if $dbg;
 			$marbles = [grep {$_->[0] != $m->[0]} @$marbles];
 			next;
 		}
 		my $m_dir = $m->[7];
-		say "move marble $m->[0] direction $m_dir" if $dbg;
 		my $t_id = $m->[1];
 		# find outgoing connecting rail
 		my @out = grep {$t_id == $_->[2] and $m_dir eq $_->[1]} @$rails;

@@ -486,11 +486,6 @@ sub store_run {
 				my $Y = loc('Y');
 				return undef if $yn !~ /^[y$Y]/i;
 			}
-			if ($self->{db} =~ /memory/) {
-				say loc("Checking marble run '%1'", $run_name);
-			} else {
-				say loc("Registering marble run '%1'", $run_name);
-			}
 			$run_id = $self->store_run_header($hdr);
 			$hdr = undef;
 		}
@@ -894,6 +889,11 @@ sub parse_run {
 		if (/^\s*(?:name|$loc_name)(?:\s+|:|$)(.*)/i) {
 			$run_name = $1;
 			$self->error("Missing run name") if ! $run_name;
+			if ($self->{db} =~ /memory/) {
+				say loc("Checking marble run '%1'", $run_name || '');
+			} else {
+				say loc("Registering marble run '%1'", $run_name || '');
+			}
 		} elsif (s/^\s*(?:level|$loc_level)(?:\s+|:)(\d+)//i) {
 			# errors already reported
 			$level_line_seen = 1;
@@ -902,16 +902,10 @@ sub parse_run {
 			push @$rules, ['level', $level];
 		} elsif (/^\s*(?:date|$loc_date)(?:\s+|:)(.*)/i) {
 			push @$rules, ['date', $1];
-			$self->error("Missing run name") if /^$run_name$/;
 		} elsif (/^\s*(?:author|$loc_author)(?:\s+|:)(.*)/i) {
 			push @$rules, ['author', $1];
-			$self->error("Missing run name") if /^$run_name$/;
 		} elsif (/^\s*(?:source|$loc_source)(?:\s+|:)(.*)/i) {
 			push @$rules, ['source', $1];
-			$self->error("Missing run name") if /^$run_name$/;
-		} elsif ($self->{line} == 1) {
-			# already covered
-			$self->{line} = 2;
 		# ground planes
 		} elsif (s/^\s*_\s*//) {
 			if (/(\d+)\D+(\d+)/) {
@@ -936,9 +930,12 @@ sub parse_run {
 			my ($x1, $y1, $z, $tile_id, $tile_name, $r, $dir, $detail, $f);
 			my ($pos, $tile, @items) = split;
 			($y1, $x1) = $self->get_pos($pos, $rel_pos);
+			#say "xy= $x1,$y1 tile $tile rel $rel_pos";
 			$off_x = $off_xy->[$level][0] || 0;
 			$off_y = $off_xy->[$level][1] || 0;
 			$plane_type = $off_xy->[$level][2] || 3;
+			#say "plane $plane_type offxy=$off_x $off_y";
+			#say "ground xy $off_xy->[0][0] $off_xy->[0][1]";
 			# adjust positions exept for transparent plane
 			if ($tile and $rel_pos) {
 				if ($tile =~ /[=^]/) {
@@ -946,11 +943,16 @@ sub parse_run {
 					$y1 += $off_xy->[0][1];
 				} else {
 					# adjust y coordinate if transparent plane on even x pos
-					$y1++ if ! ($off_xy->[$level][0] % 2 + $x1 % 2) and $level;
+					#$y1++ if ! ($off_xy->[$level][0] % 2 + $x1 % 2) and $level;
 					$x1 += $off_x;
 					$y1 += $off_y;
-					$x1 -= $plane_type if $level;
-					$y1 -= $plane_type if $level;
+					if ($level) {
+						my $xmod = ($x1 - $plane_type) % 2;
+						$y1++ if $xmod and $plane_type == 3;
+						$y1-- if $xmod and $plane_type == 2;
+						$x1 -= $plane_type;
+						$y1 -= $plane_type;
+					}
 				}
 			}
 			# tile must be on a transparent plane for level > 0

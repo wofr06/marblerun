@@ -32,7 +32,7 @@ my $run = [['name', 'basic_a'],['A', 3, 4, 5, '', 2, 0,[5, 5, 's',2],
 	['o', 2, undef]],	['C', 5, 5, 3, '', 5, 0,[5, 8, 'm', 3]],
 	['C', 5, 8, 3, '', 5, 0,[9, 6, 'l',1]], ['C', 9, 6, 0, '', 4, 0],
 	['C', 10, 6, 0, '', 5, 0],['Z', 10, 7, 0, '', 1, 0]];
-like(capture_stdout{$g->store_run($run)}, qr/basic_a/, 'store run');
+ok((capture_stdout{$g->store_run($run)}) eq '', 'store run');
 
 # check correctness of predicting rail end points
 ok(join('', $g->rail_xy('m', 5, 3, 1, '')) eq '81', 'rail_xy');

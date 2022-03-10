@@ -26,6 +26,7 @@ sub config {
 		db => $Game::MarbleRun::DB_FILE,
 		verbose => 0,
 		quiet => 0,
+		relative => 0,
 		motion => 0,
 		yes => 0,
 		outputfile => '',
@@ -230,6 +231,8 @@ sub features {
 		['xb', 5,  0,  0, 'length'], # detail: length
 		['xt', 2,  6,  7,    'dir'], # detail: direction
 	];
+	# directions
+	$self->{dirchr} = [qw(↑  ↗  ↘  ↓  ↙  ↖ )];
 	# colors
 	$self->{srgb} = {
 		S=>'#d5d5d5',
@@ -238,11 +241,11 @@ sub features {
 		B=>'#45d5d5',
 		A=>'#ffd700'};
 	$self->{color} = {
-		R => loc('red'),
-		G => loc('green'),
-		B => loc('blue'),
-		S => loc('silver'),
-		A => loc('gold')};
+		R => loc('red'), r => 'red',
+		G => loc('green'), g => 'green',
+		B => loc('blue'), b => 'blue',
+		S => loc('silver'), s => 'silver',
+		A => loc('gold'), a => 'gold'};
 	# initial time to move marbles across 1 tile
 	$self->{time0} = 10;
 	# fraction of size for green hexagon in tile
@@ -451,26 +454,27 @@ EOF
 		'Tunnel', 7, [_=>2, T=>4, I=>2, U=>2, t=>2, O=>2, b=>2, u=>1, v=>1],
 		'Lifter', 8, [xF=>1, o=>7, '^'=>1, 1=>8, '+'=>4, f=>2, xi=>1, xj=>1,
 			l=>1, m=>2, s=>3],
-		'Bridges Extension', 9, [xB=>3, g=>2, q=>2, xb=>12, l=>1, m=>2, s=>3],
+		'Bridges Extension', 9, [xB=>3, g=>2, q=>2, xb=>12, l=>1, m=>2, s=>3,
+			o=>6],
 		'Extension Vertical', 10, [B=>16, L=>8, xL=>4, xm=>2, xl=>2],
 		# Advent 2021
 		'Advent 21', 31, [xX=>1, c=>3, yC=>1, 1=>4, xR=>1, xQ=>1, xV=>1, yX=>1,
 			t=>1, xC=>1, d=>3, g=>1, q=>1, xI=>1, U=>1, yI=>1, a=>2, xY=>1,
-			I=>1, xH=>1, i=>1, j=>1, h=>3, yY=>1, xW=>1, yW=>1, T=>2, xS=>1,
+			I=>1, xH=>1, i=>1, j=>1, h=>6, yY=>1, xW=>1, yW=>1, T=>2, xS=>1,
 			o=>1, '='=>1],
 		# Action tiles
-		'Hammer', 11, [H=>1, l=>1, m=>2, s=>3],
+		'Hammer', 11, [H=>1, o =>1, l=>1, m=>2, s=>3],
 		'Looping', 12, [Q=>1, l=>1, m=>2, s=>3],
 		'Volcano', 13, [N=>1, l=>1, m=>2, s=>3],
 		'Transfer', 14, [xR=>3, l=>1, m=>2, s=>3],
 		'Flipper', 15, [F=>1, l=>1, m=>2, s=>3],
-		'Scoop', 16, [K=>1, l=>1, m=>2, s=>3],
-		'Cable Car (Zipline)', 17, [xA=>1, xZ=>1, l=>1, m=>2, s=>3, xa=>1],
+		'Scoop', 16, [K=>1, o=>2, l=>1, m=>2, s=>3],
+		'Cable Car (Zipline)', 17,[xA=>1, xZ=>1, o=>1, l=>1, m=>2, s=>3, xa=>1],
 		'Trampoline', 18, [R=>2, r=>2],
 		'Magnetic Cannon', 19, [M=>1, o=>3],
 		'Jumper', 20, [J=>1, l=>1, m=>2, s=>3],
-		'Tip Tube', 21, [xT=>1, l=>1, m=>2, s=>3],
-		'Spiral', 22, [xH=>1, i=>1, j=>1, h=>3],
+		'Tip Tube', 21, [xT=>1, o=>1, l=>1, m=>2, s=>3],
+		'Spiral', 22, [xH=>2, i=>2, j=>2, h=>12],
 		'Splinter', 23, [yS=>1],
 		'Dispenser', 24, [xM=>1],
 		'Catapult', 25, [xK=>1, o=>4],
@@ -763,15 +767,12 @@ sub fetch_run_data {
 		WHERE r.run_id=$id AND tile1_id=t1.id AND tile2_id=t2.id
 		AND t1.run_id=$id AND t2.run_id=$id";
 	my $res_rail = $self->{dbh}->selectall_arrayref($sql);
-	# treat finish line like a tile, it has no connection at the end
-	$sql = "SELECT r.id,r.run_id,r.element,posx,posy,posz,r.direction,r.detail,t.level
+	# treat finish line separately, it has no connection at the end
+	$sql = "SELECT r.element,direction,tile1_id,level,tile1_id,level,r.detail
 		FROM run_rail AS r, run_tile AS t WHERE r.run_id=$id AND tile1_id=t.id
 		AND t.run_id=$id and r.element = 'e'";
 	my $tiles_e = $self->{dbh}->selectall_arrayref($sql);
-	for my $t (@$tiles_e) {
-		($t->[3], $t->[4]) = $self->to_position($t->[3], $t->[4], $t->[6], 1);
-		push @$res_tile, $t;
-	}
+	push @$res_rail, $_ for @$tiles_e;
 	$sql = "SELECT tile_id,orient,color FROM run_marble WHERE run_id=$id";
 	my $res_marble = $self->{dbh}->selectall_arrayref($sql);
 	$sql = "SELECT board_x,board_y FROM run_no_elements WHERE run_id=$id";
@@ -847,17 +848,17 @@ sub export_marble_run {
 		# handle transparent planes first
 		if ($l) {
 			my $tp = (grep {$_->[2] =~ /([=^])/ and $_->[8] == $l} @$tile)[0];
-			my ($tp_x, $tp_y, $tp_z) = ($tp->[3], $tp->[4], $tp->[5]);
-			my $tp_type = $1 || '';
-			my $pos = $self->num2pos($tp_x, $tp_y, 1);
-			$pos =~ s/^[^\s]* //;
-			my $mid = $tp_type eq '^' ? 3 : 2;
+			my $pos = $self->num2pos($tp->[3], $tp->[4], 1);
+			$pos =~ s/^([^\s]*) //;
+			my $plane_pos = $1;
+			my $mid = $tp->[2] eq '^' ? 3 : 2;
 			if ($self->{relative}) {
-				$dx = $tp_x - $mid;
-				$dy = $tp_y - $mid;
+				$dx = $tp->[3] - $mid;
+				$dy = $tp->[4] - $mid;
+				say F "_ $plane_pos";
 			}
 			say F "Level $l";
-			say F "$pos $tp_type";
+			say F "$pos $tp->[2]";
 		}
 		my $oldpos = 0;
 		my $str = '';
@@ -881,7 +882,6 @@ sub export_marble_run {
 				$str =~ s/^$l0str //;
 				if ($l0str ne $oldplane) {
 					$oldplane = $l0str;
-					$l0str =~ s/,/ /;
 					say F "_ $l0str";
 				}
 			}
@@ -923,7 +923,7 @@ sub export_marble_run {
 			my @rails = grep {$t->[0] == $_->[2]} @$rail;
 			for my $r (@rails) {
 				my $wall = '';
-				$wall = ($r->[6] % 10) || '';
+				$wall = $r->[6] ? $r->[6] % 10 : '';
 				# bridge is noted in detail only, not as a rail
 				next if $r->[0] eq 'xb';
 				$str .= " $r->[0]$wall" . chr(97 + $r->[1]);
@@ -1093,10 +1093,8 @@ sub dir_string {
 	my $str = $alternate_string ? loc('Direction') : loc('Orientation');
 	return '' if ! defined $dir;
 	$dir %= 6;
-	my @dir = qw(a b c d e f);
 	# "\x{2191}","\x{2197}","\x{2198}","\x{2193}","\x{2199}","\x{2196}"
-	my @dir2= qw(↑  ↗  ↘  ↓  ↙  ↖ );
-	return "$str $dir2[$dir] ($dir[$dir])";
+	return "$str $self->{dirchr}[$dir] (" . chr($dir + 97) . ")";
 }
 
 sub display_run {

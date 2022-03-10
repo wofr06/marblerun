@@ -34,7 +34,7 @@ $run = [['name', 'a test'],['A', 3, 4, 5, '', 2, 0, [5, 5, 's', 2, '']]];
 # Store.pm line 379
 $g->{warn} = 0;
 push @$run, ['C', 5, 5, 3, '', 5, 0, [3, 4, 's', 5, '']];
-like(capture_merged{$g->store_run($run)}, qr/a test.*already/s, 'duplicate rail');
+like(capture_merged{$g->store_run($run)}, qr/already/s, 'duplicate rail');
 pop @$run;
 
 # Store.pm line 124
