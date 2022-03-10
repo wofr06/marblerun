@@ -1,7 +1,7 @@
 Revision history for Perl extension Game::MarbleRun
 	- marble animation with timing working for simple tracks
 	- corrected export of marble runs (transparent planes, finish line)
-	- corrected positioning of tiles on transparent planes
+	- corrected positioning of double balconies and tiles on transparent planes
 1.01  Tue Feb 15 2022
     - Symbol for splinter changed to yS. Code cleanup, fix option handling
 	- Lift handling corrected. Animation working mostly, timing incorrect.

@@ -812,7 +812,7 @@ sub doublebalcony_height {
 		my ($x, $y) = $self->to_position($x2, $y2, 3 + $dir, 1);
 		$detail ||= 1;
 		$self->{line} = $e_z{"$x,$y"}->[0][0] if exists $e_z{"$x,$y"};
-		if (exists $e_z{"$x,$y"} and grep {$_->[2] != $dir} @{$e_z{"$x,$y"}}) {
+		if (exists $e_z{"$x,$y"} and !grep {$_->[2] == $dir} @{$e_z{"$x,$y"}}) {
 			(my $dirstr = $dir) =~ tr/0-5/a-f/;
 			$self->error("Wrong direction %1 for double balcony at %2", $dirstr,
 				$self->num2pos($x, $y));
