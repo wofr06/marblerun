@@ -943,15 +943,13 @@ sub parse_run {
 					$y1 += $off_xy->[0][1];
 				} else {
 					# adjust y coordinate if transparent plane on even x pos
-					#$y1++ if ! ($off_xy->[$level][0] % 2 + $x1 % 2) and $level;
 					$x1 += $off_x;
 					$y1 += $off_y;
 					if ($level) {
-						my $xmod = ($x1 - $plane_type) % 2;
-						$y1++ if $xmod and $plane_type == 3;
-						$y1-- if $xmod and $plane_type == 2;
 						$x1 -= $plane_type;
 						$y1 -= $plane_type;
+						$y1++ if !($off_x % 2) and $x1 % 2 and $plane_type == 3;
+						$y1-- if $off_x % 2 and !($x1 % 2) and $plane_type == 2;
 					}
 				}
 			}
