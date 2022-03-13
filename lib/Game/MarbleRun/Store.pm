@@ -684,7 +684,7 @@ sub get_offsets {
 			}
 		}
 	}
-	splice @$lines, $_->[0], 0, $_->[1] for @adjust;
+	#splice @$lines, $_->[0], 0, $_->[1] for @adjust;
 	return $off;
 }
 
