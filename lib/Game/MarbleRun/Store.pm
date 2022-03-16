@@ -30,7 +30,7 @@ sub process_input {
 		*F = *STDIN;
 	}
 	{
-		local $/ = '';
+		local $/ = undef;
 		$self->{file_content} = <F>;
 	}
 	close F if $file;
@@ -586,19 +586,26 @@ sub plane_lines {
 	my ($self, $lines) = @_;
 	my $loc_level = loc('Level');
 	my ($level, $max_level, $line) = (0, 0, 0);
-	for (grep {/^\d+\s+[\^#]*(?:level|$loc_level)/i} @$lines) {
-		$max_level = $1 if /(?:level|$loc_level)\s*(\d+)/i and $1 > $max_level;
+	
+	for (@$lines) {
+		my ($what, $value) = $self->header_line($_);
+		next if ! $what or $what ne 'level';
+		$max_level = $value if  $value > $max_level;
 	}
 	my ($level_pos, $added);
-	for (@$lines) {
+	for my $str (@$lines) {
+		($_ = $str) =~ s/^(\d+)\s+//;
+		my $orig_line = $1;
 		$line++;
+		my ($what, $value) = $self->header_line($_);
+		next if $what and $what ne 'level';
 		$added = 0, next if $added;
-		if (/^\d+\s+[=^#]*_/) {
+		if (/^[=^#]*_/) {
 			$level = 0;
 			$level_pos = 0;
 		# analyse level line
-		} elsif (/^\d+\s+[^#]*(?:level|$loc_level)(?:[:=\s]+|$)(.*)/i) {
-			$level = $1;
+		} elsif ($what and $what eq 'level') {
+			$level = $value;
 			if ($level !~ /^\d+$/) {
 				my $bad = $level || '';
 				$level = ++$max_level;
@@ -608,11 +615,11 @@ sub plane_lines {
 			}
 			$level_pos = $level ? $line : 0;
 		# transparent plane line
-		} elsif (/^(\d+)\s+[^#]*[=^]/) {
+		} elsif (/^[^#]*[=^]/) {
 			if (! $level_pos) {
 				# add level line
 				$level = ++$max_level;
-				splice @$lines, $line - 1, 0, "$1 Level $level";
+				splice @$lines, $line - 1, 0, "$orig_line Level $level";
 				$added = 1;
 				$level_pos = $line - 1;
 			} elsif ($level_pos < $line - 1) {
@@ -634,12 +641,14 @@ sub get_offsets {
 	my $line = 0;
 	my $level = 0;
 	my @adjust;
-	for (@$lines) {
+	for my $str (@$lines) {
 		$line++;
-		/^line (\d+)$/;
+		$str =~ /^line (\d+)$/;
 		$self->{line}= $1;
+		($_ = $str) =~ s/#.*//;
 		# process only plane related lines (level, _, ^ and = lines)
 		next if $_ !~ /^[\w\s]+[=^_]|^level|^$loc_level/i;
+		next if $self->header_line($_);
 		if (/^\d+\s+_\s*(\d+)\D+(\d+)/) {
 			$relative = $self->{relative} = 1;
 			$level = 0;
@@ -684,7 +693,6 @@ sub get_offsets {
 			}
 		}
 	}
-	#splice @$lines, $_->[0], 0, $_->[1] for @adjust;
 	return $off;
 }
 
@@ -838,15 +846,26 @@ sub doublebalcony_height {
 	}
 }
 
+sub header_line {
+	my ($self, $line) = @_;
+	my $loc_name = loc('Name');
+	my $loc_author = loc('Author');
+	my $loc_source = loc('Source');
+	my $loc_date = loc('Date');
+	my $loc_level = loc('Level');
+	return ('name', $1) if /^\s*(?:name|$loc_name)(?:\s+|:|$)(.*)/i;
+	return ('date', $1) if /^\s*(?:date|$loc_date)(?:\s+|:)(.*)/i;
+	return ('author', $1) if /^\s*(?:author|$loc_author)(?:\s+|:)(.*)/i;
+	return ('source', $1) if /^\s*(?:source|$loc_source)(?:\s+|:)(.*)/i;
+	return ('level', $1) if /^\s*(?:level|$loc_level)(?:\s+|:)(.*)/i;
+	return undef;
+}
+
 sub parse_run {
 	my ($self, $content) = @_;
 	my ($rules, $comment, $run_name, $off_x, $off_y, $off_xy, $plane_type, $level_line_seen, $wall);
 	my ($h);
 	my $level = 0;
-	my $loc_name = loc('Name');
-	my $loc_author = loc('Author');
-	my $loc_source = loc('Source');
-	my $loc_date = loc('Date');
 	my $loc_level = loc('Level');
 	my $loc_pos = loc('Position');
 	# in the presence of _ lines location data are relative to the base plate
@@ -886,26 +905,24 @@ sub parse_run {
 			$comment = undef;
 		}
 		# analyse header lines
-		if (/^\s*(?:name|$loc_name)(?:\s+|:|$)(.*)/i) {
-			$run_name = $1;
+		my ($what, $value) = $self->header_line($_);
+		if ($what and $what eq 'name') {
+			$run_name = $value;
 			$self->error("Missing run name") if ! $run_name;
 			if ($self->{db} =~ /memory/) {
 				say loc("Checking marble run '%1'", $run_name || '');
 			} else {
 				say loc("Registering marble run '%1'", $run_name || '');
 			}
-		} elsif (s/^\s*(?:level|$loc_level)(?:\s+|:)(\d+)//i) {
+		} elsif ($what and $what eq 'level') {
+		#} elsif (s/^\s*(?:level|$loc_level)(?:\s+|:)(\d+)//i) {
 			# errors already reported
 			$level_line_seen = 1;
-			$level = $1;
+			$level = $value;
 			pop @$rules if $rules->[-1][0] eq 'level';
 			push @$rules, ['level', $level];
-		} elsif (/^\s*(?:date|$loc_date)(?:\s+|:)(.*)/i) {
-			push @$rules, ['date', $1];
-		} elsif (/^\s*(?:author|$loc_author)(?:\s+|:)(.*)/i) {
-			push @$rules, ['author', $1];
-		} elsif (/^\s*(?:source|$loc_source)(?:\s+|:)(.*)/i) {
-			push @$rules, ['source', $1];
+		} elsif ($what) {
+			push @$rules, [$what, $value];
 		# ground planes
 		} elsif (s/^\s*_\s*//) {
 			if (/(\d+)\D+(\d+)/) {
