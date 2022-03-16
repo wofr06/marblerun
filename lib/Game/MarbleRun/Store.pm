@@ -129,7 +129,7 @@ sub find_to_tile {
 sub no_rail_connection {
 	my ($self, $elem) = @_;
 	return 1 if ! $elem;
-	return $elem =~ /\d+|^[+\^BEOR]/;
+	return $elem =~ /\d+|^[+\^=BEOR]/;
 }
 
 sub rail_xy {

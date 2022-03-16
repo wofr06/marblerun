@@ -1107,7 +1107,7 @@ sub move_marbles {
 		my @out = grep {$t_id == $_->[2] and $m_dir eq $_->[1]} @$rails;
 		if ($out[0]) {
 			say "rail out $out[0]->[0] found, dir $out[0]->[1]" if $dbg;
-			say "next tile id $out[0]->[4] in dir = $out[0]->[7]" if $dbg;
+			#say "next tile id $out[0]->[4] in dir = $out[0]->[7]" if $dbg;
 			$m = $self->update_marble($m, $out[0]->[4], $out[0]->[7], $out[0]);
 		} else {
 			# find incoming connecting rail
@@ -1194,6 +1194,7 @@ sub update_marble {
 	$marble->[6] = $dir;
 	$marble->[7] = $self->next_dir($marble);
 	$marble->[8] += 10;
+	print Dumper $marble if ! defined $marble->[6];
 	my $new_dir = $marble->[6] eq 'M' ? $marble->[6] : ($marble->[6] - 3) % 6;
 	push @{$self->{xyz}[$m_id]}, [@{$self->{tiles}{$tile_id}}[0..3],
 		$new_dir, $self->{ticks}];
@@ -1205,7 +1206,6 @@ sub update_marble {
 		my $color = $marble->[10];
 		$self->{tiles}{$tile_id}[7] .= ":$marble->[0]o$marble->[6]$color";
 	}
-	#print Dumper $marble;
 	return $marble;
 }
 
