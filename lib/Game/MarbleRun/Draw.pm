@@ -1194,7 +1194,7 @@ sub update_marble {
 	$marble->[6] = $dir;
 	$marble->[7] = $self->next_dir($marble);
 	$marble->[8] += 10;
-	print Dumper $marble if ! defined $marble->[6];
+	#print Dumper $marble if ! defined $marble->[6];
 	my $new_dir = $marble->[6] eq 'M' ? $marble->[6] : ($marble->[6] - 3) % 6;
 	push @{$self->{xyz}[$m_id]}, [@{$self->{tiles}{$tile_id}}[0..3],
 		$new_dir, $self->{ticks}];
