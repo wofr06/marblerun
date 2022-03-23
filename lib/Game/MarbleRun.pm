@@ -767,12 +767,16 @@ sub fetch_run_data {
 		WHERE r.run_id=$id AND tile1_id=t1.id AND tile2_id=t2.id
 		AND t1.run_id=$id AND t2.run_id=$id";
 	my $res_rail = $self->{dbh}->selectall_arrayref($sql);
-	# treat finish line separately, it has no connection at the end
-	$sql = "SELECT r.element,direction,tile1_id,level,tile1_id,level,r.detail
+	# treat finish line like a tile, it has no connection at the end
+	$sql = "SELECT r.id,r.run_id,r.element,posx,posy,posz,r.direction,r.detail,t.level
 		FROM run_rail AS r, run_tile AS t WHERE r.run_id=$id AND tile1_id=t.id
 		AND t.run_id=$id and r.element = 'e'";
 	my $tiles_e = $self->{dbh}->selectall_arrayref($sql);
-	push @$res_rail, $_ for @$tiles_e;
+	for my $t (@$tiles_e) {
+		($t->[3], $t->[4]) = $self->to_position($t->[3], $t->[4], $t->[6], 1);
+		push @$res_tile, $t;
+	}
+
 	$sql = "SELECT tile_id,orient,color FROM run_marble WHERE run_id=$id";
 	my $res_marble = $self->{dbh}->selectall_arrayref($sql);
 	$sql = "SELECT board_x,board_y FROM run_no_elements WHERE run_id=$id";

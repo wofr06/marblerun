@@ -259,6 +259,8 @@ sub draw_tile {
 		$self->put_DoubleBalcony($x, $y, $orient);
 	} elsif ($elem eq 'B') {
 		$self->put_Balcony($x, $y, $orient);
+	} elsif ($elem eq 'e') {
+		$self->put_FinishLine($x, $y, $orient);
 	} elsif ($elem eq '^' or $elem eq '=') {
 		$self->put_TransparentPlane($x, $y, $elem);
 	# height tiles
@@ -346,9 +348,6 @@ sub draw_rail {
 		$self->put_arc($xc, $yc, 2, $dir - $inc - 2);
 		return;
 	# flextube
-	} elsif ($elem eq 'e') {
-		my ($xc, $yc) = $self->to_position($posx1, $posy1, $dir, 1);
-		$self->put_FinishLine($xc, $yc, $dir);
 	} elsif ($elem eq 'xt') {
 		my ($xc, $yc) = $self->to_position($posx1, $posy1, $detail + 3, 1);
 		my ($x1, $y1) = $self->center_pos($posx1, $posy1);
@@ -969,6 +968,7 @@ sub do_run {
 	# add reverse dir to rails
 	for (@$rails) {
 		if ($_->[0] eq 't') {
+			$_->[7] = $_->[1];
 		} elsif ($_->[0] eq 'c') {
 			$_->[7] = ($_->[1] + 2) % 6;
 		} elsif ($_->[0] eq 'd') {
@@ -981,7 +981,7 @@ sub do_run {
 			$_->[7] = ($_->[1] + 3) % 6;
 		}
 	}
-	#print Dumper $tiles;exit;
+	#print Dumper $rails;exit;
 	#print Dumper $marbles;
 	my $no_marbles = $self->move_marbles($rails) if $self->{motion};
 	$marbles->[$_] = undef for @$no_marbles;
@@ -1107,7 +1107,7 @@ sub move_marbles {
 		my @out = grep {$t_id == $_->[2] and $m_dir eq $_->[1]} @$rails;
 		if ($out[0]) {
 			say "rail out $out[0]->[0] found, dir $out[0]->[1]" if $dbg;
-			#say "next tile id $out[0]->[4] in dir = $out[0]->[7]" if $dbg;
+			say "next tile id $out[0]->[4] in dir = $out[0]->[7]" if $dbg;
 			$m = $self->update_marble($m, $out[0]->[4], $out[0]->[7], $out[0]);
 		} else {
 			# find incoming connecting rail
@@ -1182,6 +1182,11 @@ sub update_marble {
 	if ($rail) {
 		$marble->[2] = $rail->[0];
 		my $len = $self->{rail}{$rail->[0]}[1] || 1;
+		if ($rail->[0] =~ /^[uv]$/) {
+			$len /=2;
+			($t->[1], $t->[2]) = $self->to_position($t->[1], $t->[2], $dir, 2);
+			$dir = 'M';
+		}
 		my $special = $self->{rail}{$rail->[0]}[4];
 		$len = $special eq 'fast' ? $len/2 : $special eq 'slow' ? $len*2 : $len;
 		$marble->[8] += 10*($self->{rail}{$rail->[0]}[1] || 1);
