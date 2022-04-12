@@ -499,6 +499,12 @@ sub store_run {
 		}
 		# store tile data: tile_char, x, y, z, detail, orient level
 		#                          0  1  2  3       4       5     6
+		if ($d->[0] eq 'O') {
+			# register direction of outgoing marble in basket
+			my $r_o = $d->[7];
+			#$d->[7] = undef;
+			$d->[5] = $r_o->[3] if defined $r_o;
+		}
 		my @val = @{$d}[0..6];
 		$sth_i_rt->execute($run_id, @val) if $val[0];
 		next if $self->no_rail_connection($val[0]) and ! $comment;
@@ -1120,7 +1126,7 @@ sub parse_run {
 				($color, $dir) = ($dir, $color) if $dir !~ /[a-f]/;
 				push @$f, ['o', ord($dir) - 97, $color] for 1 .. ($count || 1);
 			}
-			if (@items and $tile =~ /[O^=]/) {
+			if (@items and $tile =~ /[=^]/) {
 				$self->error("Unexpected data for %1: %2", $tile_name,"@items");
 				next;
 			}
