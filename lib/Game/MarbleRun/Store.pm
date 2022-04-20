@@ -210,7 +210,7 @@ sub verify_rail_endpoints {
 					}
 					if ($tile eq 'xH') {
 						# direction in for spiral depends on number of elements
-						$case2->{xH}[0] = (2*$t->[4] - 2 - $dir) % 6;
+						$case2->{xH}[0] = (2*$t->[4] - 1) % 6;
 					}
 					if ($tile eq 'xF') {
 						# direction out for lift at z!=0 is stored in detail
@@ -252,7 +252,7 @@ sub verify_rail_endpoints {
 					if ($tile eq 'xH') {
 						my ($h) = grep {$_->[0] eq 'xH' and $r->[0] == $_->[1]
 							and $r->[1] == $_->[2]} @$data;
-						$case2->{xH}[0] = (2*$h->[4] + 1 - $dir) % 6;
+						$case2->{xH}[0] = (2*$h->[4] - 1) % 6;
 					}
 					if ($tile eq 'xF') {
 						my ($f) = grep {$_->[0] eq 'xF' and $r->[0] == $_->[1]

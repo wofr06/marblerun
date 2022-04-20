@@ -125,6 +125,7 @@ sub features {
 		['xD',   5,   5,      0,      0,     0],
 		['xF', 'detail2', 0,  0, '7*(detail1-1)', '3*(detail1-1)o0', 'o0'],
 		['xH', 'detail %6', 0, 'detail', 0,  0],
+		['xH', 'M',   0, 'detail',    0,     0],
 		['xI',   0,   3,      0,      0,   'r'],
 		['xI',   1,   2,      0,      0,   'r'],
 		['xI',   4,   5,      0,      0,   'r'],

@@ -12,7 +12,7 @@ use Locale::Maketext::Simple (Style => 'gettext', Class => 'Game::MarbleRun');
 use SVG;
 use List::Util qw(min);
 
-my $dbg = 1;
+my $dbg = 0;
 
 sub new {
 	my ($class, %attr) = @_;
@@ -822,27 +822,12 @@ sub put_Spiral {
 	$self->put_hexagon($x, $y);
 	$self->put_circle($x, $y, 0.5 - $thickness, {fill=>'url(#mygreen)'});
 	$self->put_through_line($x, $y, $orient, $thickness);
-	my $orient_in = $orient + 2*$elems - 1;
+	my $orient_in = ($orient + 2*$elems - 1) % 6;
 	$self->put_through_line($x, $y, $orient_in, $thickness);
 	my ($xc, $yc) = $self->center_pos($x, $y);
-	my $length = 0.4;
-	my $d1 = ($orient_in + 4) % 6;
-	my $d2 = ($orient_in + 5) % 6;
-	my $d3 = ($orient_in) % 6;
 	my $svg = $self->{svg};
-	my $dx1 = $length*$self->{corner_x}[0][$d1];
-	my $dy1 = $length*$self->{corner_y}[0][$d1];
-	my $dx2 = $length*$self->{middle_x}[$d2];
-	my $dy2 = $length*$self->{middle_y}[$d2];
-	my $dx3 = $self->{middle_x}[$d3]*(1-2*$thickness);
-	my $dy3 = $self->{middle_y}[$d3]*(1-2*$thickness);
-	my ($x1, $y1) = ($xc - $dx1, $yc - $dy1);
-	my ($x2, $y2) = ($xc + $dx2, $yc + $dy2);
-	my ($x3, $y3) = ($xc + $dx3, $yc + $dy3);
-	my $r = 0.21*$self->{size};
-	my $r2 = 0.4*$self->{size};
-	$svg->path(d => "M $x1 $y1 A $r $r 0 1 1 $x2 $y2", class => 'tile');
-	$svg->path(d => "M $x2 $y2 A $r2 $r2 0 0 0 $x3 $y3", class => 'tile');
+	my $path = $self->helix_path($xc, $yc, ($orient_in + 3) % 6, $elems, 1);
+	$svg->path(d=> $path, class => 'tile');
 }
 
 sub put_TipTube {
@@ -1076,7 +1061,6 @@ sub get_moving_marbles {
 					$inc += 30 if $rule->[2] ne '';
 					$self->{ticks} += 0.3 if $t->[0] eq 'xT';
 					my $left = $t->[7] =~ s/(o$dir)/$1/g;
-					say "### num $num left $left num_r $num_r";
 					last if ! $left or $left < $num_r;
 				}
 			}
@@ -1149,7 +1133,11 @@ sub tile_rule {
 		say "xy check ok" if $dbg;
 		my $t_id = $_;
 		my $tile_z = $t->{$t_id}[3];
-		$tile_z += $t->{$t_id}[5] if $t->{$t_id}[0] eq 'xH';
+		if ($t->{$t_id}[0] eq 'xH' and $dir ne 'M') {
+			$tile_z += $t->{$t_id}[5];
+			my $in = ($t->{$t_id}[4] +2*$t->{$t_id}[5] + 2) % 6;
+			next if $dir != $in;
+		}
 		for (@{$self->{rules}{$t->{$t_id}[0]}}) {
 			say "zcheck z=$z, tile_z=$tile_z, rule: $_->[3] -> $_->[4]" if $dbg;
 			if ($dir eq 'M') {
@@ -1174,7 +1162,7 @@ sub update_marble {
 	say "$self->{ticks}: from $t->[0] xyz=@$t[1,2,3] dir $marble->[7]" if $dbg;
 	if (! exists $self->{xyz}[$m_id] ) {
 		say "start marble $m_id at $self->{ticks}" if $dbg;
-		push @{$self->{xyz}[$m_id]}, [@$t[0 .. 3], $marble->[7],
+		push @{$self->{xyz}[$m_id]}, [@$t[0 .. 3], $marble->[7], $t->[5],
 			$self->{ticks}];
 	}
 	$t = $self->{tiles}{$tile_id};
@@ -1191,7 +1179,7 @@ sub update_marble {
 		$len = $special eq 'fast' ? $len/2 : $special eq 'slow' ? $len*2 : $len;
 		$marble->[8] += 10*($self->{rail}{$rail->[0]}[1] || 1);
 		push @{$self->{xyz}[$m_id]}, [$rail->[0], @$t[1,2,3], $marble->[7],
-			$self->{ticks}];
+			$t->[5], $self->{ticks}];
 	}
 	$marble->[1] = $tile_id;
 	$marble->[2] = undef;
@@ -1200,14 +1188,24 @@ sub update_marble {
 	$marble->[7] = $self->next_dir($marble);
 	$marble->[8] += 10;
 	#print Dumper $marble if ! defined $marble->[6];
-	my $new_dir = $marble->[6] eq 'M' ? $marble->[6] : ($marble->[6] - 3) % 6;
+	my $new_dir = $marble->[6];
+	if ($marble->[6] ne 'M') {
+		$new_dir = ($marble->[6] - 3) % 6;
+	} elsif ($self->{tiles}{$tile_id}[0] eq 'xH') {
+		# mark direction (+ 600) as coming from middle (for marble animation)
+		$new_dir = $self->{tiles}{$tile_id}[4] + 2*$self->{tiles}{$tile_id}[5] + 2 + 600;
+	}
+	# adjust z of connecting tile if it connects to Helix
+	if ($self->{tiles}{$tile_id}[0] eq 'xH' and $self->{xyz}[$m_id][-1][0] =~ /[a-w]$/) {
+		$self->{xyz}[$m_id][-1][3] += $self->{tiles}{$tile_id}[5];
+	}
 	push @{$self->{xyz}[$m_id]}, [@{$self->{tiles}{$tile_id}}[0..3],
-		$new_dir, $self->{ticks}];
+		$new_dir, $self->{tiles}{$tile_id}[5], $self->{ticks}];
 	if (! defined $marble->[7]) {
 		my $balls = $self->{tiles}{$tile_id}[7] || '';
 		$balls = ($balls =~ tr /:/:/);
 		push @{$self->{xyz}[$m_id]}, [@{$self->{tiles}{$tile_id}}[0..3],
-			-1 - $balls, $self->{ticks}];
+			-1 - $balls, $self->{tiles}{$tile_id}[5], $self->{ticks}];
 		my $color = $marble->[10];
 		$self->{tiles}{$tile_id}[7] .= ":$marble->[0]o$marble->[6]$color";
 	}
@@ -1273,13 +1271,16 @@ sub generate_path {
 	my $path = "M 0 0";
 	my $start;
 	for (my $i = 1; $i < @$xyz; $i++) {
-		$start = $xyz->[$i][5] || 0 if ! defined $start;
-		my ($sym, $xc, $yc, $z, $dir) = @{$xyz->[$i]};
+		$start = $xyz->[$i][6] || 0 if ! defined $start;
+		my ($sym, $xc, $yc, $z, $dir, $detail) = @{$xyz->[$i]};
 		last if ! $sym;
 		say "path sym $sym xyz=$xc $yc $z dir=",$dir || '' if $dbg;
 		my ($x, $y) = $self->center_pos($xc, $yc);
 		$dir = -1 if ! defined $dir or $dir eq '';
-		if ($dir eq 'M') {
+		if ($sym eq 'xH') {
+			my $elems = $detail;
+			$path .= $self->helix_path($x - $x0, $y -$y0, $dir, $elems);
+		} elsif ($dir eq 'M') {
 			$path .= " L " . ($x - $x0) . ' ' . ($y - $y0);
 		} elsif ($dir < 0 || $dir eq '') {
 			my $balls = -$dir || 1;
@@ -1307,7 +1308,7 @@ sub generate_path {
 			$path =~ s/(\.d)\d+ /$1 /g;
 			push @$paths, $path;
 			push @$starts, ($start + 10)/$self->{speed};
-			push @$lengths, ($xyz->[$i][5] - $start)/$self->{speed};
+			push @$lengths, ($xyz->[$i][6] - $start)/$self->{speed};
 			$path = " M $to";
 			$start = undef;
 		} elsif ($sym =~ /[a-w]$/) {
@@ -1350,9 +1351,57 @@ sub generate_path {
 	if (! $paths) {
 		push @$paths, $path;
 		push @$starts, 10/$self->{speed};
-		push @$lengths, $xyz->[-2][5]/$self->{speed};
+		push @$lengths, $xyz->[-2][6]/$self->{speed};
 	}
 	return ($starts, $lengths, $paths);
+}
+
+sub helix_path {
+	my ($self, $x, $y, $dir, $elems, $hide) = @_;
+	my $thickness = 0.1;
+	my $out = ($dir + 4 - 2*$elems) % 6;
+	my $length = 0.4;
+	my $d1 = ($dir + 3) % 6;
+	my $d2 = ($dir + 2) % 6;
+	my $d3 = ($dir + 1) % 6;
+	my $d4 = ($out + 2) % 6;
+	my $d5 = ($out + 1) % 6;
+	my $d6 = $out % 6;
+	my $dx1 = $self->{middle_x}[$d1]*(1-2*$thickness);
+	my $dy1 = $self->{middle_y}[$d1]*(1-2*$thickness);
+	my $dx2 = $length*$self->{middle_x}[$d2];
+	my $dy2 = $length*$self->{middle_y}[$d2];
+	my $dx3 = $length*$self->{corner_x}[0][$d3];
+	my $dy3 = $length*$self->{corner_y}[0][$d3];
+	my $dx4 = $length*$self->{corner_x}[0][$d4];
+	my $dy4 = $length*$self->{corner_y}[0][$d4];
+	my $dx5 = $length*$self->{middle_x}[$d5];
+	my $dy5 = $length*$self->{middle_y}[$d5];
+	my $dx6 = $self->{middle_x}[$d6]*(1-2*$thickness);
+	my $dy6 = $self->{middle_y}[$d6]*(1-2*$thickness);
+	my ($x1, $y1) = ($x + $dx1, $y + $dy1);
+	($x1, $y1) = ($x, $y) if $dir > 600 and ! $hide;
+	my ($x2, $y2) = ($x + $dx2, $y + $dy2);
+	my ($x3, $y3) = ($x - $dx3, $y - $dy3);
+	my ($x4, $y4) = ($x - $dx4, $y - $dy4);
+	my ($x5, $y5) = ($x + $dx5, $y + $dy5);
+	my ($x6, $y6) = ($x + $dx6, $y + $dy6);
+	my $r = 0.21*$self->{size};
+	my $r2 = 0.4*$self->{size};
+	my $L_or_M = $hide ? 'M' : 'L';
+	my $path = "$L_or_M $x1 $y1 A $r2 $r2 0 0 1 $x2 $y2" ;
+	$path .= "$L_or_M $x2 $y2 A $r $r 1 0 0 $x5 $y5" if $elems <=3;
+	$path .= "$L_or_M $x2 $y2 A $r $r 1 1 0 $x3 $y3" if $elems > 3;
+	if (! $hide) {
+		for (my $i=0; $i < int(($elems - 4)/3); $i++) {
+			$path .= "$L_or_M $x3 $y3 A $r $r 1 1 0 $x4 $y4";
+			$path .= "$L_or_M $x4 $y4 A $r $r 1 0 0 $x3 $y3";
+		}
+		my $flip = ($elems % 3) == 1 ? 0 : 1; 
+		$path .= "$L_or_M $x3 $y3 A $r $r 1 $flip 0 $x5 $y5" if $elems > 3;
+	}
+	$path .= "$L_or_M $x5 $y5 A $r2 $r2 0 0 1 $x6 $y6" if $elems <=3 or ! $hide;
+	return $path;
 }
 
 sub spiral_path {
@@ -1361,7 +1410,7 @@ sub spiral_path {
 	my $pi = 3.1416;
 	my $th_step = -2*$pi*0.1; # turn direction
 	my $b = -$r/$turns/$pi/2;
-	$old_th = $new_th = $pi*$dir/3; # turn direction
+	$old_th = $new_th = $pi*$dir/3 - $pi/4; # turn direction
 	my $end_th = -2*$turns*$pi + $old_th; # turn direction
 	$old_r = $new_r = $r + $b*$new_th;
 	$old_p = [0, 0];
