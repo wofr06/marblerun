@@ -1135,8 +1135,8 @@ sub tile_rule {
 		my $tile_z = $t->{$t_id}[3];
 		if ($t->{$t_id}[0] eq 'xH' and $dir ne 'M') {
 			$tile_z += $t->{$t_id}[5];
-			my $in = ($t->{$t_id}[4] +2*$t->{$t_id}[5] + 2) % 6;
-			next if $dir != $in;
+			my $in = spiral_dir($t->{$t_id}[4], $t->{$t_id}[5]);
+			next if $dir != ($in + 3) % 6;
 		}
 		for (@{$self->{rules}{$t->{$t_id}[0]}}) {
 			say "zcheck z=$z, tile_z=$tile_z, rule: $_->[3] -> $_->[4]" if $dbg;
@@ -1187,7 +1187,6 @@ sub update_marble {
 	$marble->[6] = $dir;
 	$marble->[7] = $self->next_dir($marble);
 	$marble->[8] += 10;
-	#print Dumper $marble if ! defined $marble->[6];
 	my $new_dir = $marble->[6];
 	if ($marble->[6] ne 'M') {
 		$new_dir = ($marble->[6] - 3) % 6;
@@ -1212,11 +1211,21 @@ sub update_marble {
 	return $marble;
 }
 
+sub spiral_dir {
+	my ($dir, $elems, $out) = @_;
+	return ($dir - 2*$elems + 1) % 6 if $out;
+	return ($dir + 2*$elems - 1) % 6;
+}
+
 sub next_dir {
 	my ($self, $marble) = @_;
 	my $t = $self->{tiles}{$marble->[1]};
 	# outgoing direction for spiral is stored in incoming dir
-	return $t->[4] if $t->[0] eq 'xH';
+	if ($t->[0] eq 'xH') {
+		my $in_dir = spiral_dir($t->[4], $t->[5]);
+		return $t->[4] if $marble->[6] eq 'M' or $marble->[6] == $in_dir;
+		return undef;
+	}
 	#print "tile", Dumper $t, $marble, $marble->[6],$t->[4] if $t->[0] eq 'S';
 	for my $rule (@{$self->{rules}{$t->[0]}}) {
 		say "rule $rule->[0] $rule->[1] -> $rule->[2]" if $dbg;
