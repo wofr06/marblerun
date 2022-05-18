@@ -582,6 +582,8 @@ sub get_pos {
 		($x1, $y1) = ($1, $2);
 		$x1 = ord(lc $x1) - 87 if $x1 =~ /[a-z]/i;
 		$y1 = ord(lc $y1) - 87 if $y1 =~ /[a-z]/i;
+	} elsif (! $relative and $pos =~ /^(\d+),(\d+)$/i) {
+		($x1, $y1) = ($1, $2);
 	} else {
 		$self->error("Wrong tile position '%1'", $pos);
 	}
@@ -653,7 +655,7 @@ sub get_offsets {
 		$self->{line}= $1;
 		($_ = $str) =~ s/#.*//;
 		# process only plane related lines (level, _, ^ and = lines)
-		next if $_ !~ /^[\w\s]+[=^_]|^level|^$loc_level/i;
+		next if $_ !~ /^[\w\s,]+[=^_]|^level|^$loc_level/i;
 		next if $self->header_line($_);
 		if (/^\d+\s+_\s*(\d+)\D+(\d+)/) {
 			$relative = $self->{relative} = 1;
@@ -675,7 +677,7 @@ sub get_offsets {
 				$self->error("Wrong level number '%1' becomes level %2",
 					$bad, $level) if $bad;
 			}
-		} elsif (/^\d+\s+([0-9a-z]{2})\s+.*([=^])/i) {
+		} elsif (/^\d+\s+([0-9a-z]{2}|\d+,\d+)\s+.*([=^])/i) {
 			my $type = ($2 eq '=') ? 2 : 3;
 			($row, $col) = $self->get_pos($1, $relative);
 			if (! $level_seen) {

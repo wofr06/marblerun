@@ -1061,7 +1061,7 @@ sub get_moving_marbles {
 					$inc += 30 if $rule->[2] ne '';
 					$self->{ticks} += 0.3 if $t->[0] eq 'xT';
 					my $left = $t->[7] =~ s/(o$dir)/$1/g;
-					last if ! $left or $left < $num_r;
+					last if ! $left;# or $left < $num_r;
 				}
 			}
 		}
