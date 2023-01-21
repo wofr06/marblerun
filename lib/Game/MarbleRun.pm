@@ -11,7 +11,7 @@ use Locale::Maketext::Simple (Style => 'gettext');
 $Game::MarbleRun::VERSION = '1.01';
 my $homedir = $ENV{HOME} || $ENV{HOMEPATH} || die "unknown homedir\n";
 $Game::MarbleRun::DB_FILE = "$homedir/.gravi.db";
-$Game::MarbleRun::DB_SCHEMA_VERSION = 8;
+$Game::MarbleRun::DB_SCHEMA_VERSION = 10;
 
 sub new {
 	my ($class, %attr) = @_;
@@ -130,15 +130,17 @@ sub features {
 		['xI',   1,   2,      0,      0,   'r'],
 		['xI',   4,   5,      0,      0,   'r'],
 		['xK',   3, 'F',      0,    -15,      0,      1],
-		['xM',  0,    0,      7,      0,      0,      4],
-		['xM',  0,    4,      7,      0,      4,      2],
-		['xM',  0,    2,      7,      0,      2,      0],
-		['xM',  2,    0,      7,      0,      0,      4],
-		['xM',  2,    4,      7,      0,      4,      2],
-		['xM',  2,    2,      7,      0,      2,      0],
-		['xM',  4,    0,      7,      0,      0,      4],
-		['xM',  4,    4,      7,      0,      4,      2],
-		['xM',  4,    2,      7,      0,      2,      0],
+		['xM',   0,   0,      7,      0,      0,      4],
+		['xM',   0,   4,      7,      0,      4,      2],
+		['xM',   0,   2,      7,      0,      2,      0],
+		['xM',   2,   0,      7,      0,      0,      4],
+		['xM',   2,   4,      7,      0,      4,      2],
+		['xM',   2,   2,      7,      0,      2,      0],
+		['xM',   4,   0,      7,      0,      0,      4],
+		['xM',   4,   4,      7,      0,      4,      2],
+		['xM',   4,   2,      7,      0,      2,      0],
+		['xP',   0, 'M',      0,      0,   'oM',   'o3'],
+		['xP',   3, 'M',      0,      0,   'oM',   'o0'],
 		['xQ',   0,   1,      0,      0,   'r'],
 		['xR', 'F', 'F',     10,      8,      0,      1],
 		['xR', 'F', 'F',     10,      9,      0,      1],
@@ -414,11 +416,11 @@ EOF
 		L=>'Pillar', xL=>'Tunnel Pillar', B=>'Balcony', E=>'Double Balcony',
 		xM=>'Dispenser', yS=>'Splinter', xD=>'Dipper', xS=>'Spinner',
 		yH=>'Helix', yT=>'Turntable', xQ=>'Loop Curve', xV=>'Vortex 3 in',
-		xC=>'Curve 3x small', yC=>'Curve 2x large',
+		xC=>'Curve 3x small', yC=>'Curve 2x large', yK=>'Carousel',
 		xI=>'Straight with 2 Curves', xX=>'Straight 3x', xW=>'2x 2 in 1 left',
 		yW=>'2x 2 in 1 right', xY=>'2 in 1 left with Curve',
 		yY=>'2 in 1 right with Curve', yX=>'3 Curves, 2 crossing',
-		yI=>'Cross Straight and Curve',
+		yI=>'Cross Straight and Curve', xP=>'Color Swap',
 		# Rails
 		s=>'Rail Short', m=>'Rail Medium', l=>'Rail Long', b=>'Rail Bernoulli',
 		v=>'Drop Rail Concave', u=>'Drop Rail Convex', g=>'Rail Overlong',
@@ -485,6 +487,9 @@ EOF
 		'Flextube', 28, [xt => 4, 1 => 4],
 		'Helix', 29, [yH => 1],
 		'Turntable', 30, [yT => 1],
+		# 2022
+		'Color Swap', 32, [xP => 3],
+		'Carousel', 33, [yK => 1],
 	];
 	# create tables (only single sql statements allowed)
 	$dbh->do($_) for split /;/, $sql;
@@ -567,6 +572,7 @@ sub error {
 sub adjust {
 	# print with Locale::Maketext has some problems, use a dirty hack
 	my ($str,$width) = @_;
+	$str ||= '';
 	my $loc = loc($str);
 	# calculate it by counting the high bits assuming 1 column chars only
 	my $num = $width - length $loc;
@@ -576,8 +582,19 @@ sub adjust {
 }
 
 sub list_elements {
-	my ($self) = @_;
+	my ($self, @args) = @_;
+	my @items;
+	push @items, split /,/ for @args;
 	my $name = $self->{elem_name};
+	my $nr = {reverse %$name};
+	if (@items) {
+		$name = {map {$_, $name->{$_}} grep {exists $name->{$_}} @items};
+		if (! keys %$name) {
+			for my $i (@items) {
+				$name->{$nr->{$_}} = $_ for (grep {loc($_) =~ /$i/} keys %$nr);
+			}
+		}
+	}
 	# multi column output depending on width of names to be printed
 	my $cols = 3;
 	my @width = (0, 76, 36, 23);

@@ -133,7 +133,7 @@ sub no_rail_connection {
 }
 
 sub rail_xy {
-	my ($self, $r, $x1, $y1, $dir, $detail) = @_;
+	my ($self, $r, $x1, $y1, $dir, $detail, $level) = @_;
 	return if ! defined $dir or $dir !~ /^[0-6]$/;
 	# length of rails
 	my %len = (
@@ -150,7 +150,7 @@ sub rail_xy {
 		($x2, $y2) = $self->to_position($x2, $y2, $dir, 1);
 	}
 	$self->error("Position (%1,%2) is outside of board", $x2, $y2)
-		if $x2 <= 0 or $y2 <= 0;
+		if $x2 < 0 or $y2 < 0;
 	return ($x2, $y2);
 }
 
@@ -594,7 +594,7 @@ sub plane_lines {
 	my ($self, $lines) = @_;
 	my $loc_level = loc('Level');
 	my ($level, $max_level, $line) = (0, 0, 0);
-	
+
 	for (@$lines) {
 		my ($what, $value) = $self->header_line($_);
 		next if ! $what or $what ne 'level';
@@ -866,12 +866,14 @@ sub header_line {
 	return ('author', $1) if /^\s*(?:author|$loc_author)(?:\s+|:)(.*)/i;
 	return ('source', $1) if /^\s*(?:source|$loc_source)(?:\s+|:)(.*)/i;
 	return ('level', $1) if /^\s*(?:level|$loc_level)(?:\s+|:)(.*)/i;
+	return ('name', $line) if /^\s*\w\w\w/;
 	return undef;
 }
 
 sub parse_run {
 	my ($self, $content) = @_;
-	my ($rules, $comment, $run_name, $off_x, $off_y, $off_xy, $plane_type, $level_line_seen, $wall);
+	my ($rules, $comment, $run_name, $off_x, $off_y, $off_xy, $plane_type,
+		$level_line_seen, $wall, $pillar, $z_balcony2);
 	my ($h);
 	my $level = 0;
 	my $loc_level = loc('Level');
@@ -923,7 +925,6 @@ sub parse_run {
 				say loc("Registering marble run '%1'", $run_name || '');
 			}
 		} elsif ($what and $what eq 'level') {
-		#} elsif (s/^\s*(?:level|$loc_level)(?:\s+|:)(\d+)//i) {
 			# errors already reported
 			$level_line_seen = 1;
 			$level = $value;
@@ -932,7 +933,7 @@ sub parse_run {
 		} elsif ($what) {
 			push @$rules, [$what, $value];
 		# ground planes
-		} elsif (s/^\s*_\s*//) {
+		} elsif (s/^_\s*//) {
 			if (/(\d+)\D+(\d+)/) {
 				($off_y, $off_x) = ($1, $2);
 				$off_xy->[0] = [6*($off_x - 1), 5*($off_y - 1)];
@@ -943,7 +944,7 @@ sub parse_run {
 				$self->error("Incorrect ground plane numbering '%1'", $_);
 			}
 		# ground planes not to be drawn
-		} elsif (s/^\s*!\s*//) {
+		} elsif (s/^!\s*//) {
 			if (/(\d+)\D+(\d+)/) {
 				($off_y, $off_x) = ($1, $2);
 				push @$rules, ['exclude', $2, $1];
@@ -986,12 +987,24 @@ sub parse_run {
 				or abs($x1 - $off_x) + abs($y1 - $off_y) > $delta + 1);
 			# no further analysis if position missing, error reported in get_pos
 			next if ! defined $y1;
-			# height, tile, orientation
+			### height, tile, orientation
 			if (defined $tile) {
-				# height elements 1..9,a..d,+,B,E,L,xL
+					print "tile $tile\n";
 				$z = 0;
+				# wall lines
+				if ($tile =~ s/^(\d?)(x[lms])//) {
+					my $detail = $1 || 0;
+					my $elem = $2;
+					print "wall $elem with detail $detail at $x1,$y1 seen\n";
+				# balcony lines
+				} elsif ($tile =~ s/^([\dabcd])B//) {
+					my $elem = 'B';
+					my $detail = $1;
+					print "balcony $elem with height $detail at $x1,$y1 seen\n";
+				}
+				# height elements 1..9,+,E,L,xL
 				my $skip_be = 0;
-				while ($tile =~ s/^([+\dBEabcd]|x?L)//) {
+				while ($tile =~ s/^([+\dEL]|xL)//) {
 					my $elem = $1;
 					my ($dir, $detail);
 					my $inc = 0;
@@ -1005,6 +1018,7 @@ sub parse_run {
 							$detail ||= 1;
 							$skip_be = 1;
 						}
+					} elsif ($elem =~ /^\d?x[lms]/) {
 					} elsif ($tile =~ s/^B(\d?)// or $elem eq 'B') {
 						$detail = $1 || 0;
 						$skip_be = 1;
@@ -1020,13 +1034,13 @@ sub parse_run {
 						}
 						$elem = 'B';
 					}
-					# direction for balconies
-					if ($elem =~ /^[BE]|xL/) {
+					# direction for balconies and pillars (for pillar optional)
+					if ($elem =~ /^[BEL]|xL/) {
 						if ($tile =~ s/^([a-f])//) {
 							$dir = $1;
 							$dir =~ tr/a-f/0-5/;
-						} else {
-							$self->error("Direction missing for balcony %1",
+						} elsif ($elem ne 'L') {
+							$self->error("Direction missing for element %1",
 								$elem);
 							$dir = 0;
 						}
@@ -1105,7 +1119,7 @@ sub parse_run {
 				if (exists $self->{elem_name}{$tile}) {
 					$tile_name = loc($self->{elem_name}{$tile});
 					$self->error("%1 '%2' is not a tile", $tile_name, $tile)
-						if $tile =~ /[a-w]/;
+						if $tile =~ /[a-df-w]/ and $tile !~ /x[lms]/;
 					$self->error("Missing tile orientation for '%1'", $tile)
 						if ! defined $dir and $tile !~ /[OR^=]/;
 					$self->error("Tile '%1' needs no orientation", $tile)
@@ -1168,7 +1182,7 @@ sub parse_run {
 						push @{$wall->{"$x1,$y1,$dir,$pillar"}}, $r,$num_wall
 							if $is_wall;
 						my ($x2, $y2) =
-							$self->rail_xy($r, $x1, $y1, $dir, $w_detail);
+							$self->rail_xy($r, $x1, $y1, $dir, $w_detail, $level);
 						if (exists $rails->{$dir}) {
 							my $levels = 1;
 							$levels = 2 if grep {$_ eq $tile} qw(xM yH yT);
@@ -1214,6 +1228,7 @@ sub parse_run {
 	# add z to the double balcony lines and adjust level
 	$self->doublebalcony_height($rules);
 	undef $self->{line};
+	#use Data::Dumper;print Dumper $rules;
 	return $rules;
 }
 

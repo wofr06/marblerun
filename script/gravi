@@ -85,7 +85,7 @@ if ($opt{a}) {
 		$input->process_input();
 	}
 } elsif ($opt{e}) {
-	$g->list_elements();
+	$g->list_elements(@ARGV);
 } elsif ($opt{s}) {
 	$g->list_sets(@ARGV);
 } elsif (defined $opt{i}) {

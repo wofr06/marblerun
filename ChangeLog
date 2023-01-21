@@ -1,4 +1,5 @@
 Revision history for Perl extension Game::MarbleRun
+	- new extension color swap added
 	- marble animation with timing working for simple tracks
 	- corrected export of marble runs (transparent planes, finish line)
 	- corrected positioning of double balconies and tiles on transparent planes
