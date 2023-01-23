@@ -4,18 +4,21 @@ Source Vertical Construction plan booklet
 Author Wolfgang
 Level 0
 _ 1 1
-51 7LEdL xlb
-32 bBcCa sb sc
-52 dBfCa
-24 9BcXa db
-44 8Bf1Ce lc me
-44 dBfCd se
-35 LLL xl2d xmc
-45 3Ba+Ca dc sb
-26 9BdGc mc
-26 dBdVc sc
+51 7LEdL
+51 xlb
+32 bBCa sb sc
+52 dBCa
+24 9BXa db
+44 8B1Ce lc me
+44 dBCd se
+35 LLL
+35 2xld
+35 xmc
+45 3B+Ca dc sb
+26 9BGc mc
+26 dBVc sc
 56 Yc
-56 cBeCd ab
+56 cBCd ab
 _ 2 1
 11 Ed2Ca
 14 2Ca sb sc
@@ -26,9 +29,10 @@ _ 2 1
 46 +Cc
 #06 Yc se
 _ 1 2
-31 4BdCe lc
-32 dBd2+Cf
-42 LEbL1Wa sd xsd
+31 4BCe lc
+32 dB2+Cf
+42 LEbL1Wa sd
+42 xsd
 43 EbCf ad
 55 Mf oSf oGf
 56 Cf
@@ -38,7 +42,7 @@ _ 2 2
 51 +Cb mb
 12 xLbL1+Ce
 22 Cb
-13 4BeCa
+13 4BCa
 23 Xa
 14 Za
 24 Cd

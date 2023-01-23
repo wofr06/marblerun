@@ -7,30 +7,33 @@ _ 1 1
 21 Cd
 31 Wd
 41 Za
-41 4BbCb mc
-51 bBb+Xa sd
+41 4BCb mc
+51 bB+Xa sd
 12 Ce
-32 L+LEcL+Ac oc oe xl2d ce lc
+32 L+LEcL+Ac oc oe ce lc
+32 2xld
 43 EcCa db
 53 L
-53 8BeCc se
+53 8BCc se
 14 3Ce me mc
-35 1Bb+Cf mf
-55 5BbGa aa
-45 cBbCf
-55 cBbVa
+35 1B+Cf mf
+55 5BGa aa
+45 cBCf
+55 cBVa
 55 Ef+Cf sf
-26 xLcxLc xmd
+26 xLcxLc
+26 xmd
 56 L
 _ 2 1
-11 6BbCf sa
-21 aBb+Cf sb
-22 L xl2b
-13 8BeCa
+11 6BCf sa
+21 aB+Cf sb
+22 L
+22 2xlb
+13 8BCa
 35 7
 16 3Gc sc
-24 aBf+Xb
-25 aBf+Ca sa
+24 aB+Xb
+25 aB+Ca sa
 Level 1
 14 ^
 41 LLCa cc
@@ -41,8 +44,8 @@ Level 1
 25 LEfLCd le
 45 Ca
 _ 1 2
-31 3BeCf
-41 3BeCc lc
+31 3BCf
+41 3BCc lc
 _ 2 2
 22 1Xb mc
 15 Mf oSf oRf

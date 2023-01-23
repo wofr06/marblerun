@@ -172,7 +172,7 @@ sub verify_rail_endpoints {
 		# exclude elements that cannot be start/end points for rails
 		next if $self->no_rail_connection($_->[0]) or $_->[0] =~ /L/;
 		my $pos = $self->num2pos($_->[1], $_->[2]);
-		$self->error("At %1 level %2 is already a tile %3",
+		$self->error("At %1 level %2 is already a tile %3 $z",
 			$pos, $level, $t_pos{$pos}{$z}->[0]) if exists $t_pos{$pos}{$z};
 		$t_pos{$pos}{$z} = [$_->[0], $_->[5]];
 	}
@@ -866,7 +866,6 @@ sub header_line {
 	return ('author', $1) if /^\s*(?:author|$loc_author)(?:\s+|:)(.*)/i;
 	return ('source', $1) if /^\s*(?:source|$loc_source)(?:\s+|:)(.*)/i;
 	return ('level', $1) if /^\s*(?:level|$loc_level)(?:\s+|:)(.*)/i;
-	return ('name', $line) if /^\s*\w\w\w/;
 	return undef;
 }
 
@@ -889,10 +888,9 @@ sub parse_run {
 	for (@lines) {
 		# strip off and remember line numbers, skip empty lines
 		s/^(\d+)\s+//;
-		$self->{line} = $1;
-		push @$rules, ['line', $1];
-		# first line is the name of the run if no name line given
-		$run_name = $_ if ! $run_name and ($1 || 0) == 1;
+		my $line_no = $1;
+		$self->{line} = $line_no;
+		push @$rules, ['line', $line_no];
 		next if /^\s*$/;
 		s/\s*$//;
 		# strip off and remember comments
@@ -916,9 +914,17 @@ sub parse_run {
 		}
 		# analyse header lines
 		my ($what, $value) = $self->header_line($_);
+		# first line is the name of the run if no name line given
+		if (! $what and $line_no == 1) {
+			$what = 'name';
+			$value = $_;
+		}
 		if ($what and $what eq 'name') {
-			$run_name = $value;
-			$self->error("Missing run name") if ! $run_name;
+			undef $what if defined $run_name;
+			$self->error("Missing run name") if ! $value;
+		}
+		if ($what and $what eq 'name') {
+			$run_name ||= $value;
 			if ($self->{db} =~ /memory/) {
 				say loc("Checking marble run '%1'", $run_name || '');
 			} else {
@@ -989,18 +995,18 @@ sub parse_run {
 			next if ! defined $y1;
 			### height, tile, orientation
 			if (defined $tile) {
-					print "tile $tile\n";
 				$z = 0;
 				# wall lines
-				if ($tile =~ s/^(\d?)(x[lms])//) {
+				if ($tile =~ s/^(\d?)(x[lms])([a-f])//) {
 					my $detail = $1 || 0;
 					my $elem = $2;
-					print "wall $elem with detail $detail at $x1,$y1 seen\n";
+					$dir = $3;
+					#print "wall $elem dir $dir with detail $detail at $x1,$y1 seen\n";
 				# balcony lines
 				} elsif ($tile =~ s/^([\dabcd])B//) {
 					my $elem = 'B';
 					my $detail = $1;
-					print "balcony $elem with height $detail at $x1,$y1 seen\n";
+					#print "balcony $elem with height $detail at $x1,$y1 seen\n";
 				}
 				# height elements 1..9,+,E,L,xL
 				my $skip_be = 0;
