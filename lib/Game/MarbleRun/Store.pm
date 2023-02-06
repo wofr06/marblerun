@@ -59,10 +59,10 @@ sub find_to_tile {
 		$_->[2] == $x and $_->[3] == $y} sort {$b->[4] <=> $a->[4]} @$seen;
 	if ($r =~ /x[sml]/) {
 		@ids = grep {$_->[1] =~ /L/} @ids;
-		# wall also contains the sequential wall number
-		$wall = ($wall % 10) || 1;
-		return $ids[$wall - 1]->[0] if @ids >= $wall;
-		$self->error("Not enough pillars for wall %1 at %2", $wall,
+		for (@ids) {
+			return $_->[0] if abs($_->[4] - $z) <= 1;
+		}
+		$self->error("No pillar for end of wall %1 at %2", $wall,
 			$self->num2pos($x, $y));
 		return undef;
 	} else {
@@ -102,6 +102,7 @@ sub find_to_tile {
 			}
 		}
 
+		#use Data::Dumper;print Dumper \@ids if $r eq 'd';
 		if (@ids > 1) {
 			# resolve ambiguity by sorting according to z difference
 			@ids = sort {abs($a->[4] - $z) <=> abs($b->[4] - $z)} @ids;
@@ -128,13 +129,12 @@ sub find_to_tile {
 
 sub no_rail_connection {
 	my ($self, $elem) = @_;
-	return 1 if ! $elem;
 	return $elem =~ /\d+|^[+\^=BEOR]/;
 }
 
 sub rail_xy {
 	my ($self, $r, $x1, $y1, $dir, $detail, $level) = @_;
-	return if ! defined $dir or $dir !~ /^[0-6]$/;
+	return if ! defined $dir or $dir !~ /^[0-5]$/;
 	# length of rails
 	my %len = (
 		a=>2, b=>4, c=>1, d=>1, e=>1, l=>4, m=>3, g=>5, q=>5, s=>2,
@@ -580,10 +580,10 @@ sub get_pos {
 		($x1, $y1) = ($1, $2);
 	} elsif (! $relative and $pos =~ /^([\da-z])([\da-z])$/i) {
 		($x1, $y1) = ($1, $2);
-		$x1 = ord(lc $x1) - 87 if $x1 =~ /[a-z]/i;
-		$y1 = ord(lc $y1) - 87 if $y1 =~ /[a-z]/i;
+		$x1 = ($x1 =~ /[a-z]/i) ? ord(lc $x1) - 87 : int $x1;
+		$y1 = ($y1 =~ /[a-z]/i) ? ord(lc $y1) - 87 : int $y1;
 	} elsif (! $relative and $pos =~ /^(\d+),(\d+)$/i) {
-		($x1, $y1) = ($1, $2);
+		($x1, $y1) = (int $1, int $2);
 	} else {
 		$self->error("Wrong tile position '%1'", $pos);
 	}
@@ -623,7 +623,7 @@ sub plane_lines {
 			}
 			$level_pos = $level ? $line : 0;
 		# transparent plane line
-		} elsif (/^[^#]*[=^]/) {
+		} elsif (/^[^#]* [=^]/) {
 			if (! $level_pos) {
 				# add level line
 				$level = ++$max_level;
@@ -655,7 +655,7 @@ sub get_offsets {
 		$self->{line}= $1;
 		($_ = $str) =~ s/#.*//;
 		# process only plane related lines (level, _, ^ and = lines)
-		next if $_ !~ /^[\w\s,]+[=^_]|^level|^$loc_level/i;
+		next if $_ !~ /^[\w\s,]+ [=^_]|^level|^$loc_level/i;
 		next if $self->header_line($_);
 		if (/^\d+\s+_\s*(\d+)\D+(\d+)/) {
 			$relative = $self->{relative} = 1;
@@ -677,7 +677,7 @@ sub get_offsets {
 				$self->error("Wrong level number '%1' becomes level %2",
 					$bad, $level) if $bad;
 			}
-		} elsif (/^\d+\s+([0-9a-z]{2}|\d+,\d+)\s+.*([=^])/i) {
+		} elsif (/^\d+\s+([0-9a-z]{2}|\d+,\d+)\s+([=^])/i) {
 			my $type = ($2 eq '=') ? 2 : 3;
 			($row, $col) = $self->get_pos($1, $relative);
 			if (! $level_seen) {
@@ -706,33 +706,22 @@ sub get_offsets {
 
 sub level_height {
 	my ($self, $rules, $off_xy, $h) = @_;
-	my $old_z = 0;
-	for (my $l=0; $l < @$off_xy; $l++) {
-		next if ! defined $off_xy->[$l];
-		my ($x0, $y0) = @{$off_xy->[$l]};
-		next if ! $x0;
-		my $delta = ($off_xy->[$l][2] || 3) - 1;
+	for my $l (keys %$off_xy) {
+		my ($x0, $y0) = @{$off_xy->{$l}};
+		my $delta = ($off_xy->{$l}[2]);
 		my $z = 0;
 		my $height = 0;
 		if ($l) {
-			for (keys %$h) {
-				my ($level, $x, $y) = split /,/;
-				next if $l <= $level;
-				next if abs($x - $x0) > $delta or abs($y - $y0) > $delta;
-				next if abs($x - $x0) + abs($y - $y0) > $delta + 1;
-				$height = $h->{$_} if $h->{$_} > $height;
+			for (@$h) {
+				my ($x, $y, $z) = @$_;
+				next if abs($x - $x0) > $delta - 1 or abs($y - $y0) > $delta - 1;
+				next if abs($x - $x0) + abs($y - $y0) > $delta;
+				$height = $z if $z > $height;
 			}
 			$z = $height + 1;
-		# if plane is at same position as previous, add its height
-		$z += $old_z if $x0 == $off_xy->[$l-1][0] and $y0 == $off_xy->[$l-1][1];
 		}
-		for (grep {$_->[0] eq 'level' and $_->[1] == $l} @$rules) {
-			push @$_, $z;
-		}
-		for (grep {defined $_->[6] and $_->[6] == $l} @$rules) {
-			$_->[3] += $z;
-		}
-		$old_z = $z;
+		push @$_, $z for grep {$_->[0] eq 'level' and $_->[1] == $l} @$rules;
+		$_->[3] += $z for grep {defined $_->[6] and $_->[6] == $l} @$rules;
 	}
 }
 
@@ -829,7 +818,7 @@ sub doublebalcony_height {
 		$detail ||= 1;
 		$self->{line} = $e_z{"$x,$y"}->[0][0] if exists $e_z{"$x,$y"};
 		if (exists $e_z{"$x,$y"} and !grep {$_->[2] == $dir} @{$e_z{"$x,$y"}}) {
-			(my $dirstr = $dir) =~ tr/0-5/a-f/;
+			my $dirstr = chr($dir + 97);
 			$self->error("Wrong direction %1 for double balcony at %2", $dirstr,
 				$self->num2pos($x, $y));
 		} elsif (exists $e_z{"$x,$y"} and defined $e_z{"$x,$y"}->[$detail - 1]) {
@@ -871,20 +860,17 @@ sub header_line {
 
 sub parse_run {
 	my ($self, $content) = @_;
-	my ($rules, $comment, $run_name, $off_x, $off_y, $off_xy, $plane_type,
-		$level_line_seen, $wall, $pillar, $z_balcony2);
-	my ($h);
+	my ($rules, $comment, $run_name, $plane_type, $level_line_seen, $wall, $pillar, $z_balcony2, $planepos, $planenum);
+	# offset for ground planes and center position of transparent planes
+	my ($off_x, $off_y, $center_x, $center_y) = (0, 0, 0, 0);
 	my $level = 0;
-	my $loc_level = loc('Level');
-	my $loc_pos = loc('Position');
+	my ($num_L, @pos_L, $num_E, @pos_E);
+	my $num_wall = 0;
 	# in the presence of _ lines location data are relative to the base plate
 	my $rel_pos = 0;
 	# split content into lines with line numbers prepended
 	my $i = 0;
-	my @lines = map {$i++;map {"$i $_"} split /;/, $_} split /\r?\n/, $content;
-	# determine offsets for transparent planes and its plane numbers
-	$off_xy = $self->get_offsets(\@lines);
-	my $num_wall = 0;
+	my @lines = map {$i++; map {"$i $_"} split /;/, $_} split /\r?\n/, $content;
 	for (@lines) {
 		# strip off and remember line numbers, skip empty lines
 		s/^(\d+)\s+//;
@@ -931,18 +917,23 @@ sub parse_run {
 				say loc("Registering marble run '%1'", $run_name || '');
 			}
 		} elsif ($what and $what eq 'level') {
-			# errors already reported
-			$level_line_seen = 1;
-			$level = $value;
+			$self->error("Level number not given") if ! defined $value;
+			$level = $value || 0;
+			if ($level) {
+				$level_line_seen = 1;
+				$self->error("Level %1 already seen", $level)
+					if exists $planenum->{$level};
+				$planenum->{$level} = [undef, undef];
+			}
 			pop @$rules if $rules->[-1][0] eq 'level';
 			push @$rules, ['level', $level];
 		} elsif ($what) {
 			push @$rules, [$what, $value];
 		# ground planes
-		} elsif (s/^_\s*//) {
+		} elsif (s/^_\s+//) {
 			if (/(\d+)\D+(\d+)/) {
-				($off_y, $off_x) = ($1, $2);
-				$off_xy->[0] = [6*($off_x - 1), 5*($off_y - 1)];
+				$off_x = 6*($2 - 1);
+				$off_y = 5*($1 - 1);
 				$rel_pos = 1;
 				push @$rules, ['level', 0] if $level;
 				$level = 0;
@@ -952,7 +943,6 @@ sub parse_run {
 		# ground planes not to be drawn
 		} elsif (s/^!\s*//) {
 			if (/(\d+)\D+(\d+)/) {
-				($off_y, $off_x) = ($1, $2);
 				push @$rules, ['exclude', $2, $1];
 			} else {
 				$self->error("Incorrect ground plane numbering '%1'", $_);
@@ -963,164 +953,170 @@ sub parse_run {
 			my ($pos, $tile, @items) = split;
 			($y1, $x1) = $self->get_pos($pos, $rel_pos);
 			#say "xy= $x1,$y1 tile $tile rel $rel_pos";
-			$off_x = $off_xy->[$level][0] || 0;
-			$off_y = $off_xy->[$level][1] || 0;
-			$plane_type = $off_xy->[$level][2] || 3;
-			#say "plane $plane_type offxy=$off_x $off_y";
-			#say "ground xy $off_xy->[0][0] $off_xy->[0][1]";
-			# adjust positions exept for transparent plane
-			if ($tile and $rel_pos) {
-				if ($tile =~ /[=^]/) {
-					$x1 += $off_xy->[0][0];
-					$y1 += $off_xy->[0][1];
-				} else {
-					# adjust y coordinate if transparent plane on even x pos
-					$x1 += $off_x;
-					$y1 += $off_y;
-					if ($level) {
-						$x1 -= $plane_type;
-						$y1 -= $plane_type;
-						$y1++ if !($off_x % 2) and $x1 % 2 and $plane_type == 3;
-						$y1-- if $off_x % 2 and !($x1 % 2) and $plane_type == 2;
-					}
-				}
-			}
-			# tile must be on a transparent plane for level > 0
-			my $delta = $plane_type - 1;
-			$self->error("Wrong tile position '%1'", $pos) if $level
-				and $tile !~ /[=^]/
-				and (abs($x1 - $off_x) > $delta or abs($y1 - $off_y) > $delta
-				or abs($x1 - $off_x) + abs($y1 - $off_y) > $delta + 1);
 			# no further analysis if position missing, error reported in get_pos
 			next if ! defined $y1;
+			# adjust positions
+			if ($tile and $rel_pos) {
+				$x1 += $off_x;
+				$y1 += $off_y;
+			}
+			# transparent plane position
+			if ($tile =~ /^([=^])$/) {
+				$plane_type = ($1 eq '=') ? 2 : 3;
+				if (! $level_line_seen) {
+					$level++;
+					$level++ while exists $planenum->{$level};
+				}
+				$planenum->{$level} = [$x1, $y1, $plane_type];
+				$level_line_seen = 0;
+				push @$rules, [$1, $x1, $y1, undef, undef, undef, $level];
+				next;
+			}
 			### height, tile, orientation
 			if (defined $tile) {
 				$z = 0;
+				my $elem;
 				# wall lines
 				if ($tile =~ s/^(\d?)(x[lms])([a-f])//) {
-					my $detail = $1 || 0;
-					my $elem = $2;
-					$dir = $3;
-					#print "wall $elem dir $dir with detail $detail at $x1,$y1 seen\n";
-				# balcony lines
-				} elsif ($tile =~ s/^([\dabcd])B//) {
-					my $elem = 'B';
-					my $detail = $1;
-					#print "balcony $elem with height $detail at $x1,$y1 seen\n";
+					my $detail = $1 || 1;
+					$elem = $2;
+					$dir = ord($3) - 97;
+					$num_wall++;
+					my ($x2, $y2) = $self->rail_xy($elem, $x1, $y1, $dir);
+					#print "wall $elem dir $dir with detail $detail at $x1,$y1 seen@pos_L\n";
+					$num_L = $pos_L[$detail -1];
+					#use Data::Dumper;print Dumper $detail, \@pos_L,$rules->[$num_L-1],$rules->[$num_L],$rules->[$num_L+1];
+					$rules->[$num_L][7] = [$x2, $y2, $elem, $dir, $num_wall];
 				}
-				# height elements 1..9,+,E,L,xL
-				my $skip_be = 0;
-				while ($tile =~ s/^([+\dEL]|xL)//) {
-					my $elem = $1;
-					my ($dir, $detail);
-					my $inc = 0;
-					# treat balconies, determine z after the content is parsed
-					if ($elem eq 'E') {
-						$detail = $1 if $tile =~ s/^(\d)//;
-						if ($z) {
-							$inc = 1;
-						} else {
-							$z = 0;
-							$detail ||= 1;
-							$skip_be = 1;
-						}
-					} elsif ($elem =~ /^\d?x[lms]/) {
-					} elsif ($tile =~ s/^B(\d?)// or $elem eq 'B') {
-						$detail = $1 || 0;
-						$skip_be = 1;
-						if ($elem =~ /([1-9])|([a-d])/) {
-							my $hole = $1 || ord($2) - 87;
-							$detail = 14*$detail + $hole;
-							$z = 2*$hole;
-						} elsif ($elem eq 'B') {
-							$detail = 0;
-							$z = 0;
-						} else {
-							$self->error("Wrong balcony height '%1'", $elem);
-						}
-						$elem = 'B';
+				# double balcony lines (2nd hole)
+				if ($tile =~ s/^E//) {
+					$elem = 'E';
+					my $x = $rules->[$pos_E[$num_E]][1];
+					my $y = $rules->[$pos_E[$num_E]][2];
+					$level = $rules->[$pos_E[$num_E]][6];
+					$dir = $self->find_dir($x, $y, $x1, $y1);
+					if ($tile =~ s/^([a-f])//) {
+						my $dir2 = ord(lc $1) - 97;
+						$self->error("Wrong direction %1 for double balcony, should be %2", $dir2, $dir) if $dir != $dir2;
 					}
+					$rules->[$pos_E[$num_E]][5] = $dir;
+					$z = $rules->[$pos_E[$num_E++]][3];
+					#print "double balcony at $x1,$y1,$z seen\n";
+					push @$rules,
+						[$elem, $x1, $y1, $z, $detail, $dir, $level] if $elem;
+				# balcony lines
+				} elsif ($tile =~ s/^([^xyz]+)B//) {
+					$elem = 'B';
+					my $hole = $1;
+					if ($hole and $hole =~/^(\d)$|^([a-d])$/) {
+						$hole = $1 || ord($2) - 87;
+					} else {
+						$self->error("Wrong balcony height '%1'", $hole);
+					}
+					$dir = 0;
+					my $x = $rules->[$num_L][1];
+					my $y = $rules->[$num_L][2];
+					$dir = $self->find_balcony_dir($x, $y, $x1, $y1);
+
+					if ($tile =~ s/^([a-f])//) {
+						my $dir2 = ord(lc $1) - 97;
+						$self->error("Wrong direction %1 for double balcony, should be %2", $dir2, $dir) if $dir != $dir2;
+					}
+					my $detail = 20*$num_wall + $hole;
+					$detail = $num_wall;
+					# we need z at the bottom of the wall, i.e. 28 units less
+					$z = 2*$hole + $rules->[$num_L][3] - 14;
+					#print "balcony on wall $num_wall at $x1,$y1,$z seen\n";
+					push @$rules,
+						[$elem, $x1, $y1, $z, $detail, $dir, $level] if $elem;
+				}
+				# other height elements 1..9,+,E,L,xL
+				while ($tile =~ s/^([+\dEL=^]|xL)//) {
+					$elem = $1;
 					# direction for balconies and pillars (for pillar optional)
-					if ($elem =~ /^[BEL]|xL/) {
+					if ($elem =~ /^[EL]|xL/) {
 						if ($tile =~ s/^([a-f])//) {
-							$dir = $1;
-							$dir =~ tr/a-f/0-5/;
-						} elsif ($elem ne 'L') {
+							$dir = ord($1) - 97;
+						} elsif ($elem eq 'xL') {
 							$self->error("Direction missing for element %1",
 								$elem);
 							$dir = 0;
 						}
 					}
 					if ($elem =~ /^(\d)/) {
-						$inc += 2*$1;
+						$z += 2*$1;
+					} elsif ($elem =~ /^[=^]/) {
+						push @$planepos, [$x1, $y1, $z];
+						$z++;
 					} elsif ($elem eq '+') {
-						$inc++;
+						$z++;
+					} elsif ($elem eq 'E') {
+						$num_E = 0;
+						my ($xE, $yE) = (0, 0);
+						($xE, $yE) = @{$rules->[$pos_E[-1]]}[1,2] if @pos_E;
+						@pos_E = () if $xE != $x1 or $yE != $y1;
+						push @pos_E, scalar @$rules;
+						$z++;
 					} elsif ($elem =~ /x?L/) {
-						$inc += 14;
+						my ($xL, $yL) = (0, 0);
+						($xL, $yL) = @{$rules->[$pos_L[-1]]}[1,2] if @pos_L;
+						@pos_L = () if $xL != $x1 or $yL != $y1;
+						push @pos_L, scalar @$rules;
+						$z += 14;
 					}
-					$z += $inc;
-					# remember the heights for height of transparent plane
-					my $corr = 1;
-					if ($tile !~ /[=^]/) {
-						$h->{"$level,$x1,$y1"} = $z if ! $skip_be;
-						$corr = 0;
-					}
-						push @$rules,
-						[$elem, $x1, $y1, $z, $detail, $dir, $level - $corr] if $elem;
+					# for all height elements
+					push @$rules,
+						[$elem, $x1, $y1, $z, $detail, $dir, $level] if $elem;
 				}
+				#if ($tile) {
+				# candidates for transparent plane positions
+				push @$planepos, [$x1, $y1, $z] if ! $tile and $elem !~ /[=^]|x[lms]/;
+				next if ! $tile;
 				# tile special cases S,U,xH,xB,xF,O,xM,xD
-				if ($tile) {
-					# handle Switch position + / -
-					if ($tile =~ s/([SU])([+-]?)/$1/) {
-						$detail = $2 || '';
-					} elsif ($tile =~ s/xD([+-]?)/xD/) {
-						$detail = $1 || '';
-					# handle number of helix elements
-					} elsif ($tile =~ s/xH(\d*)/xH/) {
-						$detail = $1 || 2;
-						$self->error("Helix must have at least 2 elements")
-							if $detail < 2;
-					# handle number of bridge unfolding elements
-					} elsif ($tile =~ s/xB(\d?)(\D)/xB$2/) {
-						$detail = $1 || 4;
-						$self->error("Even number of elements expected, not %1",
-							$detail) if $detail % 2;
-						push @items, "xb$2";
-					# lift (number of elements and orientation out)
-					} elsif ($tile =~ s/xF(.*)([a-f])/xF$2/) {
-						$detail = $1;
-						($dir = $2) =~ tr /a-f/d-fa-c/;
-						$detail =~ /([2-9]?)([a-f]?)/ if $detail;
-						# default 4 elements and opposite direction
-						$detail = ($1 || 4) . ($detail ? $2 : $dir);
-					# Trampolin with angle tiles
-					} elsif ($tile =~ s/R([a-fA-F]+)/R/) {
-						$detail = lc $1;
-						$detail =~ tr/a-f/0-5/;
-					# Mixer
-					} elsif ($tile =~ s/xM([a-fA-F])([a-fA-F])/xM$2/) {
-						$detail = lc $1;
-						$dir = lc $2;
-						$detail =~ tr/a-f/0-5/;
-						$dir =~ tr/a-f/0-5/;
-						$self->error("For the mixer orientation %1 the direction %2 of the outgoing ball is not possible", $1, $2) if  ($dir + $detail) % 2;
-					# open basket
-					} elsif ($tile =~ /^O/) {
-						$self->error("Tile 'O' needs no height data") if $z;
-					}
-					# tile symbol and direction
-					$_ = $tile;
-					$tile = $1 if s/^([xyz]?[=^A-Za-w])//;
-					if (s/^([a-f])//i) {
-						$dir = $1;
-						$dir =~ tr/a-fA-F/0-50-5/;
-						$self->error("%quant(%1,Excessive char) '%2'",
-							length $_, $_) if $_;
-					} else {
-						$self->error("Wrong orientation char '%1'", $_) if $_;
-					}
+				# handle Switch position + / -
+				if ($tile =~ s/([SU]|xD)([+-]?)/$1/) {
+					$detail = $2 || '';
+				# handle number of helix elements
+				} elsif ($tile =~ s/xH(\d*)/xH/) {
+					$detail = $1 || 2;
+					$self->error("Helix must have at least 2 elements")
+						if $detail < 2;
+				# handle number of bridge unfolding elements
+				} elsif ($tile =~ s/xB(\d?)(\D)/xB$2/) {
+					$detail = $1 || 4;
+					$self->error("Even number of elements expected, not %1",
+						$detail) if $detail % 2;
+					push @items, "xb$2";
+				# lift (number of elements and orientation out)
+				} elsif ($tile =~ s/xF(.*)([a-f])/xF$2/) {
+					$detail = $1;
+					($dir = $2) =~ tr /a-f/d-fa-c/;
+					$detail =~ /([2-9]?)([a-f]?)/ if $detail;
+					# default 4 elements and opposite direction
+					$detail = ($1 || 4) . ($detail ? $2 : $dir);
+				# Trampolin with angle tiles
+				} elsif ($tile =~ s/R([a-f]+)/R/) {
+					$detail = '';
+					$detail .= ord(lc $_) - 97 for split '', $1;
+				# Mixer
+				} elsif ($tile =~ s/xM([a-f])([a-f])/xM$2/) {
+					$detail = ord(lc $1) - 97;
+					$dir = ord(lc $2) - 97;
+					$self->error("For the mixer orientation %1 the direction %2 of the outgoing ball is not possible", $1, $2) if  ($dir + $detail) % 2;
+				# open basket
+				} elsif ($tile =~ /^O/) {
+					$self->error("Tile 'O' needs no height data") if $z;
 				}
-				next if ! $tile and ! @items;
+				# tile symbol and direction
+				$_ = $tile;
+				$tile = $1 if s/^([xyz]?[=^A-Za-z])//;
+				if (s/^([a-f])//) {
+					$dir = ord($1) - 97;
+					$self->error("%quant(%1,Excessive char) '%2'",
+						length $_, $_) if $_;
+				} else {
+					$self->error("Wrong orientation char '%1'", $_) if $_;
+				}
 				# check for tile errors (height tiles have tile = '')
 				if (exists $self->{elem_name}{$tile}) {
 					$tile_name = loc($self->{elem_name}{$tile});
@@ -1139,6 +1135,7 @@ sub parse_run {
 			} else {
 				$self->error("Position without further data");
 			}
+			$dir ||= 0; # default for missing direction
 			$f = [$tile, $x1, $y1, $z, $detail, $dir, $level];
 			next if ! defined $tile;
 			$self->check_marbles($tile, $dir, $detail, \@items);
@@ -1154,20 +1151,12 @@ sub parse_run {
 			}
 			# rails
 			my $rails;
-			my $num_walls = grep {/x/} @items;
 			for (@items) {
 				next if /^\d*o/; # marbles already handled
 				if (s/^(x?[A-Za-w])//) {
 				# all known rails (exists and range of small letters)
 					$r = $1;
-					my ($is_wall, $w_detail);
-					my $pillar = 0;
-					# treat walls, define sequential wall number
-					if ($r =~ /x[sml]/) {
-						$is_wall = ++$num_wall;
-						$pillar = $1 if s/^(\d)//;
-						$w_detail = 10*$num_wall + $pillar;
-					}
+					my $w_detail;
 					if ($r !~ /^(x?[a-egl-nqs-v])/
 							or ! exists $self->{elem_name}{$r}) {
 						$self->error("Wrong rail char '%1'", $r);
@@ -1179,21 +1168,18 @@ sub parse_run {
 							} else {
 								$detail = $1;
 								($dir, $detail) = ($detail, $dir);
-								$w_detail = $detail;
-								$w_detail =~ tr/a-fA-F/0-50-5/;
+								$w_detail = ord(lc $detail) - 97;
 							}
 						}
 						$w_detail = $detail if $r eq 'xb';
-						$dir =~ tr/a-fA-F/0-50-5/;
-						push @{$wall->{"$x1,$y1,$dir,$pillar"}}, $r,$num_wall
-							if $is_wall;
+						$dir = ord(lc $dir) - 97;
 						my ($x2, $y2) =
 							$self->rail_xy($r, $x1, $y1, $dir, $w_detail, $level);
 						if (exists $rails->{$dir}) {
 							my $levels = 1;
 							$levels = 2 if grep {$_ eq $tile} qw(xM yH yT);
 							$self->error("Rail direction %1 already seen", $dir)
-								if ! $is_wall and $rails->{$dir} >= $levels;
+								if $rails->{$dir} >= $levels;
 						}
 						if ($tile) {
 							push @$f, [$x2, $y2, $r, $dir, $w_detail];
@@ -1214,7 +1200,7 @@ sub parse_run {
 					$self->error("Wrong rail data '%1'", $_);
 				}
 			}
-			my $n = scalar keys(%$rails) - $num_walls;
+			my $n = scalar keys(%$rails);
 			my $nmax = 0;
 			$nmax = @{$self->{conn0}{$tile}} if exists $self->{conn0}{$tile};
 			if (exists $self->{conn1}{$tile}) {
@@ -1226,15 +1212,21 @@ sub parse_run {
 			push @$rules, $f;
 		}
 	}
+				# tile must be on a transparent plane for level > 0
+				#my $delta = $plane_type - 1;
+				#$self->error("Wrong tile position '%1'", $pos)
+				#if (abs($x1 - $center_x) > $delta or abs($y1 - $center_y) > $delta
+				#or abs($x1 - $center_x) + abs($y1 - $center_y) > $delta + 1);
+				#use Data::Dumper;print Dumper $planenum, $planepos;
 	unshift @$rules, ['name', $run_name];
 	# add the height of transparent planes to the level line and the tiles
-	$self->level_height($rules, $off_xy, $h);
+	$self->level_height($rules, $planenum, $planepos);
 	# find wall for the balconies, check orientation and adjust height and level
-	$self->balcony_height($rules, $wall);
+	#$self->balcony_height($rules, $wall);
 	# add z to the double balcony lines and adjust level
-	$self->doublebalcony_height($rules);
+	#$self->doublebalcony_height($rules);
 	undef $self->{line};
-	#use Data::Dumper;print Dumper $rules;
+	use Data::Dumper;print Dumper $rules;
 	return $rules;
 }
 

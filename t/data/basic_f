@@ -4,16 +4,16 @@ Source Construction plan booklet
 # works even better with Vortex instead of Freefall (Level 1 position 64)
 # 64 Va
 Level 0
-52 6
+52 6^
 72 1+Cd sb
 82 1+Cc sc
-24 6
+24 6^
 34 1+Cd md
 64 2Pa sc
 94 1Cb lb
 35 1+Ce
 36 1+Xc lc
-56 6
+56 6^
 76 1+Cb sb
 97 Ca
 68 Ce

@@ -1084,6 +1084,23 @@ sub translate {
 	return $str;
 }
 
+sub find_balcony_dir {
+	my ($self, $x1, $y1, $x2, $y2) = @_;
+	my $dir = 0;
+	return $dir;
+}
+
+sub find_dir {
+	my ($self, $x1, $y1, $x2, $y2) = @_;
+	my $dir = 0;
+	for ($dir = 0; $dir < 6; $dir++) {
+		my ($x, $y) = $self->to_position($x1, $y1, $dir, 1);
+		return $dir if ($x == $x2) and ($y == $y2);
+	}
+	$self->error("Field (%1, %2) is not adjacent to (%3, %4)", $x2, $y2, $x1, $y1);
+	return 0;
+}
+
 sub to_position {
 	my ($self, $x1, $y1, $dir, $len) = @_;
 	my ($x2, $y2) = ($x1, $y1);

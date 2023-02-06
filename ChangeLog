@@ -1,4 +1,7 @@
 Revision history for Perl extension Game::MarbleRun
+	- Incompatible change: new notation for transparent planes, balconies, walls
+	- german documentation reflects new notation
+	- several tracks updated according to changed notation
 	- new extension color swap added
 	- marble animation with timing working for simple tracks
 	- corrected export of marble runs (transparent planes, finish line)
