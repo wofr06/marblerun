@@ -45,9 +45,10 @@ $run->[-1][5] = 2;
 like(capture_stderr{$g->store_run($run)}, qr/no connection from/i, 'to tile');
 
 $g->{warn} = 0;
+$run->[-1][5] = 1;
 push @$run, ['L', 1, 1, 0, '', 3, 0, [3, 3, 'xs', 3, 22]];
 $run->[0] = ['name', 'pillar'];
-like(capture_merged{$g->store_run($run)}, qr/enough pillars/, 'enough pillars');
+like(capture_merged{$g->store_run($run)}, qr/No pillar/, 'No pillar');
 
 # Store.pm line 149
 $g->{warn} = 0;

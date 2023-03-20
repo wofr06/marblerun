@@ -1085,8 +1085,23 @@ sub translate {
 }
 
 sub find_balcony_dir {
-	my ($self, $x1, $y1, $x2, $y2) = @_;
+	my ($self, $x1, $y1, $o, $x2, $y2) = @_;
+	#print "x,y,dir=$x1, $y1, $o, xb,yb=$x2, $y2\n";
 	my $dir = 0;
+	if ($o == 3) {
+		$dir = $x1 < $x2 ? 4 : 1;
+	} elsif ($o == 0) {
+		$dir = $x1 < $x2 ? 1 : 4;
+	} elsif ($o == 2) {
+		$dir = $y1 < $y2 ? 0 : 3;
+	} elsif ($o == 5) {
+		$dir = $y1 < $y2 ? 3 : 0;
+	} elsif ($o == 1) {
+		$dir = 2*($y1 - $y2) < ($x2 -$x1) ? 5 : 2;
+	} elsif ($o == 4) {
+		$dir = 2*($y1 - $y2) < ($x2 -$x1) ? 2 : 5;
+	}
+	#print "o=$o dir=$dir\n";
 	return $dir;
 }
 
@@ -1883,6 +1898,13 @@ $g->print_elements($num);
 
 helper method to print a long string of element names and its count contained
 in the $num hashref
+
+=head2 find_balcony_dir
+
+$dir = find_balcony_dir($x_pile, $y_pile, $orient, $x_balcony, $y_balcony);
+
+For a pile at $x_pile, $y_pile where a wall is connected to and its direction
+$orient, the direction of the balcony for a given $x/y_balcony is calculated.
 
 =head2 translate($string)
 

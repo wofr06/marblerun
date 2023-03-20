@@ -1,5 +1,6 @@
 Revision history for Perl extension Game::MarbleRun
-	- Incompatible change: new notation for transparent planes, balconies, walls
+1.10  Mon Mar 20 2023
+	- Incompatible change: new notation for balconies and walls
 	- german documentation reflects new notation
 	- several tracks updated according to changed notation
 	- new extension color swap added

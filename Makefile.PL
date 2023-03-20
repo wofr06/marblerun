@@ -21,7 +21,6 @@ WriteMakefile(
     ABSTRACT_FROM     => 'lib/Game/MarbleRun.pm',
 	EXE_FILES         => [qw(
 			script/gravi
-			script/svg_to_png
 			script/make_gravi_po_file
 						)],
 	dist              => {COMPRESS => 'gzip -f', SUFFIX => 'gz', },
