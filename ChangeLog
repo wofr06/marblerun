@@ -1,4 +1,6 @@
 Revision history for Perl extension Game::MarbleRun
+	- corrected calculation for rail end points
+	- corrected calculation of plane heights
 1.10  Mon Mar 20 2023
 	- Incompatible change: new notation for balconies and walls
 	- german documentation reflects new notation

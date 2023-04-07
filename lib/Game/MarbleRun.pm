@@ -8,7 +8,7 @@ use DBI;
 use Game::MarbleRun::I18N;
 use Locale::Maketext::Simple (Style => 'gettext');
 
-$Game::MarbleRun::VERSION = '1.01';
+$Game::MarbleRun::VERSION = '1.10';
 my $homedir = $ENV{HOME} || $ENV{HOMEPATH} || die "unknown homedir\n";
 $Game::MarbleRun::DB_FILE = "$homedir/.gravi.db";
 $Game::MarbleRun::DB_SCHEMA_VERSION = 10;
@@ -807,7 +807,7 @@ sub get_file_name {
 	$str = $str ? " ($str)\n" : "\n";
 	if (! $name) {
 		if ($ext) {
-			warn(loc("Please give file prefix for %1 output %2", $ext, $str));
+			warn(loc("Please enter file name without .%1%2", $ext, $str));
 		} else {
 			warn(loc("Please enter a file name"), $str);
 		}
@@ -1089,9 +1089,9 @@ sub find_balcony_dir {
 	#print "x,y,dir=$x1, $y1, $o, xb,yb=$x2, $y2\n";
 	my $dir = 0;
 	if ($o == 3) {
-		$dir = $x1 < $x2 ? 4 : 1;
+		$dir = $x1 < $x2 ? 1 : 4; ### 3.4.23
 	} elsif ($o == 0) {
-		$dir = $x1 < $x2 ? 1 : 4;
+		$dir = $x1 < $x2 ? 4 : 1; ### 3.4.23
 	} elsif ($o == 2) {
 		$dir = $y1 < $y2 ? 0 : 3;
 	} elsif ($o == 5) {
@@ -1162,6 +1162,7 @@ sub display_run {
 	#       0  1    2      3    4      5         6      7      8      9
 	my $bx = int(($meta->[6] + 5)/6);
 	my $by = int(($meta->[7] + 4)/5);
+	$self->error("Unknown board size, exiting") if ! $bx or ! $by;
 	$self->{relative} = 1 if $meta->[6] > 35 or $meta->[7] > 35;
 	my ($dx, $dy) = (0, 0);
 
@@ -1172,7 +1173,7 @@ sub display_run {
 	if ($svg) {
 		# ask for SVG output
 		$self->{outputfile} = $self->get_file_name('', '',
-			loc("ENTER to continue without svg")) if ! $self->{outputfile};
+			loc("ENTER to continue without SVG output")) if ! $self->{outputfile};
 		$self->board($by, $bx, $run_id, $self->{fill}, $excl);
 	}
 	# SVG end #

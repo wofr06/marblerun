@@ -71,9 +71,8 @@ sub find_to_tile {
 		my $from = $from[0]->[1];
 		# generate entries for to tiles with connections at more than one z:
 		# lift, spiral, dispenser, tiptube, helix, turntable
-		my @t;
-		my @id2 = grep {exists $self->{conn1}{$_->[1]}} @ids;
-		for my $tile (@id2) {
+		for my $tile (grep {exists $self->{conn1}{$_->[1]}} @ids) {
+			my @t;
 			my @keys = keys %{$self->{conn1}{$tile->[1]}};
 			for my $k (@keys) {
 				push @t, $_ for @$tile;
@@ -89,40 +88,59 @@ sub find_to_tile {
 			}
 		}
 
-		# generate entry for from tile
-		if (exists $self->{conn1}{$from}) {
+		# generate multiple entries for from tile
+		my @id2 = ($from[0]);
+		if (defined $from and exists $self->{conn1}{$from}) {
 			my @keys = keys %{$self->{conn1}{$from}};
 			for my $k (@keys) {
-				@id2 = @ids if $k =~ /^\d+$/;
-				for my $tile (@id2) {
-					push @t, $_ for @$tile;
-					$t[4] -= $k;
-					push @ids, [@t];
+				my @t2 = @{$from[0]};
+				if ($k =~ /^\d+$/) {
+					$t2[4] += $k;
+				} elsif ($t2[1] eq 'xF') {
+					my $n = $1 if $t2[5] =~ /(\d)/;
+					$t2[4] += 7 + 8*($n - 2);
+				} elsif ($t2[1] eq 'xH') {
+					$t2[4] += $t2[5];
 				}
+				push @id2, [@t2];
 			}
 		}
-
-		if (@ids > 1) {
-			# resolve ambiguity by sorting according to z difference
-			@ids = sort {abs($a->[4] - $z) <=> abs($b->[4] - $z)} @ids;
-		}
-		#use Data::Dumper;print Dumper $z, \@ids if $r eq 's';
 		# vertical tunnel needs 2 ids at the same position, 1st has dz=0
 		shift @ids if $r eq 't';
+		return undef if ! @ids;
+		# resolve ambiguity by sorting according to z difference
 		my %dz0 = (t=>7, a=>5, b=>14, c=>5, d=>5, xT=>2, xM=>7, yH=>7, yS=>7,
 			yT=>7, xt=>6);
 		my %dz1 = (s =>5, m=>7, l=>8, t=>7, a=>7, b=>18, c=>7, d=>7, g=>7,
 			q=>7, xT=>2, xM=>7, yH=>7, yS=>7, yT=>7, xt=>7);
-		return undef if ! @ids;
-		my $zdiff = abs($z - $ids[0]->[4]);
-		my $zmin = exists $dz0{$r} ? $dz0{$r} : 0;
-		my $zmax = exists $dz1{$r} ? $dz1{$r} : 10;
+		my $zlow = exists $dz0{$r} ? $dz0{$r} : 0;
+		my $zhigh = exists $dz1{$r} ? $dz1{$r} : 10;
+		my $id_min = $ids[0];
+		return $id_min if ! @ids;
+		my $id_strict;
+		my $zmin = abs($id2[0]->[4] - $id_min->[4]);
+		my $zstrict = $zmin;
+		for my $f (@id2) {
+			for my $t (@ids) {
+				my $zdiff = abs($f->[4] - $t->[4]);
+				if ($zdiff < $zmin) {
+					$zmin = $zdiff;
+					$id_min = $t;
+				}
+				if ($zdiff < $zstrict and $zdiff >= $zlow and $zdiff <=$zhigh) {
+					$zstrict = $zdiff;
+					$id_strict = $t;
+				}
+			}
+		}
+		my $zdiff = $zstrict || $zmin;
+		#use Data::Dumper;print Dumper $id_min, $id_strict, $ids[0];
 		warn loc("Warning: height difference %1 from z=%4 at %5 for rail %2 at %3 maybe too small\n",
-			$zdiff/2., $r, $self->num2pos($x, $y), $z/2., $self->num2pos($xf, $yf)) if $zdiff < $zmin;
+			$zdiff/2., $r, $self->num2pos($x, $y), $z/2., $self->num2pos($xf, $yf)) if $zdiff < $zlow;
 		warn loc("Warning: height difference %1 from z=%4 at %5 for rail %2 at %3 maybe too large\n",
 			$zdiff/2., $r, $self->num2pos($x, $y), $z/2.,
-			$self->num2pos($xf, $yf)) if $zdiff > $zmax;
-		return $ids[0]->[0] if @ids;
+			$self->num2pos($xf, $yf)) if $zdiff > $zhigh;
+		return $id_strict->[0] || $id_min->[0];
 	}
 	return undef;
 }
@@ -451,6 +469,7 @@ sub store_run {
 	my $sth_sel_rr = $dbh->prepare($sql);
 	$sql = 'INSERT INTO run_no_elements (run_id,board_x,board_y) VALUES(?,?,?)';
 	my $sth_i_no = $dbh->prepare($sql);
+	my $run_seen = 0;
 	for my $d (@$data) {
 		if ($d->[0] eq 'line') {
 			$self->{line}= $d->[1];
@@ -486,8 +505,10 @@ sub store_run {
 				my $Y = loc('Y');
 				return undef if $yn !~ /^[y$Y]/i;
 			}
+			$self-> update_meta_data($run_seen) if $run_seen;
 			$run_id = $self->store_run_header($hdr);
 			$hdr = undef;
+			$run_seen = $run_id;
 		}
 		if ($d->[0] eq 'level') {
 			$level = $d->[1];
@@ -563,15 +584,21 @@ sub store_run {
 			$self->error("No valid data found");
 			return undef;
 	}
+	$self-> update_meta_data($run_id);
+	return $run_id;
+}
+
+sub update_meta_data {
+	my ($self, $run_id) = @_;
+	my $dbh = $self->{dbh};
 	# now calculate board size and maximum level
-	$sql = "SELECT max(posx),max(posy),max(level) FROM run_tile
+	my $sql = "SELECT max(posx),max(posy),max(level) FROM run_tile
 		WHERE run_id=$run_id";
 	my @vals = @{($dbh->selectall_array($sql))[0]};
 	@vals = (0, 0, 0) if ! defined $vals[0];
 	$dbh->do("UPDATE run SET size_x = $vals[0] ,size_y = $vals[1],
 		layers = $vals[2] WHERE id=$run_id");
 	$self->{run_ids} = $self->query_table('digest,id', 'run');
-	return $run_id;
 }
 
 sub get_pos {
@@ -594,29 +621,36 @@ sub get_pos {
 sub level_height {
 	my ($self, $rules, $off_xy, $h) = @_;
 	#use Data::Dumper;print Dumper $off_xy, $h;
+	my @ldone =(0);
 	for my $lev (sort keys %$off_xy) {
 		my ($x0, $y0) = @{$off_xy->{$lev}};
+		#print "height for level $lev at $x0,$y0\n";
 		if (! defined $x0) {
 			$self->error("Position unknown for level %1", $lev);
 			return;
 		}
 		my $delta = ($off_xy->{$lev}[2]);
 		my $z = 0;
+		my %height;
 		my $height = 0;
 		if ($lev) {
 			for (@$h) {
 				my ($x, $y, $z, $l) = @$_;
-				next if $l == $lev;
+				next if ! grep {$l == $_} @ldone;
+				#print "test $x,$y h $z level $l\n";
 				next if abs($x - $x0) > $delta - 1 or abs($y - $y0) > $delta - 1;
 				next if abs($x - $x0) + abs($y - $y0) > $delta;
+				#print "accept $x,$y\n";
 				$height = $z if $z > $height;
-				#print "level $lev l=$l h=$height\n";
+				$height{$z}++;
 			}
 			$z = $height + 1;
+			warn loc("Only %1 height elements for plane %2 seen\n", $height{$height}, $lev) if $height{$height} < 3;
 			# update info in $h
 			for (@$h) {
 				$_->[2] += $z if $_->[3] == $lev;
 			}
+			push @ldone, $lev if $height{$height} >= 3;
 		}
 		push @$_, $z for grep {$_->[0] eq 'level' and $_->[1] == $lev} @$rules;
 		$_->[3] += $z for grep {defined $_->[6] and $_->[6] == $lev} @$rules;
@@ -689,11 +723,11 @@ sub parse_run {
 			$value = $_;
 		}
 		if ($what and $what eq 'name') {
-			undef $what if defined $run_name;
+			$self->error("Redefinition of run name '%1'", $run_name) if defined $run_name;
 			$self->error("Missing run name") if ! $value;
 		}
 		if ($what and $what eq 'name') {
-			$run_name ||= $value;
+			$run_name = $value;
 			if ($self->{db} =~ /memory/) {
 				say loc("Checking marble run '%1'", $run_name || '');
 			} else {
@@ -977,8 +1011,7 @@ sub parse_run {
 						if (exists $rails->{$dir}) {
 							my $levels = 1;
 							$levels = 2 if grep {$_ eq $tile} qw(xM yH yT);
-							$self->error("Rail direction %1 already seen", $dir)
-								if $rails->{$dir} >= $levels;
+							$self->error("Rail %1%2: another rail in same direction already seen", $r, chr(97 + $dir)) if $rails->{$dir} >= $levels;
 						}
 						if ($tile) {
 							push @$f, [$x2, $y2, $r, $dir, $w_detail];
