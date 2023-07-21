@@ -255,7 +255,7 @@ sub draw_tile {
 		$self->put_Dipper($x, $y, $orient, $detail);
 	} elsif ($elem eq 'O') {
 		$self->put_OpenBasket($x, $y);
-	} elsif ($elem eq 'E') {
+	} elsif ($elem eq 'E' and not $detail) {
 		$self->put_DoubleBalcony($x, $y, $orient);
 	} elsif ($elem eq 'B') {
 		$self->put_Balcony($x, $y, $orient);
@@ -338,6 +338,7 @@ sub put_Tile {
 
 sub draw_rail {
 	my ($self, $elem, $posx1, $posy1, $posx2, $posy2, $dir, $detail) = @_;
+	#print "draw $elem $posx1,$posy1 -> $posx2,$posy2\n";
 	my $svg = $self->{svg};
 	return if ! $svg;
 	my $style = {'stroke-width' => $self->{small_width}};
@@ -350,17 +351,15 @@ sub draw_rail {
 	# flextube
 	} elsif ($elem eq 'xt') {
 		my ($xc, $yc) = $self->to_position($posx1, $posy1, $detail + 3, 1);
-		my ($x1, $y1) = $self->center_pos($posx1, $posy1);
 		my $dx1 = $self->{middle_x}[$detail];
 		my $dy1 = $self->{middle_y}[$detail];
-		my ($x12, $y12) = $self->center_pos($xc, $yc);
+		my ($xm, $ym) = $self->center_pos($xc, $yc);
 		my $dx2 = $self->{middle_x}[$dir];
 		my $dy2 = $self->{middle_y}[$dir];
-		my ($x2, $y2) = $self->center_pos($posx2, $posy2);
-		$svg->line(x1 => int($x1 - $dx1), y1 => int($y1 - $dy1), x2 => int $x12,
-			y2 => int $y12, style => $style, class=>'tile');
-		$svg->line(x1 => int $x12, y1 => int $y12, x2 => int($x2 + $dx2),
-			y2 => int($y2 + $dy2), style => $style, class=>'tile');
+		$svg->line(x1 => int($xm + $dx1), y1 => int($ym + $dy1), x2 => int $xm,
+			y2 => int $ym, style => $style, class=>'tile');
+		$svg->line(x1 => int $xm, y1 => int $ym, x2 => int($xm - $dx2),
+			y2 => int($ym - $dy2), style => $style, class=>'tile');
 		return;
 	}
 	# straight rails
@@ -408,7 +407,7 @@ sub put_hexagon {
 		$single = "$dx3 -$dy3 l$dlx 0 l0 -$dly l-$dlx 0 l-$dx3 -$dy3";
 	} elsif ($shape == 2) {
 		my $dx3 = $dx2 - 2*$self->{small_width};
-		my $dy3 = $self->{size}*(1 - $rel_size);
+		my $dy3 = $self->{size}*(1 - 0.95*$rel_size);
 		$double = "-$dx3 0 l0 -$dy3 l$dx3 0 l$dx2 -$dy l-$dx2 -$dy l-$dx 0
 			l-$dx2 $dy l$dx2 $dy l$dx3 0 l0 $dy3 l-$dx3";
 	}

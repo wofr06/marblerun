@@ -25,7 +25,7 @@ pop @$run;
 # Store.pm line 109
 # following checks only succeed if no previous errors
 $g->{warn} = 0;
-push @$run, ['C', 6, 5, 3, '', 5, 0 , [6, 5, 't', 0, '']];
+push @$run, ['C', 6, 5, 7, '', 5, 0 , [6, 5, 't', 0, '']];
 like(capture_merged{$g->store_run($run)}, qr/end point/i, 'vertical rail');
 pop @$run;
 # rail data still get mangled

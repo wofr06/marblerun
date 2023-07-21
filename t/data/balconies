@@ -1,0 +1,64 @@
+Name: Balconies test
+Author: Wolfgang
+Date: Apr 17 2023
+# direction f
+21 LaLa
+45 LbLb
+45 xlf
+12 3Bd
+23 3Bd
+24 3Bd
+35 3Bd
+44 3Ba
+43 3Ba
+32 3Ba
+31 3Ba
+#direction c
+52 LaLa
+52 xlc
+76 LbLb
+53 3Bd
+54 3Bd
+65 3Bd
+66 3Bd
+62 3Ba
+73 3Ba
+74 3Ba
+85 3Ba
+# direction b
+78 LaLa
+78 xlb
+68 3Bc
+69 3Bc
+5a 3Bc
+5b 3Bc
+89 3Bf
+7a 3Bf
+7b 3Bf
+6c 3Bf
+5c LaLa
+47 LaLaLaLa
+# direction d
+47 xld
+46 3Bb
+48 3Be
+56 3Bb
+58 3Be
+87 LaLaLaLa
+#direction a
+87 3xla
+46 3Bb
+48 3Be
+56 3Bb
+58 3Be
+# direction e
+2b LaLa
+2b xle
+37 3Bc
+28 3Bc
+29 3Bc
+1a 3Bc
+48 3Bf
+49 3Bf
+3a 3Bf
+3b 3Bf

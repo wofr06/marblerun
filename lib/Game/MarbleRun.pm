@@ -177,6 +177,19 @@ sub features {
 		['yH',   5,   2,      7,      0,   'r'],
 		['yI',   0,   3,      0,      0,   'r'],
 		['yI',   1,   5,      0,      0,   'r'],
+		['yK',   0,   0,      0,      0,   0],
+		['yK',   1,   2,      1,      0,   0],
+		['yK',   2,   2,      0,      0,   0],
+		['yK',   3,   4,      1,      0,   0],
+		['yK',   4,   4,      0,      0,   0],
+		['yK',   5,   0,      1,      0,   0],
+		['yK',   0,   1,      8,      7,   0],
+		['yK',   1,   1,      7,      7,   0],
+		['yK',   2,   3,      8,      7,   0],
+		['yK',   3,   3,      7,      7,   0],
+		['yK',   4,   5,      8,      7,   0],
+		['yK',   5,   5,      7,      7,   0],
+
 		['yS',   0,   3,      7,      7, 'fast', 'fast'],
 		['yS',   1,   4,      7,      7, 'fast', 'fast'],
 		['yS',   0,   2,      7,      0,      0,      3],
@@ -565,7 +578,8 @@ sub error {
 	$str = loc($str, @args);
 	$str .= " (file $self->{fname}$line!)" if $self->{fname};
 	$self->{warn}++;
-	die "$str\n" if $str =~ /quit|exit/i;
+	my $locstr = loc('exit');
+	die "$str\n" if $str =~ /$locstr|exit/i;
 	warn "$str\n";
 }
 
@@ -1088,18 +1102,12 @@ sub find_balcony_dir {
 	my ($self, $x1, $y1, $o, $x2, $y2) = @_;
 	#print "x,y,dir=$x1, $y1, $o, xb,yb=$x2, $y2\n";
 	my $dir = 0;
-	if ($o == 3) {
-		$dir = $x1 < $x2 ? 1 : 4; ### 3.4.23
-	} elsif ($o == 0) {
-		$dir = $x1 < $x2 ? 4 : 1; ### 3.4.23
-	} elsif ($o == 2) {
-		$dir = $y1 < $y2 ? 0 : 3;
-	} elsif ($o == 5) {
-		$dir = $y1 < $y2 ? 3 : 0;
-	} elsif ($o == 1) {
+	if ($o == 0 or $o == 3) {
+		$dir = $x1 < $x2 ? 4 : 1;
+	} elsif ($o == 1 or $o == 4) {
 		$dir = 2*($y1 - $y2) < ($x2 -$x1) ? 5 : 2;
-	} elsif ($o == 4) {
-		$dir = 2*($y1 - $y2) < ($x2 -$x1) ? 2 : 5;
+	} elsif ($o == 2 or $o == 5) {
+		$dir = 2*($y2 - $y1) > ($x2 -$x1) ? 0 : 3;
 	}
 	#print "o=$o dir=$dir\n";
 	return $dir;
@@ -1158,6 +1166,7 @@ sub display_run {
 	my %pos;
 	my $tp_pos = [[0,0]];
 	my ($meta, $tile, $rail, $marble, $excl) = $self->fetch_run_data($run_id);
+	#use Data::Dumper;print Dumper $rail;exit;
 	# meta: id name digest date source person_id size_x size_y layers marble
 	#       0  1    2      3    4      5         6      7      8      9
 	my $bx = int(($meta->[6] + 5)/6);
@@ -1318,6 +1327,7 @@ sub display_run {
 
 				# SVG #
 				# double balcony already drawn in 1st pass
+				#print "tile $sym, dir $tdir detail $detail\n";
 				next if $sym eq 'E' and $detail;
 				# get marbles for that tile
 				my $ball = [grep {$_->[0] == $id} @$marble];
@@ -1335,6 +1345,10 @@ sub display_run {
 				my $dir = $r->[1];
 				my ($x1, $y1) = @{$pos{$r->[2]}}[3,4];
 				my ($x2, $y2) = @{$pos{$r->[4]}}[3,4];
+				if ($sym =~ /x[sml]/) {
+					my $len = $sym eq 'xs' ? 2 : $sym eq 'xm' ? 3 : 4;
+					($x1, $y1) = $self->to_position($x2, $y2, ($r->[1]+3)%6, $len);
+				}
 				my $pos1 = $self->num2pos($x1, $y1);
 				my $pos2 = $self->num2pos($x2, $y2);
 				if ($self->{relative}) {

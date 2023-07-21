@@ -51,6 +51,8 @@ sub process_input {
 sub find_to_tile {
 	# r: from_id x1 y1 z1 detail orient from_level, x2, y2, rail_id, dir wall
 	#          0  1  2  3      4      5          6   7   8        9   10   11
+	# t: tile_id tile_char, x, y, z, detail, orient level
+	#          0         1  2  3  4       5       6     7
 	my ($self, $rail, $seen) = @_;
 	my ($tile, $xf, $yf, $z, $d0, $d1, $l, $x, $y, $r, $dir, $wall) = @$rail;
 	# finish line does not end on a tile
@@ -72,9 +74,9 @@ sub find_to_tile {
 		# generate entries for to tiles with connections at more than one z:
 		# lift, spiral, dispenser, tiptube, helix, turntable
 		for my $tile (grep {exists $self->{conn1}{$_->[1]}} @ids) {
-			my @t;
 			my @keys = keys %{$self->{conn1}{$tile->[1]}};
 			for my $k (@keys) {
+				my @t;
 				push @t, $_ for @$tile;
 				if ($k =~ /^\d+$/) {
 					$t[4] += $k;
@@ -105,24 +107,23 @@ sub find_to_tile {
 				push @id2, [@t2];
 			}
 		}
-		# vertical tunnel needs 2 ids at the same position, 1st has dz=0
-		shift @ids if $r eq 't';
 		return undef if ! @ids;
 		# resolve ambiguity by sorting according to z difference
-		my %dz0 = (t=>7, a=>5, b=>14, c=>5, d=>5, xT=>2, xM=>7, yH=>7, yS=>7,
+		my %dz0 = (t=>6, a=>5, b=>14, c=>5, d=>5, xT=>2, xM=>7, yH=>7, yS=>7,
 			yT=>7, xt=>6);
-		my %dz1 = (s =>5, m=>7, l=>8, t=>7, a=>7, b=>18, c=>7, d=>7, g=>7,
-			q=>7, xT=>2, xM=>7, yH=>7, yS=>7, yT=>7, xt=>7);
+		my %dz1 = (s =>5, m=>7, l=>8, t=>8, a=>7, b=>18, c=>7, d=>7, g=>7,
+			q=>7, xT=>2, xM=>7, yH=>7, yS=>7, yT=>7, xt=>8);
 		my $zlow = exists $dz0{$r} ? $dz0{$r} : 0;
 		my $zhigh = exists $dz1{$r} ? $dz1{$r} : 10;
 		my $id_min = $ids[0];
 		return $id_min if ! @ids;
 		my $id_strict;
 		my $zmin = abs($id2[0]->[4] - $id_min->[4]);
-		my $zstrict = $zmin;
+		my $zstrict = 999;
 		for my $f (@id2) {
 			for my $t (@ids) {
 				my $zdiff = abs($f->[4] - $t->[4]);
+
 				if ($zdiff < $zmin) {
 					$zmin = $zdiff;
 					$id_min = $t;
@@ -133,8 +134,9 @@ sub find_to_tile {
 				}
 			}
 		}
+		undef $zstrict if $zstrict == 999;
 		my $zdiff = $zstrict || $zmin;
-		#use Data::Dumper;print Dumper $id_min, $id_strict, $ids[0];
+		#use Data::Dumper;print Dumper $id_min, $id_strict, \@ids, \@id2 if $ids[0]->[1] eq 'yK';
 		warn loc("Warning: height difference %1 from z=%4 at %5 for rail %2 at %3 maybe too small\n",
 			$zdiff/2., $r, $self->num2pos($x, $y), $z/2., $self->num2pos($xf, $yf)) if $zdiff < $zlow;
 		warn loc("Warning: height difference %1 from z=%4 at %5 for rail %2 at %3 maybe too large\n",
@@ -186,7 +188,7 @@ sub verify_rail_endpoints {
 		}
 		($level, $z0) = ($_->[1], $_->[2]) if $_->[0] eq 'level';
 		next if  length $_->[0] > 2;
-		my $z = $_->[3];
+		my $z = $_->[3] || 0;
 		# exclude elements that cannot be start/end points for rails
 		next if $self->no_rail_connection($_->[0]) or $_->[0] =~ /L/;
 		my $pos = $self->num2pos($_->[1], $_->[2]);
@@ -227,13 +229,15 @@ sub verify_rail_endpoints {
 						}
 					}
 					if ($tile eq 'xH') {
+						# marble can come from above
+						undef $case2->{xH};
 						# direction in for spiral depends on number of elements
-						$case2->{xH}[0] = (2*$t->[4] - 1) % 6;
+						$case2->{xH}[0] = (2*$t->[4] - 1)%6 if $t->[0] eq 'xH';
 					}
-					if ($tile eq 'xF') {
+					if ($tile eq 'xF' and $t->[0] eq 'xF') {
 						# direction out for lift at z!=0 is stored in detail
 						$case2->{xF}[0] = ord($1) - 97 if $t->[4] =~ /([a-f])/;
-						$case2->{xF}[0] = ($cases->{xF}[0] - $dir) % 6;
+						$case2->{xF}[0] = ($case2->{xF}[0] - $t->[5]) % 6;
 					}
 					# skip height tiles
 					next if ! $tile;
@@ -245,8 +249,6 @@ sub verify_rail_endpoints {
 							and grep {$my_dir==($_+$dir)%6} @{$case2->{$tile}};
 					}
 					my $reverse = 0;
-					# special case vertical tube (not all situations covered)
-					#last if $r->[2] eq 't' and keys %{$t_pos{$from}} == 2 and ! $ok;
 					last if $ok;
 
 				}
@@ -527,6 +529,7 @@ sub store_run {
 			$d->[5] = $r_o->[3] if defined $r_o;
 		}
 		my @val = @{$d}[0..6];
+		$val[3] ||= 0; # check for unassigned z value
 		$sth_i_rt->execute($run_id, @val) if $val[0];
 		next if $self->no_rail_connection($val[0]) and ! $comment;
 		my $id = @{$dbh->selectall_arrayref('SELECT last_insert_rowid()
@@ -563,19 +566,21 @@ sub store_run {
 		#         0  1  2  3      4      5          6   7   8        9   10   11
 		# chose correct tile: tile normally placed at same or lower level
 		my $id = $self->find_to_tile($r, $seen);
+		undef $id if defined $id and $id == $r->[0];
 		# finish lines have no end tile
 		if ($id or $r->[9] eq 'e') {
 			$sth_sel_rr->execute($id, $r->[0], $run_id);
 			if ($sth_sel_rr->fetchrow_array) {
-				$self->error("Rail %1 already registered from %2 to %3",
-					$r->[9], $self->num2pos($r->[7], $r->[8]),
-					$self->num2pos($r->[1], $r->[2]));
+				$self->error("%1 already registered from %2 to %3",
+					loc($self->{elem_name}{$r->[9]}), $self->num2pos($r->[7],
+					$r->[8]), $self->num2pos($r->[1], $r->[2]));
 			} else {
 				$sth_i_rr->execute($run_id, $r->[0], $id, @{$r}[9 .. 11]);
 			}
 		} else {
-			$self->error("No end point for rail %1 from %2 to %3",
+			$self->error("No end point for %1 from %2 to %3",
 				$r->[9],
+				#loc($self->{elem_name}{$r->[9]}),
 				$self->num2pos($r->[1], $r->[2]),
 				$self->num2pos($r->[7], $r->[8]));
 		}
@@ -644,6 +649,7 @@ sub level_height {
 				$height = $z if $z > $height;
 				$height{$z}++;
 			}
+			#use Data::Dumper;print Dumper \%height;
 			$z = $height + 1;
 			warn loc("Only %1 height elements for plane %2 seen\n", $height{$height}, $lev) if $height{$height} < 3;
 			# update info in $h
@@ -678,7 +684,7 @@ sub parse_run {
 	# offset for ground planes and center position of transparent planes
 	my ($off_x, $off_y) = (0, 0);
 	my $level = 0;
-	my ($num_L, @pos_L, $num_E, @pos_E);
+	my ($num_L, @pos_L, $num_E, @pos_E, $xw, $yw);
 	my $num_wall = 0;
 	# in the presence of _ lines location data are relative to the base plate
 	my $rel_pos = 0;
@@ -811,29 +817,36 @@ sub parse_run {
 				$dir = ord($3) - 97;
 				$num_wall++;
 				my ($x2, $y2) = $self->rail_xy($elem, $x1, $y1, $dir);
-				#print "wall $elem dir $dir with detail $detail at $x1,$y1 seen@pos_L\n";
+				($xw, $yw) = ($x1, $y1);
+				#print "wall $elem dir $dir with detail $detail at $xw,$yw to $x2, $y2 seen @pos_L\n";
 				$num_L = $pos_L[$detail -1];
 				#use Data::Dumper;print Dumper $detail, \@pos_L,$rules->[$num_L-1],$rules->[$num_L],$rules->[$num_L+1];
-				$rules->[$num_L][7] = [$x2, $y2, $elem, $dir, $num_wall];
+				push @{$rules->[$num_L]}, [$x2, $y2, $elem, $dir, $num_wall, $x1, $y1];
+				#$rules->[$num_L][7] = [$x2, $y2, $elem, $dir, $num_wall];
 			}
 			# double balcony lines (2nd hole)
 			if ($tile =~ s/^E//) {
 				$elem = 'E';
-				my $x = $rules->[$pos_E[$num_E]][1];
-				my $y = $rules->[$pos_E[$num_E]][2];
-				# change level according to position of 1st hole
-				$old_level = $level;
-				$level = $rules->[$pos_E[$num_E]][6];
-				$dir = $self->find_dir($x, $y, $x1, $y1);
-				if ($tile =~ s/^([a-f])//) {
-					my $dir2 = ord(lc $1) - 97;
-					$self->error("Wrong direction %1 for double balcony at %2, should be %3", $1, $self->num2pos($x1, $y1), chr($dir + 97)) if $dir != $dir2;
+				if ( ! exists $pos_E[$num_E]) {
+					$self->error("First position of double balcony not seen so far");
+					$tile = '';
+				} else {
+					my $x = $rules->[$pos_E[$num_E]][1];
+					my $y = $rules->[$pos_E[$num_E]][2];
+					# change level according to position of 1st hole
+					$old_level = $level;
+					$level = $rules->[$pos_E[$num_E]][6];
+					$dir = $self->find_dir($x, $y, $x1, $y1);
+					if ($tile =~ s/^([a-f])//) {
+						my $dir2 = ord(lc $1) - 97;
+						$self->error("Wrong direction %1 for double balcony at %2, should be %3", $1, $self->num2pos($x1, $y1), chr($dir + 97)) if $dir != $dir2;
+					}
+					$rules->[$pos_E[$num_E]][5] = $dir;
+					$z = $rules->[$pos_E[$num_E++]][3];
+					#print "double balcony at $x1,$y1,$z seen\n";
+					push @$rules,
+						[$elem, $x1, $y1, $z, $num_E, $dir, $level] if $elem;
 				}
-				$rules->[$pos_E[$num_E]][5] = $dir;
-				$z = $rules->[$pos_E[$num_E++]][3];
-				#print "double balcony at $x1,$y1,$z seen\n";
-				push @$rules,
-					[$elem, $x1, $y1, $z, $detail, $dir, $level] if $elem;
 			# balcony lines
 			} elsif ($tile =~ s/^([^xyz]+)B//) {
 				$elem = 'B';
@@ -847,11 +860,12 @@ sub parse_run {
 				my $x = $rules->[$num_L][1];
 				my $y = $rules->[$num_L][2];
 				my $o = $rules->[$num_L][7][3];
-				$dir = $self->find_balcony_dir($x, $y, $o, $x1, $y1);
+				$dir = $self->find_balcony_dir($xw, $yw, $o, $x1, $y1);
 
 				if ($tile =~ s/^([a-f])//) {
 					my $dir2 = ord(lc $1) - 97;
 					$self->error("Wrong direction %1 for balcony at %2, should be %3", $dir2, $self->num2pos($x1, $y1), $dir) if $dir != $dir2;
+					$dir=$dir2;
 				}
 				my $detail = 20*$num_wall + $hole;
 				$detail = $num_wall;
@@ -989,6 +1003,7 @@ sub parse_run {
 				if (s/^(x?[A-Za-w])//) {
 				# all known rails (exists and range of small letters)
 					$r = $1;
+					#print "rail $r: $_\n";
 					my $w_detail;
 					if ($r !~ /^(x?[a-egl-nqs-v])/
 							or ! exists $self->{elem_name}{$r}) {
@@ -1050,7 +1065,7 @@ sub parse_run {
 	$self->level_height($rules, $planenum, $planepos);
 	# find wall for the balconies, check orientation and adjust height and level
 	undef $self->{line};
-	#use Data::Dumper;print Dumper $rules;
+	#use Data::Dumper;print Dumper $rules;exit;
 	return $rules;
 }
 

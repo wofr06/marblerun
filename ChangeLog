@@ -1,4 +1,6 @@
 Revision history for Perl extension Game::MarbleRun
+	- small documentation updates
+	- improved drawing of flex tube
 	- corrected calculation for rail end points
 	- corrected calculation of plane heights
 1.10  Mon Mar 20 2023

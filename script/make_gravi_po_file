@@ -47,6 +47,7 @@ $phrases->{z202} = 'Instruction booklet';
 $phrases->{z203} = 'track';
 $phrases->{z204} = 'run';
 $phrases->{z205} = 'Straight Tile';	# Draw.pm
+$phrases->{z206} = 'exit';
 $phrases->{z211} = 'orientation';
 
 say "msgid \"$phrases->{$_}\"\nmsgstr \"",loc2($phrases->{$_}),"\"\n" for sort keys %$phrases;
