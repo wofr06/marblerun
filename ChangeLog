@@ -1,5 +1,7 @@
 Revision history for Perl extension Game::MarbleRun
-	- small documentation updates
+1.11 Sun Jul 23 2023
+	- reworked code for position notation with ground planes (relative pos)
+	- documentation updates
 	- improved drawing of flex tube
 	- corrected calculation for rail end points
 	- corrected calculation of plane heights

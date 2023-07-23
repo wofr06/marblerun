@@ -1284,7 +1284,7 @@ sub display_run {
 				}
 				my $elem = $self->{elem_name}{$sym};
 				$str .= loc('On ') if $sym eq 'E' and $tile->[$i][7];
-				$str .= loc($elem) if $sym;
+				$str .= loc($elem) if $sym and $elem;
 				# handle details (or defaults) and balconies
 				if ($detail or $sym =~ /x[BHL]|B/) {
 					$str .= ' ';

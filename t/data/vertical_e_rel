@@ -1,8 +1,9 @@
-Name Track E vertical
+Name Track E vertical relative
 Date Jan 28, 2021
 Source Vertical Construction plan booklet
 Author Wolfgang
 Level 0
+_ 1 1
 21 Cd
 31 Wd
 41 Za
@@ -13,9 +14,11 @@ Level 0
 41 4BCb mc
 51 bB+Xa sd
 53 8BCc se
-61 6BCf sa
-71 aB+Cf sb
-63 8BCa
+_ 2 1
+11 6BCf sa
+21 aB+Cf sb
+13 8BCa
+_ 1 1
 53 L
 56 L
 14 3Ce me mc
@@ -25,27 +28,30 @@ Level 0
 55 5BGa aa
 45 cBCf
 55 cBVa
-37 3BCf
-47 3BCc lc
-72 L
-85 7
-66 3Gc sc
+_ 1 2
+31 3BCf
+41 3BCc lc
+_ 2 1
+22 L
+35 7
+16 3Gc sc
 Level 1
-64 ^
-72 LLCa cc
-72 xlb
-74 aB+Xb
-75 aB+Ca sa
-54 1Cf sd
-74 Cc
-75 Cb
-66 Dd
-56 LEfLCd le
-76 Ca
+14 ^
+41 LLCa cc
+41 xlb
+24 aB+Xb
+25 aB+Ca sa
+23 1Cf sd
+43 Cc
+44 Cb
+35 Dd
+25 LEfLCd le
+45 Ca
+_ 1 1
 55 Ef+Cf sf
-Level 0
-78 1Xb mc
-6b Mf oSf oRf
-9b 1Cb
-6c Cf
-8c 1Ca sa
+_ 2 2
+22 1Xb mc
+15 Mf oSf oRf
+45 1Cb
+16 Cf
+36 1Ca sa

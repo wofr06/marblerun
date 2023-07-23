@@ -149,6 +149,7 @@ sub find_to_tile {
 
 sub no_rail_connection {
 	my ($self, $elem) = @_;
+	return 1 if $elem =~ /\|/;
 	return $elem =~ /\d+|^[+\^=BEOR]/;
 }
 
@@ -221,6 +222,11 @@ sub verify_rail_endpoints {
 				for my $k (keys %{$t_pos{$from}}) {
 					$ok = 0;
 					($tile, $dir) = @{$t_pos{$from}{$k}};
+					# ignore checks for new/unknown tiles
+					if ($tile =~ /\|/) {
+						$ok = 1;
+						last;
+					}
 					my $case2;
 					if ($tile and exists $self->{conn1}{$tile}) {
 						for my $k (keys %{$self->{conn1}{$tile}}) {
@@ -532,8 +538,11 @@ sub store_run {
 		$val[3] ||= 0; # check for unassigned z value
 		$sth_i_rt->execute($run_id, @val) if $val[0];
 		next if $self->no_rail_connection($val[0]) and ! $comment;
-		my $id = @{$dbh->selectall_arrayref('SELECT last_insert_rowid()
-			FROM run_tile')}[0]->[0];
+		#my $id = @{$dbh->selectall_arrayref('SELECT last_insert_rowid()
+		#	FROM run_tile')}[0]->[0];
+		my $res = $dbh->selectall_arrayref('SELECT last_insert_rowid()
+			FROM run_tile');
+		my $id = $res->[0][0] if $res;
 		$dbh->do("INSERT OR IGNORE INTO run_comment (run_id,tile_id,comment)
 			VALUES('$run_id', '$id', '$comment')") if $comment and $run_id;
 		$comment = undef;
@@ -623,6 +632,120 @@ sub get_pos {
 	return ($x1, $y1);
 }
 
+sub plane_lines {
+	my ($self, $lines) = @_;
+	my $loc_level = loc('Level');
+	my ($level, $max_level, $line) = (0, 0, 0);
+
+	for (@$lines) {
+		my ($what, $value) = $self->header_line($_);
+		next if ! $what or $what ne 'level';
+		$max_level = $value if  $value > $max_level;
+	}
+	my ($level_pos, $added);
+	for my $str (@$lines) {
+		($_ = $str) =~ s/^(\d+)\s+//;
+		my $orig_line = $1;
+		$line++;
+		my ($what, $value) = $self->header_line($_);
+		next if $what and $what ne 'level';
+		$added = 0, next if $added;
+		if (/^[=^#]*_/) {
+			$level = 0;
+			$level_pos = 0;
+		# analyse level line
+		} elsif ($what and $what eq 'level') {
+			$level = $value;
+			if ($level !~ /^\d+$/) {
+				my $bad = $level || '';
+				$level = ++$max_level;
+				s/$bad$/ $level/;
+				$self->error("Wrong level number '%1' becomes level %2",
+					$bad, $level) if $bad;
+			}
+			$level_pos = $level ? $line : 0;
+		# transparent plane line
+		} elsif (/^[^#]*[=^]/) {
+			if (! $level_pos) {
+				# add level line
+				$level = ++$max_level;
+				splice @$lines, $line - 1, 0, "$orig_line Level $level";
+				$added = 1;
+				$level_pos = $line - 1;
+			} elsif ($level_pos < $line - 1) {
+				# move transparent plane definition up after the level line
+				splice @$lines, $level_pos, 0, splice(@$lines, $line - 1, 1);
+			}
+			$level_pos = 0;
+		}
+	}
+}
+
+sub get_offsets {
+	my ($self, $lines) = @_;
+	$self->plane_lines($lines);
+	my $loc_level = loc('Level');
+	my $off = [[0, 0, 0]];
+	my $relative = $self->{relative} = 0;
+	my ($level_seen, $col, $row);
+	my $line = 0;
+	my $level = 0;
+	my @adjust;
+	for my $str (@$lines) {
+		$line++;
+		$str =~ /^line (\d+)$/;
+		$self->{line}= $1;
+		($_ = $str) =~ s/#.*//;
+		# process only plane related lines (level, _, ^ and = lines)
+		next if $_ !~ /^[\w\s,]+[=^_]|^level|^$loc_level/i;
+		next if $self->header_line($_);
+		if (/^\d+\s+_\s*(\d+)\D+(\d+)/) {
+			$relative = $self->{relative} = 1;
+			$level = 0;
+			next if ! $2;
+			$col = 5*($1 - 1);
+			$row = 6*($2 - 1);
+			$level_seen = 0;
+			$off->[0] = [$row, $col, 0];
+		} elsif (/^\d+\s+(?:level|$loc_level)(?:\s+|:|$)(.*)/i) {
+			$level = $1;
+			if ($level =~ /^\d+/) {
+				$level_seen = 1;
+			} else {
+				my $bad = $level || '';
+				$level = 1;
+				$level++ while defined $off->[$level];
+				s/$bad$/ $level/;
+				$self->error("Wrong level number '%1' becomes level %2",
+					$bad, $level) if $bad;
+			}
+		} elsif (/^\d+\s+([0-9a-z]{2}|\d+,\d+)\s+.*([=^])/i) {
+			my $type = ($2 eq '=') ? 2 : 3;
+			($row, $col) = $self->get_pos($1, $relative);
+			if (! $level_seen) {
+				$level++ while defined $off->[$level];
+				# add level lines later, if missing
+				push @adjust, [$line - 1, "Level $level"]
+			}
+			$level_seen = 0;
+			if ($relative) {
+				$col += $off->[0][0];
+				$row += $off->[0][1];
+			}
+			if (defined $off->[$level]) {
+				my $pos = $self->num2pos($off->[$level][0], $off->[$level][1]);
+				$self->error("Level %1 already seen at %2", $level, $pos)
+					if $col != $off->[$level][0] or $row != $off->[$level][1];
+			} else {
+				$off->[$level][0] = $col;
+				$off->[$level][1] = $row;
+				$off->[$level][2] = $type;
+			}
+		}
+	}
+	return $off;
+}
+
 sub level_height {
 	my ($self, $rules, $off_xy, $h) = @_;
 	#use Data::Dumper;print Dumper $off_xy, $h;
@@ -651,12 +774,13 @@ sub level_height {
 			}
 			#use Data::Dumper;print Dumper \%height;
 			$z = $height + 1;
-			warn loc("Only %1 height elements for plane %2 seen\n", $height{$height}, $lev) if $height{$height} < 3;
+			my $h_elems = exists $height{$height} ? $height{$height} : 0;
+			warn loc("Only %1 height elements for plane %2 seen\n", $h_elems, $lev) if $h_elems < 3;
 			# update info in $h
 			for (@$h) {
 				$_->[2] += $z if $_->[3] == $lev;
 			}
-			push @ldone, $lev if $height{$height} >= 3;
+			push @ldone, $lev if $h_elems >= 3;
 		}
 		push @$_, $z for grep {$_->[0] eq 'level' and $_->[1] == $lev} @$rules;
 		$_->[3] += $z for grep {defined $_->[6] and $_->[6] == $lev} @$rules;
@@ -680,11 +804,12 @@ sub header_line {
 
 sub parse_run {
 	my ($self, $content) = @_;
-	my ($rules, $comment, $run_name, $plane_type, $level_line_seen, $wall, $pillar, $z_balcony2, $planepos, $planenum);
+	my ($rules, $comment, $run_name, $off_xy, $plane_type,
+		$level_line_seen, $wall, $pillar, $z_balcony2, $planepos, $planenum);
 	# offset for ground planes and center position of transparent planes
 	my ($off_x, $off_y) = (0, 0);
 	my $level = 0;
-	my ($num_L, @pos_L, $num_E, @pos_E, $xw, $yw);
+	my ($num_L, @pos_L, $num_E, @pos_E, $num_W, $xw, $yw);
 	my $num_wall = 0;
 	# in the presence of _ lines location data are relative to the base plate
 	my $rel_pos = 0;
@@ -692,6 +817,7 @@ sub parse_run {
 	my $i = 0;
 	my $old_level = -1;
 	my @lines = map {$i++; map {"$i $_"} split /;/, $_} split /\r?\n/, $content;
+	$off_xy = $self->get_offsets(\@lines);
 	for (@lines) {
 		$level = $old_level if $old_level >= 0;
 		$old_level = -1;
@@ -765,6 +891,7 @@ sub parse_run {
 			if (/(\d+)\D+(\d+)/) {
 				$off_x = 6*($2 - 1);
 				$off_y = 5*($1 - 1);
+				$off_xy->[0] = [$off_x, $off_y];
 				$rel_pos = 1;
 				push @$rules, ['level', 0] if $level;
 				$level = 0;
@@ -784,20 +911,34 @@ sub parse_run {
 			my ($pos, $tile, @items) = split;
 			($y1, $x1) = $self->get_pos($pos, $rel_pos);
 			#say "xy= $x1,$y1 tile $tile rel $rel_pos";
-			# no further analysis if position missing, error reported in get_pos
-			next if ! defined $y1;
-			# adjust positions
-			if ($tile and $rel_pos) {
-				$x1 += $off_x;
-				$y1 += $off_y;
-			}
+			$off_x = $off_xy->[$level][0] || 0;
+			$off_y = $off_xy->[$level][1] || 0;
+			$plane_type = $off_xy->[$level][2] || 3;
+			#say "plane $plane_type offxy=$off_x $off_y";
+			#say "ground xy $off_xy->[0][0] $off_xy->[0][1]";
 			if (! defined $tile) {
 				$self->error("Position without further data");
 				next;
 			}
+			# adjust positions
+			if ($tile and $rel_pos) {
+				if ($tile =~ /[=^]|^E|^.B/) {
+					$x1 += $off_xy->[0][0];
+					$y1 += $off_xy->[0][1];
+				} else {
+					# adjust y coordinate if transparent plane on even x pos
+					$x1 += $off_x;
+					$y1 += $off_y;
+					if ($level) {
+						$x1 -= $plane_type;
+						$y1 -= $plane_type;
+						$y1++ if !($off_x % 2) and $x1 % 2 and $plane_type == 3;
+						$y1-- if $off_x % 2 and !($x1 % 2) and $plane_type == 2;
+					}
+				}
+			}
 			# transparent plane position
 			if ($tile =~ /^([=^])$/) {
-				$plane_type = ($1 eq '=') ? 2 : 3;
 				if (! $level_line_seen) {
 					$level++;
 					$level++ while exists $planenum->{$level};
@@ -807,6 +948,14 @@ sub parse_run {
 				push @$rules, [$1, $x1, $y1, undef, undef, undef, $level];
 				next;
 			}
+			# tile must be on a transparent plane for level > 0
+			my $delta = $plane_type - 1;
+			$self->error("Wrong tile position '%1'", $pos) if $level
+				and $tile !~ /[=^BE]/
+				and (abs($x1 - $off_x) > $delta or abs($y1 - $off_y) > $delta
+				or abs($x1 - $off_x) + abs($y1 - $off_y) > $delta + 1);
+			# no further analysis if position missing, error reported in get_pos
+			next if ! defined $y1;
 			### height, tile, orientation
 			$z = 0;
 			my $elem;
@@ -820,9 +969,9 @@ sub parse_run {
 				($xw, $yw) = ($x1, $y1);
 				#print "wall $elem dir $dir with detail $detail at $xw,$yw to $x2, $y2 seen @pos_L\n";
 				$num_L = $pos_L[$detail -1];
+				$num_W = @{$rules->[$num_L]};
 				#use Data::Dumper;print Dumper $detail, \@pos_L,$rules->[$num_L-1],$rules->[$num_L],$rules->[$num_L+1];
 				push @{$rules->[$num_L]}, [$x2, $y2, $elem, $dir, $num_wall, $x1, $y1];
-				#$rules->[$num_L][7] = [$x2, $y2, $elem, $dir, $num_wall];
 			}
 			# double balcony lines (2nd hole)
 			if ($tile =~ s/^E//) {
@@ -830,6 +979,7 @@ sub parse_run {
 				if ( ! exists $pos_E[$num_E]) {
 					$self->error("First position of double balcony not seen so far");
 					$tile = '';
+					@items = ();
 				} else {
 					my $x = $rules->[$pos_E[$num_E]][1];
 					my $y = $rules->[$pos_E[$num_E]][2];
@@ -857,23 +1007,28 @@ sub parse_run {
 					$self->error("Wrong balcony height '%1'", $hole);
 				}
 				$dir = 0;
-				my $x = $rules->[$num_L][1];
-				my $y = $rules->[$num_L][2];
-				my $o = $rules->[$num_L][7][3];
-				$dir = $self->find_balcony_dir($xw, $yw, $o, $x1, $y1);
-
-				if ($tile =~ s/^([a-f])//) {
-					my $dir2 = ord(lc $1) - 97;
-					$self->error("Wrong direction %1 for balcony at %2, should be %3", $dir2, $self->num2pos($x1, $y1), $dir) if $dir != $dir2;
-					$dir=$dir2;
+				if (! defined $num_L) {
+					$self->error("Wall for balcony not yet seen so far");
+					$tile = '';
+					@items = ();
+				} else {
+					my $x = $rules->[$num_L][1];
+					my $y = $rules->[$num_L][2];
+					my $o = $rules->[$num_L][$num_W][3];
+					$dir = $self->find_balcony_dir($xw, $yw, $o, $x1, $y1);
+					if ($tile =~ s/^([a-f])//) {
+						my $dir2 = ord(lc $1) - 97;
+						$self->error("Wrong direction %1 for balcony at %2, should be %3", $dir2, $self->num2pos($x1, $y1), $dir) if $dir != $dir2;
+						$dir=$dir2;
+					}
+					my $detail = 20*$num_wall + $hole;
+					$detail = $num_wall;
+					# we need z at the bottom of the wall, i.e. 28 units less
+					$z = 2*$hole + $rules->[$num_L][3] - 14;
+					#print "balcony on wall $num_wall at $x1,$y1,$z seen\n";
+					push @$rules,
+						[$elem, $x1, $y1, $z, $detail, $dir, $level] if $elem;
 				}
-				my $detail = 20*$num_wall + $hole;
-				$detail = $num_wall;
-				# we need z at the bottom of the wall, i.e. 28 units less
-				$z = 2*$hole + $rules->[$num_L][3] - 14;
-				#print "balcony on wall $num_wall at $x1,$y1,$z seen\n";
-				push @$rules,
-					[$elem, $x1, $y1, $z, $detail, $dir, $level] if $elem;
 			}
 			# other height elements 1..9,+,E,L,xL
 			while ($tile =~ s/^([+\dEL=^]|xL)//) {
@@ -915,13 +1070,6 @@ sub parse_run {
 			}
 			# candidates for transparent plane positions
 			push @$planepos, [$x1, $y1, $z, $level] if ! $tile and $elem !~ /[=^]|x[lms]/;
-			#if ($level) {
-			# tile must be on a transparent plane for level > 0
-			#	my $delta = $plane_type - 1;
-			#	$self->error("Wrong tile position '%1'", $self->num2pos($x1, $y1))
-			#		if (abs($x1 - $center_x) > $delta or abs($y1 - $center_y) > $delta
-			#		or abs($x1 - $center_x) + abs($y1 - $center_y) > $delta + 1);
-			#}
 			# tile special cases S,U,xH,xB,xF,O,xM,xD
 			# handle Switch position + / -
 			if ($tile =~ s/([SU]|xD)([+-]?)/$1/) {
@@ -957,9 +1105,15 @@ sub parse_run {
 			} elsif ($tile =~ /^O/) {
 				$self->error("Tile 'O' needs no height data") if $z;
 			}
-			# tile symbol and direction
+			# tile symbol and direction, allow for |tile_name| notation
 			$_ = $tile;
-			$tile = $1 if s/^([xyz]?[=^A-Za-z])//;
+			if (s/^\|(\S+)\|//) {
+				$tile = $1;
+				my @elem = grep {$self->{elem_name}{$_} eq $tile or loc($self->{elem_name}{$_}) eq $tile} keys %{$self->{elem_name}};
+				$tile = $elem[0] ? $elem[0] : "|$tile|";
+			} else {
+				$tile = $1 if s/^([xyz]?[=^A-Za-z])//;
+			}
 			if (s/^([a-f])//) {
 				$dir = ord($1) - 97;
 				$self->error("%quant(%1,Excessive char) '%2'",
@@ -977,7 +1131,7 @@ sub parse_run {
 				$self->error("Tile '%1' needs no orientation", $tile)
 					if defined $dir and $tile =~ /[OR^=]/;
 			} elsif ($tile) {
-				$self->error("Wrong tile char '%1'", $tile);
+				$self->error("Wrong tile char '%1'", $tile) if $tile !~ /^\|/;
 			} else {
 				$self->error("In %1 no tile data found","@items")
 					if grep {$_ !~ /x[lms]/} @items;
@@ -1055,7 +1209,7 @@ sub parse_run {
 				$nmax += @{$self->{conn1}{$tile}{$key0}};
 			}
 			$self->error("%1 rail data seen, %2 is maximum for tile %3",
-				$n, $nmax, $tile) if $n > $nmax;
+				$n, $nmax, $tile) if $n > $nmax and $tile !~ /^\|/;
 			push @$rules, $f;
 		}
 	}
