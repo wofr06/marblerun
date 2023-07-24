@@ -8,7 +8,7 @@ use DBI;
 use Game::MarbleRun::I18N;
 use Locale::Maketext::Simple (Style => 'gettext');
 
-$Game::MarbleRun::VERSION = '1.10';
+$Game::MarbleRun::VERSION = '1.11';
 my $homedir = $ENV{HOME} || $ENV{HOMEPATH} || die "unknown homedir\n";
 $Game::MarbleRun::DB_FILE = "$homedir/.gravi.db";
 $Game::MarbleRun::DB_SCHEMA_VERSION = 10;
@@ -817,7 +817,7 @@ sub fetch_run_data {
 }
 
 sub get_file_name {
-	my ($self, $name, $ext, $str) = @_;
+	my ($self, $name, $ext, $str, $nocheck) = @_;
 	$str = $str ? " ($str)\n" : "\n";
 	if (! $name) {
 		if ($ext) {
@@ -834,6 +834,7 @@ sub get_file_name {
 		}
 	}
 	$name = $ext ? "$name.$ext" : $name;
+	return $name if $nocheck;
 	if ($name and -r $name) {
 		my $yn = $self->prompt(loc("File %1 existing, overwrite it?", $name));
 		my $Y = loc('Y');
@@ -1127,7 +1128,7 @@ sub find_dir {
 sub to_position {
 	my ($self, $x1, $y1, $dir, $len) = @_;
 	my ($x2, $y2) = ($x1, $y1);
-	return ($x2, $y2) if $dir eq 'M' or ! $len;
+	return ($x2, $y2) if ! defined $dir or $dir eq 'M' or ! $len;
 	$dir = $dir % 6;
 	# bent rails
 	if ($len =~ /[+-]/) {
@@ -1181,8 +1182,9 @@ sub display_run {
 	# SVG #
 	if ($svg) {
 		# ask for SVG output
-		$self->{outputfile} = $self->get_file_name('', '',
-			loc("ENTER to continue without SVG output")) if ! $self->{outputfile};
+		$self->{outputfile} = $self->get_file_name($self->{outputfile}, 'svg',
+			loc("ENTER to continue without SVG output"), 1)
+			if ! $self->{outputfile};
 		$self->board($by, $bx, $run_id, $self->{fill}, $excl);
 	}
 	# SVG end #
@@ -1308,9 +1310,12 @@ sub display_run {
 					} elsif ($sym eq 'E') {
 						$str .= "($detail)" if $detail;
 					} elsif ($sym eq 'B') {
-						my $w = int($detail/100);
-						$detail = $detail % 100;
-						my ($h, $p) = ($detail % 14, int($detail/14));
+						my ($w, $h) = ('?', '?');
+						if ($detail) {
+							$w = int($detail/100);
+							$detail = $detail % 100;
+							$h = $detail % 14;
+						}
 						$str .= loc("in wall %1 hole %2", $w, $h);
 					}
 				}

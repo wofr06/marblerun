@@ -1447,16 +1447,17 @@ sub emit_svg {
 	my ($self, $name, $level) = @_;
 	my $svg = $self->{svg};
 	return if ! $self->{svg};
-	return if exists $self->{outputfile} and $self->{outputfile} =~ /^\s*$/;
-	$name = $self->{outputfile} if exists $self->{outputfile};
-	my $svgfile = $self->get_file_name($name, 'svg', loc("ENTER to exit"));
-	$self->{outputfile} = $svgfile || '';
-	return if ! $svgfile or $svgfile =~ /^\s*$/;
-	if (defined $level and $level ne '') {
-		($self->{outputfile} = $svgfile) =~ s/\.svg$//;
-		$svgfile =~ s/\.svg$/_$level.svg/;
-	} else {
-		delete $self->{outputfile};
+	my $svgfile = $self->{outputfile} or
+		$self->get_file_name('', 'svg', loc("ENTER to exit"), 0);;
+	$svgfile =~ s/\.svg$// if defined $svgfile;
+	$self->{outputfile} = $svgfile;
+	return if ! defined $svgfile or $svgfile =~ /^\s*$/;
+	$svgfile .="_$level" if defined $level and $level ne '';
+	$svgfile .= '.svg';
+	if ($svgfile and -r $svgfile) {
+		my $yn = $self->prompt(loc("File %1 existing, overwrite it?",$svgfile));
+		my $Y = loc('Y');
+		return '' if $yn !~ /^[y$Y]/i;
 	}
 	open F, ">$svgfile" or die "$svgfile: $!\n";
 	print F $svg->xmlify;

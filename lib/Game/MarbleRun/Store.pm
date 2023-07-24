@@ -635,6 +635,8 @@ sub get_pos {
 sub plane_lines {
 	my ($self, $lines) = @_;
 	my $loc_level = loc('Level');
+	my $off = [[0, 0, 0]];
+	my $relative = $self->{relative} = 0;
 	my ($level, $max_level, $line) = (0, 0, 0);
 
 	for (@$lines) {
@@ -642,7 +644,7 @@ sub plane_lines {
 		next if ! $what or $what ne 'level';
 		$max_level = $value if  $value > $max_level;
 	}
-	my ($level_pos, $added);
+	my ($level_pos, $added, $col, $row, $type);
 	for my $str (@$lines) {
 		($_ = $str) =~ s/^(\d+)\s+//;
 		my $orig_line = $1;
@@ -651,21 +653,27 @@ sub plane_lines {
 		next if $what and $what ne 'level';
 		$added = 0, next if $added;
 		if (/^[=^#]*_/) {
+			if (/^_\s*(\d+)\D+(\d+)/) {
+				$relative = $self->{relative} = 1;
+				next if ! $2;
+				$col = 5*($1 - 1);
+				$row = 6*($2 - 1);
+				$off->[0] = [$row, $col, 0];
+			}
 			$level = 0;
 			$level_pos = 0;
 		# analyse level line
 		} elsif ($what and $what eq 'level') {
 			$level = $value;
-			if ($level !~ /^\d+$/) {
-				my $bad = $level || '';
-				$level = ++$max_level;
-				s/$bad$/ $level/;
-				$self->error("Wrong level number '%1' becomes level %2",
-					$bad, $level) if $bad;
-			}
+			# bad level error reported in parse_run
+			$level = ++$max_level if $level !~ /^\d+$/;
 			$level_pos = $level ? $line : 0;
 		# transparent plane line
 		} elsif (/^[^#]*[=^]/) {
+			if (/([0-9a-z]{2}|\d+,\d+)\s+.*([=^])/i) {
+				$type = ($2 eq '=') ? 2 : 3;
+				($row, $col) = $self->get_pos($1, $relative);
+			}
 			if (! $level_pos) {
 				# add level line
 				$level = ++$max_level;
@@ -677,66 +685,12 @@ sub plane_lines {
 				splice @$lines, $level_pos, 0, splice(@$lines, $line - 1, 1);
 			}
 			$level_pos = 0;
-		}
-	}
-}
-
-sub get_offsets {
-	my ($self, $lines) = @_;
-	$self->plane_lines($lines);
-	my $loc_level = loc('Level');
-	my $off = [[0, 0, 0]];
-	my $relative = $self->{relative} = 0;
-	my ($level_seen, $col, $row);
-	my $line = 0;
-	my $level = 0;
-	my @adjust;
-	for my $str (@$lines) {
-		$line++;
-		$str =~ /^line (\d+)$/;
-		$self->{line}= $1;
-		($_ = $str) =~ s/#.*//;
-		# process only plane related lines (level, _, ^ and = lines)
-		next if $_ !~ /^[\w\s,]+[=^_]|^level|^$loc_level/i;
-		next if $self->header_line($_);
-		if (/^\d+\s+_\s*(\d+)\D+(\d+)/) {
-			$relative = $self->{relative} = 1;
-			$level = 0;
-			next if ! $2;
-			$col = 5*($1 - 1);
-			$row = 6*($2 - 1);
-			$level_seen = 0;
-			$off->[0] = [$row, $col, 0];
-		} elsif (/^\d+\s+(?:level|$loc_level)(?:\s+|:|$)(.*)/i) {
-			$level = $1;
-			if ($level =~ /^\d+/) {
-				$level_seen = 1;
-			} else {
-				my $bad = $level || '';
-				$level = 1;
-				$level++ while defined $off->[$level];
-				s/$bad$/ $level/;
-				$self->error("Wrong level number '%1' becomes level %2",
-					$bad, $level) if $bad;
-			}
-		} elsif (/^\d+\s+([0-9a-z]{2}|\d+,\d+)\s+.*([=^])/i) {
-			my $type = ($2 eq '=') ? 2 : 3;
-			($row, $col) = $self->get_pos($1, $relative);
-			if (! $level_seen) {
-				$level++ while defined $off->[$level];
-				# add level lines later, if missing
-				push @adjust, [$line - 1, "Level $level"]
-			}
-			$level_seen = 0;
 			if ($relative) {
 				$col += $off->[0][0];
 				$row += $off->[0][1];
 			}
-			if (defined $off->[$level]) {
-				my $pos = $self->num2pos($off->[$level][0], $off->[$level][1]);
-				$self->error("Level %1 already seen at %2", $level, $pos)
-					if $col != $off->[$level][0] or $row != $off->[$level][1];
-			} else {
+			# duplicate level line error reported in parse_run
+			if (!defined $off->[$level]) {
 				$off->[$level][0] = $col;
 				$off->[$level][1] = $row;
 				$off->[$level][2] = $type;
@@ -795,10 +749,10 @@ sub header_line {
 	my $loc_date = loc('Date');
 	my $loc_level = loc('Level');
 	return ('name', $1) if /^\s*(?:name|$loc_name)(?:\s+|:|$)(.*)/i;
-	return ('date', $1) if /^\s*(?:date|$loc_date)(?:\s+|:)(.*)/i;
-	return ('author', $1) if /^\s*(?:author|$loc_author)(?:\s+|:)(.*)/i;
-	return ('source', $1) if /^\s*(?:source|$loc_source)(?:\s+|:)(.*)/i;
-	return ('level', $1) if /^\s*(?:level|$loc_level)(?:\s+|:)(.*)/i;
+	return ('date', $1) if /^\s*(?:date|$loc_date)(?:\s+|:|$)(.*)/i;
+	return ('author', $1) if /^\s*(?:author|$loc_author)(?:\s+|:|$)(.*)/i;
+	return ('source', $1) if /^\s*(?:source|$loc_source)(?:\s+|:|$)(.*)/i;
+	return ('level', $1) if /^\s*(?:level|$loc_level)(?:\s+|:|$)(.*)/i;
 	return undef;
 }
 
@@ -817,7 +771,7 @@ sub parse_run {
 	my $i = 0;
 	my $old_level = -1;
 	my @lines = map {$i++; map {"$i $_"} split /;/, $_} split /\r?\n/, $content;
-	$off_xy = $self->get_offsets(\@lines);
+	$off_xy = $self->plane_lines(\@lines);
 	for (@lines) {
 		$level = $old_level if $old_level >= 0;
 		$old_level = -1;
@@ -850,7 +804,7 @@ sub parse_run {
 		# analyse header lines
 		my ($what, $value) = $self->header_line($_);
 		# first line is the name of the run if no name line given
-		if (! $what and $line_no == 1) {
+		if (! $what and $line_no == 1 and $content =~ /^$_/) {
 			$what = 'name';
 			$value = $_;
 		}
@@ -866,20 +820,24 @@ sub parse_run {
 				say loc("Registering marble run '%1'", $run_name || '');
 			}
 		} elsif ($what and $what eq 'level') {
-			$self->error("Level number not given") if ! defined $value;
+			$self->error("Level number not given") if ! defined $value or $value eq '';
+			my $good_level = $level;
 			$level = $value || 0;
 			if ($level) {
 				if ($level !~ /^\d+$/) {
 					my $bad = $level || '';
-					$level = 0;
+					$level = $good_level;
 					$level++ while exists $planenum->{$level};
 					s/$bad$/ $level/;
 					$self->error("Wrong level number '%1' becomes level %2",
 						$bad, $level) if $bad;
 				}
 				$level_line_seen = 1;
-				$self->error("Level %1 already seen", $level)
-					if exists $planenum->{$level};
+				if (exists $planenum->{$level}) {
+					my $pos = $self->num2pos($off_xy->[$level][0] || 0,
+											 $off_xy->[$level][1] || 0);
+					$self->error("Level %1 already seen at %2", $level, $pos);
+				}
 				$planenum->{$level} = [undef, undef];
 			}
 			pop @$rules if $rules->[-1][0] eq 'level';
@@ -946,7 +904,7 @@ sub parse_run {
 				$planenum->{$level} = [$x1, $y1, $plane_type];
 				$level_line_seen = 0;
 				push @$rules, [$1, $x1, $y1, undef, undef, undef, $level];
-				next;
+				#next;
 			}
 			# tile must be on a transparent plane for level > 0
 			my $delta = $plane_type - 1;
@@ -968,15 +926,15 @@ sub parse_run {
 				my ($x2, $y2) = $self->rail_xy($elem, $x1, $y1, $dir);
 				($xw, $yw) = ($x1, $y1);
 				#print "wall $elem dir $dir with detail $detail at $xw,$yw to $x2, $y2 seen @pos_L\n";
-				$num_L = $pos_L[$detail -1];
+				$num_L = $pos_L[$detail - 1] || 0;
 				$num_W = @{$rules->[$num_L]};
-				#use Data::Dumper;print Dumper $detail, \@pos_L,$rules->[$num_L-1],$rules->[$num_L],$rules->[$num_L+1];
+				#use Data::Dumper;print Dumper $detail, $num_L, \@pos_L,$rules->[$num_L-1],$rules->[$num_L],$rules->[$num_L+1];
 				push @{$rules->[$num_L]}, [$x2, $y2, $elem, $dir, $num_wall, $x1, $y1];
 			}
 			# double balcony lines (2nd hole)
 			if ($tile =~ s/^E//) {
 				$elem = 'E';
-				if ( ! exists $pos_E[$num_E]) {
+				if ( ! defined $num_E or ! exists $pos_E[$num_E]) {
 					$self->error("First position of double balcony not seen so far");
 					$tile = '';
 					@items = ();
@@ -1005,6 +963,7 @@ sub parse_run {
 					$hole = int($1 || ord($2) - 87);
 				} else {
 					$self->error("Wrong balcony height '%1'", $hole);
+					$hole = 0;
 				}
 				$dir = 0;
 				if (! defined $num_L) {
@@ -1024,14 +983,16 @@ sub parse_run {
 					my $detail = 20*$num_wall + $hole;
 					$detail = $num_wall;
 					# we need z at the bottom of the wall, i.e. 28 units less
-					$z = 2*$hole + $rules->[$num_L][3] - 14;
+					$z = 2*$hole;
+					$z += $rules->[$num_L][3]-14 if defined $rules->[$num_L][3];
 					#print "balcony on wall $num_wall at $x1,$y1,$z seen\n";
 					push @$rules,
 						[$elem, $x1, $y1, $z, $detail, $dir, $level] if $elem;
 				}
 			}
 			# other height elements 1..9,+,E,L,xL
-			while ($tile =~ s/^([+\dEL=^]|xL)//) {
+			#while ($tile =~ s/^([+\dEL=^]|xL)//) {
+			while ($tile =~ s/^([+\dEL]|xL)//) {
 				$elem = $1;
 				# direction for balconies and pillars (for pillar optional)
 				if ($elem =~ /^[EL]|xL/) {
@@ -1129,12 +1090,12 @@ sub parse_run {
 				$self->error("Missing tile orientation for '%1'", $tile)
 					if ! defined $dir and $tile !~ /[OR^=]/;
 				$self->error("Tile '%1' needs no orientation", $tile)
-					if defined $dir and $tile =~ /[OR^=]/;
+					if defined $dir and $tile eq 'O';
 			} elsif ($tile) {
 				$self->error("Wrong tile char '%1'", $tile) if $tile !~ /^\|/;
 			} else {
 				$self->error("In %1 no tile data found","@items")
-					if grep {$_ !~ /x[lms]/} @items;
+					if $tile and grep {$_ !~ /x[lms]/} @items;
 			}
 			$dir ||= 0; # default for missing direction
 			$f = [$tile, $x1, $y1, $z, $detail, $dir, $level];
@@ -1270,8 +1231,10 @@ sub check_marbles {
 		}
 		if ($color and $cdir) {
 			my @chk2 = grep {$_ =~ /$cdir/} @chk;
+			my $numdir = ord($cdir) - 97 - $dir;
+			my $out = grep {$numdir eq $_->[2]} @{$self->{rules}{$tile}};
 			if (! @chk2) {
-				if ($self->{rules}{$tile}[0][1] eq '') {
+				if ($out and $self->{rules}{$tile}[0][1] eq '') {
 					print loc("marble %1 on tile %2 will be started later\n",
 					$_, $tile);
 				} else {
