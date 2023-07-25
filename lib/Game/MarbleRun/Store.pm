@@ -1217,7 +1217,7 @@ sub check_marbles {
 		return;
 	}
 	# check existing marbles and add color and/or orientation
-	for (@$items) {
+	for (grep {/o/} @$items) {
 		my ($num, $str) = split /o/, $_;
 		$num ||= '';
 		my $color = $1 if $str and $str =~ s/([$colors])//;
