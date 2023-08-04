@@ -270,7 +270,7 @@ sub features {
 	#Position of marbles on tiles
 	my %offset = (A => 0.25, 'xF' => 0, M => 2*$self->{r_ball},
 		N => 1./24.+$self->{r_ball}, P => 1./12.+$self->{r_ball},
-		xA => 2*$self->{r_ball}, xS => 0.375, xZ => 2*$self->{r_ball},
+		xA => -$self->{r_ball}, xS => 0.375, xZ => $self->{r_ball},
 		xB => [[-0.3, -0.25], [-0.3, 0.25]], Z => 1.5*$self->{r_ball},
 		xK => [[-0.2, -0.3], [-0.2, 0.3], [0.2, -0.3], [0.2, 0.3]],
 		xT => -2*$self->{r_ball},

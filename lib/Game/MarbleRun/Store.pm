@@ -149,8 +149,7 @@ sub find_to_tile {
 
 sub no_rail_connection {
 	my ($self, $elem) = @_;
-	return 1 if $elem =~ /\|/;
-	return $elem =~ /\d+|^[+\^=BEOR]/;
+	return 1 if ! $elem or $elem =~ /\d+|^[+\^=BEOR]|\|/;
 }
 
 sub rail_xy {
@@ -197,13 +196,14 @@ sub verify_rail_endpoints {
 			$pos, $level, $t_pos{$pos}{$z}->[0]) if exists $t_pos{$pos}{$z};
 		$t_pos{$pos}{$z} = [$_->[0], $_->[5]] if $_->[0];
 	}
+	#use Data::Dumper;print Dumper $data;exit;
 	# check if connections exist with that orientation of tiles and rail
 	for my $t (@$data) {
 		if ($t->[0] eq 'line') {
 			$self->{line}= $t->[1];
 			next;
 		}
-		for my $r (@$t) {
+		for my $r (@$t[7..$#$t]) {
 			# skip header data and marbles
 			next if ! ref $r or $r->[0] eq 'o';
 			# exclude elements that cannot be start points for rails
@@ -309,6 +309,7 @@ sub verify_rail_endpoints {
 				$chr = defined $dir ? chr(97 + $dir) : '?';
 				$to_chr = defined $to_dir ? chr(97 + $to_dir) : '?';
 				$self->error("No connection from rail %4%5 to tile %1 at %2 orientation %3", $tile, $to, $chr, $r->[2], $to_chr) if ! $ok;
+				say "connection from rail $r->[2]$to_chr to tile $tile at $to orientation chr";
 
 			# rail end point missing
 			} else {
@@ -531,7 +532,6 @@ sub store_run {
 		if ($d->[0] eq 'O') {
 			# register direction of outgoing marble in basket
 			my $r_o = $d->[7];
-			#$d->[7] = undef;
 			$d->[5] = $r_o->[3] if defined $r_o;
 		}
 		my @val = @{$d}[0..6];
@@ -571,6 +571,7 @@ sub store_run {
 			$self->{line}= $r->[1];
 			next;
 		}
+		#print Dumper $r;exit;
 		#r: from_id x1 y1 z1 detail orient from_level, x2, y2, rail_id, dir wall
 		#         0  1  2  3      4      5          6   7   8        9   10   11
 		# chose correct tile: tile normally placed at same or lower level

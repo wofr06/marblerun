@@ -957,8 +957,6 @@ sub do_run {
 			$_->[7] = ($_->[1] + 2) % 6;
 		} elsif ($_->[0] eq 'd') {
 			$_->[7] = ($_->[1] + 4) % 6;
-		} elsif ($_->[0] eq 't') {
-			$_->[7] = $_->[1];
 		} elsif ($_->[0] eq 'xt') {
 			$_->[7] = $_->[6];
 		} else {
@@ -1010,25 +1008,26 @@ sub display_balls {
 
 sub get_moving_marbles {
 	my ($self, $marbles) = @_;
+	my $xT_delay = 0.8;
+	my $same_pos_delay = 30;
 	for my $id (grep {$self->{tiles}{$_}[7]} keys %{$self->{tiles}}) {
 		my $t = $self->{tiles}{$id};
 		next if ($t->[8] || 0) > $self->{ticks};
 		my $t_dir = $t->[4];
 		# do not honor tile direction for A and xS
-		$t_dir = $t->[4] % 2 if $t->[0] eq 'A';
-		$t_dir = 0 if $t->[0] eq 'xS';
+		#$t_dir = $t->[4] % 2 if $t->[0] eq 'A';
+		#$t_dir = 0 if $t->[0] eq 'xS';
 		for my $rule (@{$self->{rules}{$t->[0]}}) {
 			next if ! defined $rule->[6] or $rule->[6] !~ /o/;
 			my %dirs;
-			for my $str (grep {defined $_} split /:/, $t->[7]) {
-				next if ! $str;
-				my ($num, $dir, $color) = ($str =~ /(\d+)o(.)(.)$/);
-				$dir eq 'M' ? $dirs{M}++ : $dirs{($dir - $t_dir) % 6}++;
+			for my $str (grep {$_} split /:/, $t->[7]) {
+				my ($m_dir) = ($str =~ /\d+o(.).$/);
+				$m_dir eq 'M' ? $dirs{M}++ : $dirs{($m_dir - $t_dir) % 6}++;
 			}
 			my $match = 1;
-			(my $num_r) = ($rule->[5] =~ /(\d?)o(.)/);
-			$num_r ||= 1;
 			my $cond = $rule->[5];
+			(my $num_r) = ($cond =~ /(\d?)o./);
+			$num_r ||= 1;
 			while ($cond =~ s/(\d?)o(.)//) {
 				my $num = $1 || 1;
 				$match = 0 if ! exists $dirs{$2} or $dirs{$2} < $num;
@@ -1040,26 +1039,28 @@ sub get_moving_marbles {
 					my $dir_in = ($dir - 1) % 6;
 					$t->[7] =~ s/o$dir_in/o$dir/g;
 					$t->[7] =~ s/^(:[^:]+)(:[^:]+)(:[^:]+)/$3$2$1/;
-					$self->{ticks} += 0.3;
+					$self->{ticks} += $xT_delay;
 				}
 				# now no marble at orientation $dir
 				my $inc = 0;
 				while ($t->[7] =~ s/:(\d+)o$dir(.)//) {
 					my ($num, $color) = ($1, $2);
 					$marbles = [grep {$_->[0] != $num} @$marbles];
-					say "2: start marble at ", $self->{ticks} + $inc,
+					say "$num: start marble at ", $self->{ticks} + $inc,
 						" $self->{color}{lc $color} ($self->{dirchr}[$dir])"
 						if $dbg;
 					# id sym x y z dir_in dir_out total_time inc_time len
 					my $len = 0.5;
 					$len -= $self->{offset}{$t->[0]}
 						if exists $self->{offset}{$t->[0]};
+					my $e = 10*$t->[3] + 5;
 					push @$marbles, [$num, $id, undef, @$t[1..3],
-						undef, $dir, $self->{ticks} + $inc, 0, $color, $len];
+						undef, $dir, $self->{ticks}+$inc, 0, $color, $len, $e];
 					# inhibit emitting new marbles for 30 ticks
-					$inc += 30 if $rule->[2] ne '';
-					$self->{ticks} += 0.3 if $t->[0] eq 'xT';
+					$inc += $same_pos_delay if $rule->[2] ne '';
+					$self->{ticks} += $xT_delay if $t->[0] eq 'xT';
 					my $left = $t->[7] =~ s/(o$dir)/$1/g;
+					$num_r-- if $t->[0] eq 'xT';
 					last if ! $left or $left < $num_r;
 				}
 			}
@@ -1087,8 +1088,10 @@ sub move_marbles {
 		}
 		my $m_dir = $m->[7];
 		my $t_id = $m->[1];
+		#print Dumper $rails, $self->{tiles};exit;
 		# find outgoing connecting rail
 		my @out = grep {$t_id == $_->[2] and $m_dir eq $_->[1]} @$rails;
+		say "$m0: search for rail in direction $m_dir connected to tile $t_id";
 		if (defined $out[0]) {
 			say "$m0: rail out $out[0]->[0] found, dir $out[0]->[1]" if $dbg;
 			say "$m0: next tile $self->{tiles}{$out[0]->[4]}[0] in dir = $out[0]->[7]" if $dbg;
@@ -1151,6 +1154,7 @@ sub tile_rule {
 			say "   tile $t->{$t_id}[0] ok" if $dbg;
 			return $t_id;
 		}
+		say "   tile $t->{$t_id}[0] failed" if $dbg;
 	}
 }
 
@@ -1177,6 +1181,7 @@ sub update_marble {
 		my $special = $self->{rail}{$rail->[0]}[4];
 		$len = $special eq 'fast' ? $len/2 : $special eq 'slow' ? $len*2 : $len;
 		$marble->[8] += 10*($self->{rail}{$rail->[0]}[1] || 1);
+		$marble->[7] = ($marble->[7] + 3) % 6 if $rail->[0] eq 't';
 		push @{$self->{xyz}[$m_id]}, [$rail->[0], @$t[1,2,3], $marble->[7],
 			$t->[5], $self->{ticks}];
 	}
@@ -1252,6 +1257,7 @@ sub next_dir {
 			return ($rule->[2] + $t->[4]) % 6 if $rule->[2] =~ /^[0-5]$/;
 		# outgoing direction: flying (no connection for rails)
         } elsif ($rule->[2] =~ /^[FR]$/) {
+			$marble->[5] += $rule->[3] if $rule->[1]  eq 'F';
 			$marble->[5] += ($rule->[4] - $rule->[3]) if $rule->[4] =~ /^\d$/;
 			return $rule->[2] eq 'F' ? $marble->[7] : $marble->[6];
 		} elsif ($rule->[1] eq 'F' or ($rule->[1] =~ /^[0-5]$/
@@ -1274,6 +1280,7 @@ sub generate_path {
 	my ($paths, $starts, $lengths);
 	my $sym = $xyz->[0][0];
 	if (exists $self->{offset}{$sym}) {
+		#distance to the edge
 		my $offset = $self->{offset}{$sym};
 		$offset *= 2 if $sym eq 'M';
 		my $dir = $xyz->[0][4];
@@ -1287,9 +1294,9 @@ sub generate_path {
 		$start = $xyz->[$i][6] || 0 if ! defined $start;
 		my ($sym, $xc, $yc, $z, $dir, $detail) = @{$xyz->[$i]};
 		last if ! $sym;
+		next if exists $xyz->[$i + 1] and $xyz->[$i + 1][4] ne 'M' and $xyz->[$i + 1] < 0;# and $sym =~ /x[AZ]/;
 		say " path sym $sym xyz=$xc $yc $z dir=",$dir if $dbg;
 		my ($x, $y) = $self->center_pos($xc, $yc);
-		$dir = -1 if ! defined $dir or $dir eq '';
 		if ($sym eq 'xH') {
 			my $elems = $detail;
 			$path .= $self->helix_path($x - $x0, $y -$y0, $dir, $elems);
@@ -1310,7 +1317,7 @@ sub generate_path {
 					$dir = ($dir + 1) % 6;
 				}
 			} elsif ($sym eq 'M') {
-				$frac = 4*$self->{r_ball}*$balls;
+				$frac = 4*$self->{r_ball};#*$balls;
 			} elsif ($sym eq 'Z') {
 			# end of path landing (Z)
 				$dir = (2*$balls + int($balls/3)) % 6;
