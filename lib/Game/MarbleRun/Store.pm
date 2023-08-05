@@ -49,12 +49,12 @@ sub process_input {
 }
 
 sub find_to_tile {
-	# r: from_id x1 y1 z1 detail orient from_level, x2, y2, rail_id, dir wall
-	#          0  1  2  3      4      5          6   7   8        9   10   11
+	#r: from_id chr x1 y1 z1 detail orient level, x2, y2, rail_id, dir wall
+	#         0   1  2  3  4      5      6     7   8   9       10   11   12
 	# t: tile_id tile_char, x, y, z, detail, orient level
 	#          0         1  2  3  4       5       6     7
 	my ($self, $rail, $seen) = @_;
-	my ($tile, $xf, $yf, $z, $d0, $d1, $l, $x, $y, $r, $dir, $wall) = @$rail;
+	my ($q, $tile, $xf, $yf, $z, $d0, $d1, $l, $x, $y, $r, $dir, $wall) = @$rail;
 	# finish line does not end on a tile
 	return undef if $r eq 'e';
 	my @ids = grep {! $self->no_rail_connection($_->[1]) and
@@ -182,35 +182,35 @@ sub verify_rail_endpoints {
 	my %t_pos;
 	my ($level, $z0) = (0, 0);
 	for (@$data) {
-		if ($_->[0] eq 'line') {
-			$self->{line}= $_->[1];
+		if ($_->[1] eq 'line') {
+			$self->{line}= $_->[2];
 			next;
 		}
-		($level, $z0) = ($_->[1], $_->[2]) if $_->[0] eq 'level';
-		next if  length $_->[0] > 2;
-		my $z = $_->[3] || 0;
+		($level, $z0) = ($_->[2], $_->[3]) if $_->[1] eq 'level';
+		# exclude header data
+		next if ! $_->[0];
+		my $z = $_->[4] || 0;
+		$z -= 14 if $_->[1] =~ /L/;
 		# exclude elements that cannot be start/end points for rails
-		next if $self->no_rail_connection($_->[0]) or $_->[0] =~ /L/;
-		my $pos = $self->num2pos($_->[1], $_->[2]);
-		$self->error("At %1 level %2 is already a tile %3",
-			$pos, $level, $t_pos{$pos}{$z}->[0]) if exists $t_pos{$pos}{$z};
-		$t_pos{$pos}{$z} = [$_->[0], $_->[5]] if $_->[0];
+		next if $self->no_rail_connection($_->[1]);
+		my $pos = $self->num2pos($_->[2], $_->[3]);
+		$self->error("At %1 level %2 ($_->[4]) is already a tile %3",
+			$pos, $level, $t_pos{$pos}{$z}->[1]) if exists $t_pos{$pos}{$z};
+		$t_pos{$pos}{$z} = [$_->[0], $_->[1], $_->[6]] if $_->[1];
 	}
 	#use Data::Dumper;print Dumper $data;exit;
 	# check if connections exist with that orientation of tiles and rail
 	for my $t (@$data) {
-		if ($t->[0] eq 'line') {
-			$self->{line}= $t->[1];
+		if ($t->[1] eq 'line') {
+			$self->{line}= $t->[2];
 			next;
 		}
-		for my $r (@$t[7..$#$t]) {
-			# skip header data and marbles
-			next if ! ref $r or $r->[0] eq 'o';
+		for my $r (@$t[8..$#$t]) {
+			# skip marble data
+			next if $r->[0] eq 'o';
 			# exclude elements that cannot be start points for rails
-			next if $self->no_rail_connection($t->[0]);
-			# exclude walls, connection is possible to every side of a pillar
-			next if $r->[2] =~ /x[sml]/;
-			my $from = $self->num2pos($t->[1], $t->[2]);
+			next if $self->no_rail_connection($t->[1]);
+			my $from = $self->num2pos($t->[2], $t->[3]);
 			my $to = $self->num2pos($r->[0], $r->[1]);
 			# special case finish line
 			if ($r->[2] eq 'e') {
@@ -218,10 +218,10 @@ sub verify_rail_endpoints {
 					$self->{elem_name}{$r->[2]}) if exists $t_pos{$to};
 			} elsif (exists $t_pos{$to}) {
 				# from tile
-				my ($tile, $dir, $to_dir, $ok);
+				my ($tid, $tile, $dir, $to_dir, $ok);
 				for my $k (keys %{$t_pos{$from}}) {
 					$ok = 0;
-					($tile, $dir) = @{$t_pos{$from}{$k}};
+					($tid, $tile, $dir) = @{$t_pos{$from}{$k}};
 					# ignore checks for new/unknown tiles
 					if ($tile =~ /\|/) {
 						$ok = 1;
@@ -238,15 +238,13 @@ sub verify_rail_endpoints {
 						# marble can come from above
 						undef $case2->{xH};
 						# direction in for spiral depends on number of elements
-						$case2->{xH}[0] = (2*$t->[4] - 1)%6 if $t->[0] eq 'xH';
+						$case2->{xH}[0] = (2*$t->[5] - 1)%6 if $t->[1] eq 'xH';
 					}
-					if ($tile eq 'xF' and $t->[0] eq 'xF') {
+					if ($tile eq 'xF' and $t->[1] eq 'xF') {
 						# direction out for lift at z!=0 is stored in detail
-						$case2->{xF}[0] = ord($1) - 97 if $t->[4] =~ /([a-f])/;
-						$case2->{xF}[0] = ($case2->{xF}[0] - $t->[5]) % 6;
+						$case2->{xF}[0] = ord($1) - 97 if $t->[5] =~ /([a-f])/;
+						$case2->{xF}[0] = ($case2->{xF}[0] - $t->[6]) % 6;
 					}
-					# skip height tiles
-					next if ! $tile;
 					my $my_dir = $r->[3];
 					$ok = 1 if defined $dir
 						and grep {$my_dir == ($_+$dir)%6} @{$cases->{$tile}};
@@ -255,6 +253,7 @@ sub verify_rail_endpoints {
 							and grep {$my_dir==($_+$dir)%6} @{$case2->{$tile}};
 					}
 					my $reverse = 0;
+					$ok = 1 if $tile =~/L/;
 					last if $ok;
 
 				}
@@ -263,8 +262,15 @@ sub verify_rail_endpoints {
 				$self->error("No connection from tile %1 at %2 orientation %3 to rail %4%5", $tile, $from, $chr, $r->[2], $to_chr) if ! $ok;
 				# to tile
 				$ok = 0;
-				for my $k (keys %{$t_pos{$to}}) {
-					($tile, $dir) = @{$t_pos{$to}{$k}};
+				for my $k (sort {$a <=> $b} keys %{$t_pos{$to}}) {
+					($tid, $tile, $dir) = @{$t_pos{$to}{$k}};
+					# special case for walls
+					if ($r->[2] =~ /x[sml]/) {
+						$ok = 1 if $tile =~ /L/ and abs($k - $t->[4]) <= 1;
+						$to_dir = $r->[3];
+						#say "tile $tile wall=$r->[4] z=$k:$t->[4]";
+						next;
+					}
 					my $case2;
 					if ($tile and exists $self->{conn1}{$tile}) {
 						for my $k (keys %{$self->{conn1}{$tile}}) {
@@ -276,14 +282,14 @@ sub verify_rail_endpoints {
 					next if ! $tile;
 					# variable direction for spiral in and Lift out
 					if ($tile eq 'xH') {
-						my ($h) = grep {$_->[0] eq 'xH' and $r->[0] == $_->[1]
-							and $r->[1] == $_->[2]} @$data;
-						$case2->{xH}[0] = (2*$h->[4] - 1) % 6;
+						my ($h) = grep {$_->[1] eq 'xH' and $r->[0] == $_->[2]
+							and $r->[1] == $_->[3]} @$data;
+						$case2->{xH}[0] = (2*$h->[5] - 1) % 6;
 					}
 					if ($tile eq 'xF') {
-						my ($f) = grep {$_->[0] eq 'xF' and $r->[0] == $_->[1]
-							and $r->[1] == $_->[2]} @$data;
-						$cases->{xF}[0] = ord($1) - 97 if $f->[4] =~ /([a-f])/;
+						my ($f) = grep {$_->[1] eq 'xF' and $r->[0] == $_->[2]
+							and $r->[1] == $_->[3]} @$data;
+						$cases->{xF}[0] = ord($1) - 97 if $f->[5] =~ /([a-f])/;
 						$cases->{xF}[0] = ($cases->{xF}[0] - $dir) % 6;
 					}
 
@@ -309,16 +315,22 @@ sub verify_rail_endpoints {
 				$chr = defined $dir ? chr(97 + $dir) : '?';
 				$to_chr = defined $to_dir ? chr(97 + $to_dir) : '?';
 				$self->error("No connection from rail %4%5 to tile %1 at %2 orientation %3", $tile, $to, $chr, $r->[2], $to_chr) if ! $ok;
-				say "connection from rail $r->[2]$to_chr to tile $tile at $to orientation chr";
+				#say "id $tid ($tile) for $t->[0] ($t->[1]) [$t->[2],$t->[3],$t->[4]] rail $r->[2] dir $to_dir";
+				push @$r, $tid;
 
 			# rail end point missing
 			} else {
 				my $rail = loc($self->{elem_name}{$r->[2]});
-				my $from = $self->num2pos($t->[1],$t->[2]);
-				$self->error("No tile at %1 %2 -> %3", $rail, $from, $to);
+				my $from = $self->num2pos($t->[2],$t->[3]);
+				if ($r->[2] =~ /x[lms]/) {
+					$self->error("No pillar at %1 %2 -> %3", $rail, $from, $to);
+				} else {
+					$self->error("No tile at %1 %2 -> %3", $rail, $from, $to);
+				}
 			}
 		}
 	}
+	#use Data::Dumper;print Dumper \%t_pos;exit;
 }
 
 sub store_person {
@@ -462,8 +474,8 @@ sub store_run {
 	# prepare insert, select and update statement handles
 	my $dbh = $self->{dbh};
 	my $sql = 'INSERT INTO run_tile
-		(run_id,element,posx,posy,posz,detail,orient,level)
-		VALUES(?,?,?,?,?,?,?,?)';
+		(id,run_id,element,posx,posy,posz,detail,orient,level)
+		VALUES(?,?,?,?,?,?,?,?,?)';
 	my $sth_i_rt = $dbh->prepare($sql);
 	$sql = 'UPDATE run SET marbles=? WHERE id=?';
 	my $sth_u_r = $dbh->prepare($sql);
@@ -480,20 +492,20 @@ sub store_run {
 	my $sth_i_no = $dbh->prepare($sql);
 	my $run_seen = 0;
 	for my $d (@$data) {
-		if ($d->[0] eq 'line') {
-			$self->{line}= $d->[1];
+		if ($d->[1] eq 'line') {
+			$self->{line}= $d->[2];
 			next;
 		}
 		# collect header data
-		if ($d->[0] =~ /^name|^date|^author|^source/) {
-			$hdr->{$d->[0]} = $d->[1];
+		if ($d->[1] =~ /^name|^date|^author|^source/) {
+			$hdr->{$d->[1]} = $d->[2];
 			$level = 0;
 			$marbles = 0;
 			$run_id = undef;
 			$seen = undef;
 			next;
-		} elsif ($d->[0] =~ /^comment/) {
-			$comment = $d->[1];
+		} elsif ($d->[1] =~ /^comment/) {
+			$comment = $d->[2];
 			next;
 		}
 		# store header data
@@ -519,40 +531,34 @@ sub store_run {
 			$hdr = undef;
 			$run_seen = $run_id;
 		}
-		if ($d->[0] eq 'level') {
-			$level = $d->[1];
+		if ($d->[1] eq 'level') {
+			$level = $d->[2];
 			next;
 		}
-		if ($d->[0] eq 'exclude') {
-			$sth_i_no->execute($run_id, $d->[1], $d->[2]);
+		if ($d->[1] eq 'exclude') {
+			$sth_i_no->execute($run_id, $d->[2], $d->[3]);
 			next;
 		}
-		# store tile data: tile_char, x, y, z, detail, orient level
-		#                          0  1  2  3       4       5     6
-		if ($d->[0] eq 'O') {
+		# store tile data: id char, x, y, z, detail, orient level rails,marbles
+		#                   0    1  2  3  4       5       6     7 8...
+		if ($d->[1] eq 'O') {
 			# register direction of outgoing marble in basket
-			my $r_o = $d->[7];
-			$d->[5] = $r_o->[3] if defined $r_o;
+			my @r_o = map {$_->[3]} grep {$_->[0] eq 'o'} @{$d}[8 .. $#$d];
+			$d->[6] = $r_o[0] if defined $r_o[0];
 		}
-		my @val = @{$d}[0..6];
-		$val[3] ||= 0; # check for unassigned z value
-		$sth_i_rt->execute($run_id, @val) if $val[0];
-		next if $self->no_rail_connection($val[0]) and ! $comment;
-		#my $id = @{$dbh->selectall_arrayref('SELECT last_insert_rowid()
-		#	FROM run_tile')}[0]->[0];
-		my $res = $dbh->selectall_arrayref('SELECT last_insert_rowid()
-			FROM run_tile');
-		my $id = $res->[0][0] if $res;
+		my @val = @{$d}[0..7];
+		$val[4] ||= 0; # check for unassigned z value
+		$sth_i_rt->execute($val[0], $run_id, @val[1 .. 7]);
+		next if $self->no_rail_connection($val[1]) and ! $comment;
+		my $id = $val[0];
 		$dbh->do("INSERT OR IGNORE INTO run_comment (run_id,tile_id,comment)
 			VALUES('$run_id', '$id', '$comment')") if $comment and $run_id;
 		$comment = undef;
-		next if $self->no_rail_connection($val[0]);
+		next if $self->no_rail_connection($val[1]);
 		# exclude height tiles and transparent plane from being rail end points
-		push @$seen, [$id, @val];
-		for my $aref (@$d) {
-			next if ! ref $aref;
+		push @$seen, [@val];
+		for my $aref (@$d[8 .. $#$d]) {
 			# store marble data
-
 			if (exists $aref->[0] and $aref->[0] eq 'o') {
 				$marbles++;
 				$sth_u_r->execute($marbles, $run_id);
@@ -572,27 +578,30 @@ sub store_run {
 			next;
 		}
 		#print Dumper $r;exit;
-		#r: from_id x1 y1 z1 detail orient from_level, x2, y2, rail_id, dir wall
-		#         0  1  2  3      4      5          6   7   8        9   10   11
+		#r: from_id chr x1 y1 z1 detail orient level, x2, y2, rail_id, dir wall
+		#         0   1  2  3  4      5      6     7   8   9       10   11   12
 		# chose correct tile: tile normally placed at same or lower level
 		my $id = $self->find_to_tile($r, $seen);
+		$id = $r->[-1];
+		my @elem = grep {$_->[0] == $id} @$seen;
+		#say "id=$id ($elem[0]->[1]) for $r->[0] ($r->[1]) [@$r[2,3,4]] rail $r->[10] dir $r->[11]";
 		undef $id if defined $id and $id == $r->[0];
 		# finish lines have no end tile
-		if ($id or $r->[9] eq 'e') {
-			$sth_sel_rr->execute($id, $r->[0], $run_id);
+		if ($id or $r->[10] eq 'e') {
+			$sth_sel_rr->execute($id, $r->[1], $run_id);
 			if ($sth_sel_rr->fetchrow_array) {
 				$self->error("%1 already registered from %2 to %3",
-					loc($self->{elem_name}{$r->[9]}), $self->num2pos($r->[7],
-					$r->[8]), $self->num2pos($r->[1], $r->[2]));
+					loc($self->{elem_name}{$r->[10]}), $self->num2pos($r->[8],
+					$r->[9]), $self->num2pos($r->[2], $r->[3]));
 			} else {
-				$sth_i_rr->execute($run_id, $r->[0], $id, @{$r}[9 .. 11]);
+				$sth_i_rr->execute($run_id, $r->[0], $id, @{$r}[10, 11, 12]);
 			}
 		} else {
 			$self->error("No end point for %1 from %2 to %3",
 				$r->[9],
 				#loc($self->{elem_name}{$r->[9]}),
-				$self->num2pos($r->[1], $r->[2]),
-				$self->num2pos($r->[7], $r->[8]));
+				$self->num2pos($r->[2], $r->[3]),
+				$self->num2pos($r->[8], $r->[9]));
 		}
 	}
 	if (! $run_id) {
@@ -737,8 +746,8 @@ sub level_height {
 			}
 			push @ldone, $lev if $h_elems >= 3;
 		}
-		push @$_, $z for grep {$_->[0] eq 'level' and $_->[1] == $lev} @$rules;
-		$_->[3] += $z for grep {defined $_->[6] and $_->[6] == $lev} @$rules;
+		push @$_, $z for grep {$_->[1] eq 'level' and $_->[2] == $lev} @$rules;
+		$_->[4] += $z for grep {defined $_->[7] and $_->[7] == $lev} @$rules;
 	}
 }
 
@@ -773,6 +782,8 @@ sub parse_run {
 	my $old_level = -1;
 	my @lines = map {$i++; map {"$i $_"} split /;/, $_} split /\r?\n/, $content;
 	$off_xy = $self->plane_lines(\@lines);
+	# unique tile number
+	my $tid = 1;
 	for (@lines) {
 		$level = $old_level if $old_level >= 0;
 		$old_level = -1;
@@ -780,7 +791,7 @@ sub parse_run {
 		s/^(\d+)\s+//;
 		my $line_no = $1;
 		$self->{line} = $line_no;
-		push @$rules, ['line', $line_no];
+		push @$rules, [0, 'line', $line_no];
 		next if /^\s*$/;
 		s/\s*$//;
 		# strip off and remember comments
@@ -791,15 +802,15 @@ sub parse_run {
 				next;
 			# if we had already a comment, we create a rule
 			} elsif ($comment) {
-				push @$rules, ['comment', $comment];
+				push @$rules, [0, 'comment', $comment];
 			}
 			# an inline comment;
 			$comment .= $1;
-			push @$rules, ['comment', $comment];
+			push @$rules, [0, 'comment', $comment];
 			$comment = undef;
 		# no further comment lines, store a rule
 		} elsif ($comment) {
-			push @$rules, ['comment', $comment];
+			push @$rules, [0, 'comment', $comment];
 			$comment = undef;
 		}
 		# analyse header lines
@@ -841,10 +852,10 @@ sub parse_run {
 				}
 				$planenum->{$level} = [undef, undef];
 			}
-			pop @$rules if $rules->[-1][0] eq 'level';
-			push @$rules, ['level', $level];
+			pop @$rules if $rules->[-1][1] eq 'level';
+			push @$rules, [0, 'level', $level];
 		} elsif ($what) {
-			push @$rules, [$what, $value];
+			push @$rules, [0, $what, $value];
 		# ground planes
 		} elsif (s/^_\s+//) {
 			if (/(\d+)\D+(\d+)/) {
@@ -852,7 +863,7 @@ sub parse_run {
 				$off_y = 5*($1 - 1);
 				$off_xy->[0] = [$off_x, $off_y];
 				$rel_pos = 1;
-				push @$rules, ['level', 0] if $level;
+				push @$rules, [0, 'level', 0] if $level;
 				$level = 0;
 			} else {
 				$self->error("Incorrect ground plane numbering '%1'", $_);
@@ -860,7 +871,7 @@ sub parse_run {
 		# ground planes not to be drawn
 		} elsif (s/^!\s*//) {
 			if (/(\d+)\D+(\d+)/) {
-				push @$rules, ['exclude', $2, $1];
+				push @$rules, [0, 'exclude', $2, $1];
 			} else {
 				$self->error("Incorrect ground plane numbering '%1'", $_);
 			}
@@ -904,7 +915,7 @@ sub parse_run {
 				}
 				$planenum->{$level} = [$x1, $y1, $plane_type];
 				$level_line_seen = 0;
-				push @$rules, [$1, $x1, $y1, undef, undef, undef, $level];
+				push @$rules, [$tid++, $1, $x1, $y1, undef, undef, undef, $level];
 				#next;
 			}
 			# tile must be on a transparent plane for level > 0
@@ -940,21 +951,21 @@ sub parse_run {
 					$tile = '';
 					@items = ();
 				} else {
-					my $x = $rules->[$pos_E[$num_E]][1];
-					my $y = $rules->[$pos_E[$num_E]][2];
+					my $x = $rules->[$pos_E[$num_E]][2];
+					my $y = $rules->[$pos_E[$num_E]][3];
 					# change level according to position of 1st hole
 					$old_level = $level;
-					$level = $rules->[$pos_E[$num_E]][6];
+					$level = $rules->[$pos_E[$num_E]][7];
 					$dir = $self->find_dir($x, $y, $x1, $y1);
 					if ($tile =~ s/^([a-f])//) {
 						my $dir2 = ord(lc $1) - 97;
 						$self->error("Wrong direction %1 for double balcony at %2, should be %3", $1, $self->num2pos($x1, $y1), chr($dir + 97)) if $dir != $dir2;
 					}
-					$rules->[$pos_E[$num_E]][5] = $dir;
-					$z = $rules->[$pos_E[$num_E++]][3];
+					$rules->[$pos_E[$num_E]][6] = $dir;
+					$z = $rules->[$pos_E[$num_E++]][4];
 					#print "double balcony at $x1,$y1,$z seen\n";
 					push @$rules,
-						[$elem, $x1, $y1, $z, $num_E, $dir, $level] if $elem;
+						[$tid++, $elem, $x1, $y1, $z, $num_E, $dir, $level] if $elem;
 				}
 			# balcony lines
 			} elsif ($tile =~ s/^([^xyz]+)B//) {
@@ -985,10 +996,10 @@ sub parse_run {
 					$detail = $num_wall;
 					# we need z at the bottom of the wall, i.e. 28 units less
 					$z = 2*$hole;
-					$z += $rules->[$num_L][3]-14 if defined $rules->[$num_L][3];
+					$z += $rules->[$num_L][4]-14 if defined $rules->[$num_L][4];
 					#print "balcony on wall $num_wall at $x1,$y1,$z seen\n";
 					push @$rules,
-						[$elem, $x1, $y1, $z, $detail, $dir, $level] if $elem;
+						[$tid++, $elem, $x1, $y1, $z, $detail, $dir, $level] if $elem;
 				}
 			}
 			# other height elements 1..9,+,E,L,xL
@@ -1015,20 +1026,20 @@ sub parse_run {
 				} elsif ($elem eq 'E') {
 					$num_E = 0;
 					my ($xE, $yE) = (0, 0);
-					($xE, $yE) = @{$rules->[$pos_E[-1]]}[1,2] if @pos_E;
+					($xE, $yE) = @{$rules->[$pos_E[-1]]}[2,3] if @pos_E;
 					@pos_E = () if $xE != $x1 or $yE != $y1;
 					push @pos_E, scalar @$rules;
 					$z++;
 				} elsif ($elem =~ /x?L/) {
 					my ($xL, $yL) = (0, 0);
-					($xL, $yL) = @{$rules->[$pos_L[-1]]}[1,2] if @pos_L;
+					($xL, $yL) = @{$rules->[$pos_L[-1]]}[2,3] if @pos_L;
 					@pos_L = () if $xL != $x1 or $yL != $y1;
 					push @pos_L, scalar @$rules;
 					$z += 14;
 				}
 				# for all height elements
 				push @$rules,
-					[$elem, $x1, $y1, $z, $detail, $dir, $level] if $elem;
+					[$tid++, $elem, $x1, $y1, $z, $detail, $dir, $level] if $elem;
 			}
 			# candidates for transparent plane positions
 			push @$planepos, [$x1, $y1, $z, $level] if ! $tile and $elem !~ /[=^]|x[lms]/;
@@ -1099,7 +1110,7 @@ sub parse_run {
 					if $tile and grep {$_ !~ /x[lms]/} @items;
 			}
 			$dir ||= 0; # default for missing direction
-			$f = [$tile, $x1, $y1, $z, $detail, $dir, $level];
+			$f = [$tid++, $tile, $x1, $y1, $z, $detail, $dir, $level];
 			next if ! defined $tile;
 			$self->check_marbles($tile, $dir, $detail, \@items);
 			# store marbles
@@ -1176,7 +1187,7 @@ sub parse_run {
 		}
 	}
 	#use Data::Dumper;print Dumper $planenum, $planepos;
-	unshift @$rules, ['name', $run_name];
+	unshift @$rules, [0, 'name', $run_name];
 	# add the height of transparent planes to the level line and the tiles
 	$self->level_height($rules, $planenum, $planepos);
 	# find wall for the balconies, check orientation and adjust height and level

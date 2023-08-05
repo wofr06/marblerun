@@ -1091,7 +1091,7 @@ sub move_marbles {
 		#print Dumper $rails, $self->{tiles};exit;
 		# find outgoing connecting rail
 		my @out = grep {$t_id == $_->[2] and $m_dir eq $_->[1]} @$rails;
-		say "$m0: search for rail in direction $m_dir connected to tile $t_id";
+		#say "$m0: search for rail in direction $m_dir connected to tile $t_id";
 		if (defined $out[0]) {
 			say "$m0: rail out $out[0]->[0] found, dir $out[0]->[1]" if $dbg;
 			say "$m0: next tile $self->{tiles}{$out[0]->[4]}[0] in dir = $out[0]->[7]" if $dbg;
@@ -1458,7 +1458,7 @@ sub spiral_path {
 sub emit_svg {
 	my ($self, $name, $level) = @_;
 	my $svg = $self->{svg};
-	return if ! $self->{svg};
+	return if ! $self->{svg} or ! defined $self->{outputfile};
 	my $svgfile = $self->{outputfile} or
 		$self->get_file_name('', 'svg', loc("ENTER to exit"), 0);;
 	$svgfile =~ s/\.svg$// if defined $svgfile;

@@ -11,7 +11,7 @@ use Locale::Maketext::Simple (Style => 'gettext');
 $Game::MarbleRun::VERSION = '1.11';
 my $homedir = $ENV{HOME} || $ENV{HOMEPATH} || die "unknown homedir\n";
 $Game::MarbleRun::DB_FILE = "$homedir/.gravi.db";
-$Game::MarbleRun::DB_SCHEMA_VERSION = 10;
+$Game::MarbleRun::DB_SCHEMA_VERSION = 11;
 
 sub new {
 	my ($class, %attr) = @_;
@@ -340,7 +340,9 @@ DROP TABLE IF EXISTS `set_element`;
 CREATE TABLE IF NOT EXISTS `set_element` (
 	sets_id integer,
 	element TEXT,
-	count integer
+	count integer,
+	FOREIGN KEY (sets_id) REFERENCES sets (id)
+		ON DELETE CASCADE ON UPDATE NO ACTION
 );
 CREATE TABLE IF NOT EXISTS `person` (
 	id INTEGER PRIMARY KEY,
@@ -351,13 +353,19 @@ CREATE TABLE IF NOT EXISTS `person_set` (
 	person_id INTEGER,
 	set_id INTEGER,
 	count INTEGER,
-	comment TEXT
+	comment TEXT,
+	FOREIGN KEY (person_id) REFERENCES person (id)
+		ON DELETE CASCADE ON UPDATE NO ACTION,
+	FOREIGN KEY (set_id) REFERENCES sets (id)
+		ON DELETE CASCADE ON UPDATE NO ACTION
 );
 CREATE TABLE IF NOT EXISTS `person_elem` (
 	person_id INTEGER,
 	element TEXT,
 	count INTEGER,
-	comment TEXT
+	comment TEXT,
+	FOREIGN KEY (person_id) REFERENCES person (id)
+		ON DELETE CASCADE ON UPDATE NO ACTION
 );
 CREATE TABLE IF NOT EXISTS `run` (
 	id INTEGER PRIMARY KEY,
@@ -372,40 +380,50 @@ CREATE TABLE IF NOT EXISTS `run` (
 	marbles INTEGER
 );
 CREATE TABLE IF NOT EXISTS `run_tile` (
-	id INTEGER PRIMARY KEY,
-	run_id INTEGER,
+	id INTEGER NOT NULL,
+	run_id INTEGER NOT NULL,
 	element TEXT,
 	posx INTEGER,
 	posy INTEGER,
 	posz INTEGER,
 	orient INTEGER,
 	detail INTEGER,
-	level INTEGER
+	level INTEGER,
+	FOREIGN KEY (run_id) REFERENCES run (id)
+		ON DELETE CASCADE ON UPDATE NO ACTION
 );
 CREATE TABLE IF NOT EXISTS `run_rail` (
 	id INTEGER PRIMARY KEY,
-	run_id INTEGER,
+	run_id INTEGER NOT NULL,
 	element TEXT,
 	direction INTEGER,
 	tile1_id INTEGER,
 	tile2_id INTEGER,
-	detail INTEGER
+	detail INTEGER,
+	FOREIGN KEY (run_id) REFERENCES run (id)
+		ON DELETE CASCADE ON UPDATE NO ACTION
 );
 CREATE TABLE IF NOT EXISTS `run_marble` (
 	run_id INTEGER,
 	tile_id INTEGER,
 	orient INTEGER,
-	color TEXT
+	color TEXT,
+	FOREIGN KEY (run_id) REFERENCES run (id)
+		ON DELETE CASCADE ON UPDATE NO ACTION
 );
 CREATE TABLE IF NOT EXISTS `run_comment` (
 	run_id INTEGER,
 	tile_id INTEGER,
-	comment
+	comment,
+	FOREIGN KEY (run_id) REFERENCES run (id)
+		ON DELETE CASCADE ON UPDATE NO ACTION
 );
 CREATE TABLE IF NOT EXISTS `run_no_elements` (
 	run_id INTEGER,
 	board_x INTEGER,
-	board_y INTEGER
+	board_y INTEGER,
+	FOREIGN KEY (run_id) REFERENCES run (id)
+		ON DELETE CASCADE ON UPDATE NO ACTION
 );
 EOF
 	# use arrayrefs to keep the ordering (letters 'cwy' unused)
@@ -1185,6 +1203,7 @@ sub display_run {
 		$self->{outputfile} = $self->get_file_name($self->{outputfile}, 'svg',
 			loc("ENTER to continue without SVG output"), 1)
 			if ! $self->{outputfile};
+			$self->{outputfile} = undef if ! $self->{outputfile};
 		$self->board($by, $bx, $run_id, $self->{fill}, $excl);
 	}
 	# SVG end #
