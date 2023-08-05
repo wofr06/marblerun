@@ -313,8 +313,38 @@ sub connect_db {
 		my $yn = $self->prompt(loc("Upgrade the DB now?"));
 		my $Y = loc('Y');
 		create_tables($dbh) if $yn =~ /^[y$Y]/i;
+		upgrade_run_tile($dbh) if $yn =~ /^[y$Y]/i and $vers < 11;
 	}
 	return $dbh;
+}
+
+sub upgrade_run_tile {
+	my ($dbh) = @_;
+	my $sql = <<EOF;
+PRAGMA foreign_keys=off;
+BEGIN TRANSACTION;
+CREATE TABLE IF NOT EXISTS `run_tile2` (
+	id INTEGER NOT NULL,
+	run_id INTEGER NOT NULL,
+	element TEXT,
+	posx INTEGER,
+	posy INTEGER,
+	posz INTEGER,
+	orient INTEGER,
+	detail INTEGER,
+	level INTEGER,
+	FOREIGN KEY (run_id) REFERENCES run (id)
+		ON DELETE CASCADE ON UPDATE NO ACTION
+);
+INSERT INTO run_tile2(id,run_id,element,posx,posy,posz,orient,detail,level)
+SELECT id,run_id,element,posx,posy,posz,orient,detail,level
+FROM run_tile;
+DROP TABLE run_tile;
+ALTER TABLE run_tile2 RENAME TO run_tile;
+COMMIT;
+PRAGMA foreign_keys=on;
+EOF
+	$dbh->do($_) for split /;/, $sql;
 }
 
 sub create_tables {
