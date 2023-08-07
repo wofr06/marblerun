@@ -48,105 +48,6 @@ sub process_input {
 	return $self->{warn};
 }
 
-sub find_to_tile {
-	#r: from_id chr x1 y1 z1 detail orient level, x2, y2, rail_id, dir wall
-	#         0   1  2  3  4      5      6     7   8   9       10   11   12
-	# t: tile_id tile_char, x, y, z, detail, orient level
-	#          0         1  2  3  4       5       6     7
-	my ($self, $rail, $seen) = @_;
-	my ($q, $tile, $xf, $yf, $z, $d0, $d1, $l, $x, $y, $r, $dir, $wall) = @$rail;
-	# finish line does not end on a tile
-	return undef if $r eq 'e';
-	my @ids = grep {! $self->no_rail_connection($_->[1]) and
-		$_->[2] == $x and $_->[3] == $y} sort {$b->[4] <=> $a->[4]} @$seen;
-	if ($r =~ /x[sml]/) {
-		@ids = grep {$_->[1] =~ /L/} @ids;
-		for (@ids) {
-			return $_->[0] if abs($_->[4] - $z) <= 1;
-		}
-		$self->error("No pillar for end of wall %1 at %2", $wall,
-			$self->num2pos($x, $y));
-		return undef;
-	} else {
-		@ids = grep {$_->[1] !~ /L/} @ids;
-		my @from = grep {$rail->[0] == $_->[0]} @$seen;
-		my $from = $from[0]->[1];
-		# generate entries for to tiles with connections at more than one z:
-		# lift, spiral, dispenser, tiptube, helix, turntable
-		for my $tile (grep {exists $self->{conn1}{$_->[1]}} @ids) {
-			my @keys = keys %{$self->{conn1}{$tile->[1]}};
-			for my $k (@keys) {
-				my @t;
-				push @t, $_ for @$tile;
-				if ($k =~ /^\d+$/) {
-					$t[4] += $k;
-				} elsif ($t[1] eq 'xF') {
-					my $n = $1 if $t[5] =~ /(\d)/;
-					$t[4] += 7 + 8*($n - 2);
-				} elsif ($t[1] eq 'xH') {
-					$t[4] += $t[5];
-				}
-				push @ids, [@t];
-			}
-		}
-
-		# generate multiple entries for from tile
-		my @id2 = ($from[0]);
-		if (defined $from and exists $self->{conn1}{$from}) {
-			my @keys = keys %{$self->{conn1}{$from}};
-			for my $k (@keys) {
-				my @t2 = @{$from[0]};
-				if ($k =~ /^\d+$/) {
-					$t2[4] += $k;
-				} elsif ($t2[1] eq 'xF') {
-					my $n = $1 if $t2[5] =~ /(\d)/;
-					$t2[4] += 7 + 8*($n - 2);
-				} elsif ($t2[1] eq 'xH') {
-					$t2[4] += $t2[5];
-				}
-				push @id2, [@t2];
-			}
-		}
-		return undef if ! @ids;
-		# resolve ambiguity by sorting according to z difference
-		my %dz0 = (t=>6, a=>5, b=>14, c=>5, d=>5, xT=>2, xM=>7, yH=>7, yS=>7,
-			yT=>7, xt=>6);
-		my %dz1 = (s =>5, m=>7, l=>8, t=>8, a=>7, b=>18, c=>7, d=>7, g=>7,
-			q=>7, xT=>2, xM=>7, yH=>7, yS=>7, yT=>7, xt=>8);
-		my $zlow = exists $dz0{$r} ? $dz0{$r} : 0;
-		my $zhigh = exists $dz1{$r} ? $dz1{$r} : 10;
-		my $id_min = $ids[0];
-		return $id_min if ! @ids;
-		my $id_strict;
-		my $zmin = abs($id2[0]->[4] - $id_min->[4]);
-		my $zstrict = 999;
-		for my $f (@id2) {
-			for my $t (@ids) {
-				my $zdiff = abs($f->[4] - $t->[4]);
-
-				if ($zdiff < $zmin) {
-					$zmin = $zdiff;
-					$id_min = $t;
-				}
-				if ($zdiff < $zstrict and $zdiff >= $zlow and $zdiff <=$zhigh) {
-					$zstrict = $zdiff;
-					$id_strict = $t;
-				}
-			}
-		}
-		undef $zstrict if $zstrict == 999;
-		my $zdiff = $zstrict || $zmin;
-		#use Data::Dumper;print Dumper $id_min, $id_strict, \@ids, \@id2 if $ids[0]->[1] eq 'yK';
-		warn loc("Warning: height difference %1 from z=%4 at %5 for rail %2 at %3 maybe too small\n",
-			$zdiff/2., $r, $self->num2pos($x, $y), $z/2., $self->num2pos($xf, $yf)) if $zdiff < $zlow;
-		warn loc("Warning: height difference %1 from z=%4 at %5 for rail %2 at %3 maybe too large\n",
-			$zdiff/2., $r, $self->num2pos($x, $y), $z/2.,
-			$self->num2pos($xf, $yf)) if $zdiff > $zhigh;
-		return $id_strict->[0] || $id_min->[0];
-	}
-	return undef;
-}
-
 sub no_rail_connection {
 	my ($self, $elem) = @_;
 	return 1 if ! $elem or $elem =~ /\d+|^[+\^=BEOR]|\|/;
@@ -176,161 +77,177 @@ sub rail_xy {
 
 sub verify_rail_endpoints {
 	my ($self, $data) = @_;
-	# possible connections on tiles
-	my $cases = $self->{conn0};
 	# remember the tile positions
-	my %t_pos;
-	my ($level, $z0) = (0, 0);
-	for (@$data) {
-		if ($_->[1] eq 'line') {
-			$self->{line}= $_->[2];
-			next;
+	my ($t_pos);
+	my $level = 0;
+	for my $i (0 .. $#$data) {
+		my $t = $data->[$i];
+		if ($t->[1] eq 'line') {
+			$self->{line}= $t->[2];
+		} elsif ($t->[1] eq 'level') {
+			$level = $t->[2];
 		}
-		($level, $z0) = ($_->[2], $_->[3]) if $_->[1] eq 'level';
-		# exclude header data
-		next if ! $_->[0];
-		my $z = $_->[4] || 0;
-		$z -= 14 if $_->[1] =~ /L/;
-		# exclude elements that cannot be start/end points for rails
-		next if $self->no_rail_connection($_->[1]);
-		my $pos = $self->num2pos($_->[2], $_->[3]);
-		$self->error("At %1 level %2 ($_->[4]) is already a tile %3",
-			$pos, $level, $t_pos{$pos}{$z}->[1]) if exists $t_pos{$pos}{$z};
-		$t_pos{$pos}{$z} = [$_->[0], $_->[1], $_->[6]] if $_->[1];
+		next if ! $t->[0];
+		next if $self->no_rail_connection($t->[1]);
+		my $z = $t->[4] || 0;
+		my $pos = $self->num2pos($t->[2], $t->[3]);
+		$self->error("At %1 level %2 ($z) is already a tile %3", $pos, $level,
+			$data->[$t_pos->{$pos}{$z}][1]) if exists $t_pos->{$pos}{$z};
+		$z -= 14 if $t->[1] =~ /L/;
+		$t_pos->{$pos}{$z} = $i;
 	}
-	#use Data::Dumper;print Dumper $data;exit;
 	# check if connections exist with that orientation of tiles and rail
 	for my $t (@$data) {
 		if ($t->[1] eq 'line') {
 			$self->{line}= $t->[2];
-			next;
 		}
+		# exclude header data
+		next if ! $t->[0];
+		# exclude elements that cannot be start points for rails
+		next if $self->no_rail_connection($t->[1]);
+		my $z = $t->[4] || 0;
 		for my $r (@$t[8..$#$t]) {
 			# skip marble data
 			next if $r->[0] eq 'o';
-			# exclude elements that cannot be start points for rails
-			next if $self->no_rail_connection($t->[1]);
 			my $from = $self->num2pos($t->[2], $t->[3]);
 			my $to = $self->num2pos($r->[0], $r->[1]);
 			# special case finish line
 			if ($r->[2] eq 'e') {
 				$self->error("Already a tile at end point of %1",
-					$self->{elem_name}{$r->[2]}) if exists $t_pos{$to};
-			} elsif (exists $t_pos{$to}) {
-				# from tile
-				my ($tid, $tile, $dir, $to_dir, $ok);
-				for my $k (keys %{$t_pos{$from}}) {
-					$ok = 0;
-					($tid, $tile, $dir) = @{$t_pos{$from}{$k}};
-					# ignore checks for new/unknown tiles
-					if ($tile =~ /\|/) {
-						$ok = 1;
-						last;
+					$self->{elem_name}{$r->[2]}) if exists $t_pos->{$to};
+				next;
+			}
+			# from tile
+			my $z_from = $self->rail_connection($t, $r);
+			$_ += $t->[4] for @$z_from;
+			# to tiles
+			my $z_to;
+			my $reverse = 3;
+			# vertical rail: no reverse, curved rail, flextube: adjust
+			if ($r->[2] eq 't') {
+				$reverse = 0;
+			} elsif ($r->[2] eq 'c') {
+				$reverse = 2;
+			} elsif ($r->[2] eq 'd') {
+				$reverse = 4;
+			} elsif ($r->[2] eq 'xt') {
+				$reverse = 3 + $r->[4] - $r->[3];
+			}
+			for my $z (keys %{$t_pos->{$to}}) {
+				my $i = $t_pos->{$to}{$z};
+				# special case for walls
+				if ($r->[2] =~ /x[sml]/) {
+					my $ind = $data->[$i];
+					if ($ind->[1] =~ /L/ and abs($z + 14 - $ind->[4]) <= 1) {
+						$r->[5] =$ind->[0];
+						$z_to = [[$i, $ind->[4] + 14]];
 					}
-					my $case2;
-					if ($tile and exists $self->{conn1}{$tile}) {
-						for my $k (keys %{$self->{conn1}{$tile}}) {
-							push @{$case2->{$tile}}, $_
-								for @{$self->{conn1}{$tile}{$k}};
-						}
-					}
-					if ($tile eq 'xH') {
-						# marble can come from above
-						undef $case2->{xH};
-						# direction in for spiral depends on number of elements
-						$case2->{xH}[0] = (2*$t->[5] - 1)%6 if $t->[1] eq 'xH';
-					}
-					if ($tile eq 'xF' and $t->[1] eq 'xF') {
-						# direction out for lift at z!=0 is stored in detail
-						$case2->{xF}[0] = ord($1) - 97 if $t->[5] =~ /([a-f])/;
-						$case2->{xF}[0] = ($case2->{xF}[0] - $t->[6]) % 6;
-					}
-					my $my_dir = $r->[3];
-					$ok = 1 if defined $dir
-						and grep {$my_dir == ($_+$dir)%6} @{$cases->{$tile}};
-					if ($tile and exists $self->{conn1}{$tile}) {
-						$ok = 1 if defined $dir
-							and grep {$my_dir==($_+$dir)%6} @{$case2->{$tile}};
-					}
-					my $reverse = 0;
-					$ok = 1 if $tile =~/L/;
-					last if $ok;
-
+					next;
 				}
-				my $chr = defined $dir ? chr(97 + $dir) : '?';
+				my $zs = $self->rail_connection($data->[$i], $r, $reverse);
+				push @$z_to, [$i, $_ + $data->[$i][4]] for @$zs;
+				$r->[5] = $data->[$i][0] if $z_to;
+			}
+			#say "$t->[1] $from -> rail $r->[2]", chr(97 + $r->[3]), " to $to (z=@$z_from)";
+			#for my $z_inc (@$z_from) {
+			#	say " from z=", $z_inc, " to ", $data->[$_->[0]][1], " z=", $_->[1] for @$z_to;
+			#}
+			my $chr = defined $t->[6] ? chr(97 + $t->[6]) : '?';
+			if (! $z_from) {
 				my $to_chr = defined $r->[3] ? chr(97 + $r->[3]) : '?';
-				$self->error("No connection from tile %1 at %2 orientation %3 to rail %4%5", $tile, $from, $chr, $r->[2], $to_chr) if ! $ok;
-				# to tile
-				$ok = 0;
-				for my $k (sort {$a <=> $b} keys %{$t_pos{$to}}) {
-					($tid, $tile, $dir) = @{$t_pos{$to}{$k}};
-					# special case for walls
-					if ($r->[2] =~ /x[sml]/) {
-						$ok = 1 if $tile =~ /L/ and abs($k - $t->[4]) <= 1;
-						$to_dir = $r->[3];
-						#say "tile $tile wall=$r->[4] z=$k:$t->[4]";
-						next;
-					}
-					my $case2;
-					if ($tile and exists $self->{conn1}{$tile}) {
-						for my $k (keys %{$self->{conn1}{$tile}}) {
-							push @{$case2->{$tile}}, $_
-								for @{$self->{conn1}{$tile}{$k}};
-						}
-					}
-					# skip height tiles, missing dir was already reported
-					next if ! $tile;
-					# variable direction for spiral in and Lift out
-					if ($tile eq 'xH') {
-						my ($h) = grep {$_->[1] eq 'xH' and $r->[0] == $_->[2]
-							and $r->[1] == $_->[3]} @$data;
-						$case2->{xH}[0] = (2*$h->[5] - 1) % 6;
-					}
-					if ($tile eq 'xF') {
-						my ($f) = grep {$_->[1] eq 'xF' and $r->[0] == $_->[2]
-							and $r->[1] == $_->[3]} @$data;
-						$cases->{xF}[0] = ord($1) - 97 if $f->[5] =~ /([a-f])/;
-						$cases->{xF}[0] = ($cases->{xF}[0] - $dir) % 6;
-					}
+				$self->error("No connection between tile %1 at %2 orientation %3 and rail %4%5", $t->[1], $from, $chr, $r->[2], $to_chr);
+			}
+			if (! $z_to) {
+				my $rail_dir = ($r->[3] + $reverse) % 6;
+				my $to_chr = defined $rail_dir ? chr(97 + $rail_dir) : '?';
+				$self->error("No connection to a tile from %1 at %2 orientation %3 and rail %4%5", $t->[1], $from, $chr, $r->[2], $to_chr);
+			}
+			# resolve z ambiguities
+			$self->resolve_z($r, $z_from, $z_to, $from, $data) if $z_from and $z_to;
+		}
+	}
+}
 
-					my $reverse = 3;
-					# vertical rail: no reverse, curved rail, flextube: adjust
-					if ($r->[2] eq 't') {
-						$reverse = 0;
-					} elsif ($r->[2] eq 'c') {
-						$reverse = 2;
-					} elsif ($r->[2] eq 'd') {
-						$reverse = 4;
-					} elsif ($r->[2] eq 'xt') {
-						$reverse = 3 + $r->[4] - $r->[3];
-					}
-					$to_dir = ($r->[3] + $reverse) % 6;
-					$ok = 1 if defined $dir
-						and grep {$to_dir == ($_+$dir)%6} @{$cases->{$tile}};
-					if ($tile and exists $self->{conn1}{$tile}) {
-						$ok = 1 if defined $dir
-							and grep {$to_dir==($_+$dir)%6} @{$case2->{$tile}};
-					}
-				}
-				$chr = defined $dir ? chr(97 + $dir) : '?';
-				$to_chr = defined $to_dir ? chr(97 + $to_dir) : '?';
-				$self->error("No connection from rail %4%5 to tile %1 at %2 orientation %3", $tile, $to, $chr, $r->[2], $to_chr) if ! $ok;
-				#say "id $tid ($tile) for $t->[0] ($t->[1]) [$t->[2],$t->[3],$t->[4]] rail $r->[2] dir $to_dir";
-				push @$r, $tid;
-
-			# rail end point missing
-			} else {
-				my $rail = loc($self->{elem_name}{$r->[2]});
-				my $from = $self->num2pos($t->[2],$t->[3]);
-				if ($r->[2] =~ /x[lms]/) {
-					$self->error("No pillar at %1 %2 -> %3", $rail, $from, $to);
-				} else {
-					$self->error("No tile at %1 %2 -> %3", $rail, $from, $to);
-				}
+sub resolve_z {
+	my ($self, $r, $from, $to, $t_pos, $data) = @_;
+	return if @$from == 1 and @$to == 1;
+	$from = [sort {$a <=> $b} @$from];
+	$to = [sort {$a->[1] <=> $b->[1]} @$to];
+	# resolve ambiguity by sorting according to z difference
+	my %dz0 = (t=>6, a=>5, b=>14, c=>5, d=>5, xT=>2, xM=>7, yH=>7, yS=>7,
+		yT=>7, xt=>6);
+	my %dz1 = (s =>5, m=>7, l=>8, t=>8, a=>7, b=>18, c=>7, d=>7, g=>7,
+		q=>7, xT=>2, xM=>7, yH=>7, yS=>7, yT=>7, xt=>8);
+	my $zlow = exists $dz0{$r} ? $dz0{$r} : 0;
+	my $zhigh = exists $dz1{$r} ? $dz1{$r} : 10;
+	my $id_min = $to->[0][0];
+	my $id_strict;
+	my $zmin = abs($to->[0][1] - $from->[0]);
+	my $zstrict = 999;
+	for my $zf (@$from) {
+		for my $t (@$to) {
+			my $zdiff = abs($zf - $t->[1]);
+			if ($zdiff < $zmin) {
+				$zmin = $zdiff;
+				$id_min = $t->[0];
+			}
+			if ($zdiff < $zstrict and $zdiff >= $zlow and $zdiff <=$zhigh) {
+				$zstrict = $zdiff;
+				$id_strict = $t->[0];
 			}
 		}
 	}
-	#use Data::Dumper;print Dumper \%t_pos;exit;
+	undef $zstrict if $zstrict == 999;
+	my $zdiff = $zstrict || $zmin;
+	my $id = $id_strict || $id_min;
+	$r->[5] = $data->[$id][0];
+	my ($xf, $yf, $z) = @{$data->[$id]}[2,3,4];
+	#say " z=$z taken";
+	#use Data::Dumper;print Dumper $id_min, $id_strict, $from, $to if $data->[id][1] eq 'yK';
+	warn loc("Warning: height difference %1 from z=%4 at %5 for rail %2 at %3 maybe too small\n",
+		$zdiff/2., $r->[2], $t_pos, $z/2., $self->num2pos($xf, $yf)) if $zdiff < $zlow;
+	warn loc("Warning: height difference %1 from z=%4 at %5 for rail %2 at %3 maybe too large\n",
+		$zdiff/2., $r, $t_pos, $z/2.,
+		$self->num2pos($xf, $yf)) if $zdiff > $zhigh;
+}
+
+sub rail_connection {
+	my ($self, $t, $r, $reverse) = @_;
+	my $tile = $t->[1];
+	my $z_from;
+	$reverse ||= 0;
+	my $rail_dir = ($r->[3] + $reverse) % 6;
+	my $tile_dir = $t->[6];
+	# ignore checks for pillars and new/unknown tiles
+	if ($tile =~ /L|\|/) {
+		$z_from = [0] if $r->[2] =~ /x[sml]/ or $tile =~ /\|/;
+	} else {
+		my $case2;
+		if ($tile eq 'xH') {
+			# direction in for spiral depends on number of elements
+			my $in = $1 if $t->[5] =~ /([0-5])/;
+			$case2 = [[(2*$in - 1)%6, $in]] if defined $in;
+		} elsif ($tile eq 'xF') {
+			# direction out for lift at z!=0 is stored in detail
+			my $out = ord($2) - 97 if $t->[5] =~ /(\d)([a-f])/;
+			$case2 = [[($out - $t->[6]) % 6, 7*($1 - 1)]] if $out;
+		} elsif ($tile ne 'J' and exists $self->{conn1}{$tile}) {
+			for my $k (keys %{$self->{conn1}{$tile}}) {
+				push @$case2, [$_, $k]
+					for @{$self->{conn1}{$tile}{$k}};
+			}
+		}
+		if (defined $tile_dir
+			and grep {$rail_dir == ($_+$tile_dir)%6} @{$self->{conn0}{$tile}}) {
+			$z_from = [0];
+		}
+		for my $case (@$case2) {
+			if (defined $tile_dir and $rail_dir==($case->[0] + $tile_dir) % 6) {
+				push @$z_from, $case->[1];
+			}
+		}
+	}
+	return $z_from;
 }
 
 sub store_person {
@@ -577,14 +494,12 @@ sub store_run {
 			$self->{line}= $r->[1];
 			next;
 		}
-		#print Dumper $r;exit;
 		#r: from_id chr x1 y1 z1 detail orient level, x2, y2, rail_id, dir wall
 		#         0   1  2  3  4      5      6     7   8   9       10   11   12
+		# t: tile_id tile_char, x, y, z, detail, orient level
+		#          0         1  2  3  4       5       6     7
 		# chose correct tile: tile normally placed at same or lower level
-		my $id = $self->find_to_tile($r, $seen);
-		$id = $r->[-1];
-		my @elem = grep {$_->[0] == $id} @$seen;
-		#say "id=$id ($elem[0]->[1]) for $r->[0] ($r->[1]) [@$r[2,3,4]] rail $r->[10] dir $r->[11]";
+		my $id = $r->[13];
 		undef $id if defined $id and $id == $r->[0];
 		# finish lines have no end tile
 		if ($id or $r->[10] eq 'e') {
@@ -1400,15 +1315,6 @@ Finally the data get stored in the DB. The file format is described in
 Game::MarbleRun.
 
 =head1 HELPER METHODS
-
-=head2 find_to_tile
-
-$tile_id = $g->find_to_tile($rail, $seen);
-
-returns the tile_id for the end point of a rail from the database table
-run_tile. The seen variable is an arrayref populated with information from
-all seen tiles and rail is an arrayref that contains the rail description
-(from and to positions, rail symbol etc.). Returns undef on error.
 
 =head2 no_rail_connection
 
