@@ -998,7 +998,7 @@ sub display_balls {
 			next if ! $str;
 			my ($m_id, $dir, $color) = ($str =~ /^(\d+)o(.)(.)/);
 			next if defined $xyz->[$m_id][0];
-			say "$sym at $x,$y marble $m_id dir $dir, color $color" if $dbg;
+			say "$sym at $x,$y marble $m_id dir $dir, color $color $str" if $dbg;
 			$mult{$dir}++;
 			my $desc = [$m_id, $dir, $color];
 			$self->put_Balls($x, $y, $mult{$dir}*$self->{offset}{$sym}, $desc);
@@ -1342,6 +1342,11 @@ sub generate_path {
 				my $r = 1.5*$self->{width3};
 				my $flip = $self->{rail}{$sym}[4] > 0 ? 0 : 1;
 				$path .= "A $r $r 0 0 $flip $x $y";
+			} elsif ($sym eq 't') {
+				$dx = 0.5*$dx;
+				$dy = 0.5*$dy;
+				$path .= " L " . ($x - $dx) . ' ' . ($y - $dy);
+				$path .= " l $dx $dy";
 			} else {
 				$path .= " L $x $y";
 			}
@@ -1351,6 +1356,7 @@ sub generate_path {
 			$path .= spiral_path($x - $x0, $y -$y0, $r, $turns, $dir);
 		} elsif ($sym !~ /^[ADMZ]$|^xT$/) {
 			my $out = $xyz->[$i+1][4];
+			$out = ($out + 3) % 6 if $xyz->[$i+1][0] eq 't';
 			$out = $dir if ! defined $out or $out !~ /^\d$/;
 			my ($dx, $dy) = ($self->{middle_x}[$out], $self->{middle_y}[$out]);
 			$x += $dx - $x0;

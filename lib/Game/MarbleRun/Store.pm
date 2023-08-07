@@ -10,6 +10,8 @@ use Game::MarbleRun::I18N;
 use Locale::Maketext::Simple (Style => 'gettext', Class => 'Game::MarbleRun');
 use Digest::MD5 qw(md5_base64);
 
+my $dbg = 0;
+
 sub new {
 	my ($class, %attr) = @_;
 	my $self = {};
@@ -148,28 +150,34 @@ sub verify_rail_endpoints {
 				push @$z_to, [$i, $_ + $data->[$i][4]] for @$zs;
 				$r->[5] = $data->[$i][0] if $z_to;
 			}
-			#say "$t->[1] $from -> rail $r->[2]", chr(97 + $r->[3]), " to $to (z=@$z_from)";
-			#for my $z_inc (@$z_from) {
-			#	say " from z=", $z_inc, " to ", $data->[$_->[0]][1], " z=", $_->[1] for @$z_to;
-			#}
+			if ($dbg) {
+				say "$t->[1] $from -> rail $r->[2]", chr(97 + $r->[3]),
+					" to $to (z=@$z_from)";
+				for my $z_inc (@$z_from) {
+					say " from z=", $z_inc, " to ", $data->[$_->[0]][1],
+						" z=", $_->[1] for @$z_to;
+				}
+			}
 			my $chr = defined $t->[6] ? chr(97 + $t->[6]) : '?';
-			if (! $z_from) {
+			if (! @{$z_from}) {
 				my $to_chr = defined $r->[3] ? chr(97 + $r->[3]) : '?';
 				$self->error("No connection between tile %1 at %2 orientation %3 and rail %4%5", $t->[1], $from, $chr, $r->[2], $to_chr);
 			}
-			if (! $z_to) {
+			if (! @{$z_to}) {
 				my $rail_dir = ($r->[3] + $reverse) % 6;
 				my $to_chr = defined $rail_dir ? chr(97 + $rail_dir) : '?';
 				$self->error("No connection to a tile from %1 at %2 orientation %3 and rail %4%5", $t->[1], $from, $chr, $r->[2], $to_chr);
 			}
 			# resolve z ambiguities
-			$self->resolve_z($r, $z_from, $z_to, $from, $data) if $z_from and $z_to;
+			$self->resolve_z($r, $z_from, $z_to, $from, $data);
 		}
 	}
 }
 
 sub resolve_z {
 	my ($self, $r, $from, $to, $t_pos, $data) = @_;
+	return if ! @$from or ! @$to;
+	$r->[5] = $data->[$to->[0][0]][0] if @$to == 1;
 	return if @$from == 1 and @$to == 1;
 	$from = [sort {$a <=> $b} @$from];
 	$to = [sort {$a->[1] <=> $b->[1]} @$to];
@@ -178,10 +186,11 @@ sub resolve_z {
 		yT=>7, xt=>6);
 	my %dz1 = (s =>5, m=>7, l=>8, t=>8, a=>7, b=>18, c=>7, d=>7, g=>7,
 		q=>7, xT=>2, xM=>7, yH=>7, yS=>7, yT=>7, xt=>8);
-	my $zlow = exists $dz0{$r} ? $dz0{$r} : 0;
-	my $zhigh = exists $dz1{$r} ? $dz1{$r} : 10;
+	my $zlow = exists $dz0{$r->[2]} ? $dz0{$r->[2]} : 0;
+	my $zhigh = exists $dz1{$r->[2]} ? $dz1{$r->[2]} : 10;
 	my $id_min = $to->[0][0];
 	my $id_strict;
+	exit if ! defined $to->[0][1];
 	my $zmin = abs($to->[0][1] - $from->[0]);
 	my $zstrict = 999;
 	for my $zf (@$from) {
@@ -202,8 +211,7 @@ sub resolve_z {
 	my $id = $id_strict || $id_min;
 	$r->[5] = $data->[$id][0];
 	my ($xf, $yf, $z) = @{$data->[$id]}[2,3,4];
-	#say " z=$z taken";
-	#use Data::Dumper;print Dumper $id_min, $id_strict, $from, $to if $data->[id][1] eq 'yK';
+	say " z=$z taken" if $dbg;
 	warn loc("Warning: height difference %1 from z=%4 at %5 for rail %2 at %3 maybe too small\n",
 		$zdiff/2., $r->[2], $t_pos, $z/2., $self->num2pos($xf, $yf)) if $zdiff < $zlow;
 	warn loc("Warning: height difference %1 from z=%4 at %5 for rail %2 at %3 maybe too large\n",
@@ -465,6 +473,7 @@ sub store_run {
 		}
 		my @val = @{$d}[0..7];
 		$val[4] ||= 0; # check for unassigned z value
+		say "store $val[0], $run_id", map {defined $_ ? " $_" : ' ?'} @val[1 .. 7] if $dbg;
 		$sth_i_rt->execute($val[0], $run_id, @val[1 .. 7]);
 		next if $self->no_rail_connection($val[1]) and ! $comment;
 		my $id = $val[0];
@@ -509,12 +518,13 @@ sub store_run {
 					loc($self->{elem_name}{$r->[10]}), $self->num2pos($r->[8],
 					$r->[9]), $self->num2pos($r->[2], $r->[3]));
 			} else {
+				say "store $r->[0], $id, @{$r}[10, 11]" if $dbg;
 				$sth_i_rr->execute($run_id, $r->[0], $id, @{$r}[10, 11, 12]);
 			}
 		} else {
 			$self->error("No end point for %1 from %2 to %3",
-				$r->[9],
-				#loc($self->{elem_name}{$r->[9]}),
+				$r->[10],
+				#loc($self->{elem_name}{$r->[10]}),
 				$self->num2pos($r->[2], $r->[3]),
 				$self->num2pos($r->[8], $r->[9]));
 		}
@@ -627,11 +637,9 @@ sub plane_lines {
 
 sub level_height {
 	my ($self, $rules, $off_xy, $h) = @_;
-	#use Data::Dumper;print Dumper $off_xy, $h;
 	my @ldone =(0);
 	for my $lev (sort keys %$off_xy) {
 		my ($x0, $y0) = @{$off_xy->{$lev}};
-		#print "height for level $lev at $x0,$y0\n";
 		if (! defined $x0) {
 			$self->error("Position unknown for level %1", $lev);
 			return;
@@ -644,14 +652,11 @@ sub level_height {
 			for (@$h) {
 				my ($x, $y, $z, $l) = @$_;
 				next if ! grep {$l == $_} @ldone;
-				#print "test $x,$y h $z level $l\n";
 				next if abs($x - $x0) > $delta - 1 or abs($y - $y0) > $delta - 1;
 				next if abs($x - $x0) + abs($y - $y0) > $delta;
-				#print "accept $x,$y\n";
 				$height = $z if $z > $height;
 				$height{$z}++;
 			}
-			#use Data::Dumper;print Dumper \%height;
 			$z = $height + 1;
 			my $h_elems = exists $height{$height} ? $height{$height} : 0;
 			warn loc("Only %1 height elements for plane %2 seen\n", $h_elems, $lev) if $h_elems < 3;
@@ -795,12 +800,9 @@ sub parse_run {
 			my ($x1, $y1, $z, $tile_id, $tile_name, $r, $dir, $detail, $f);
 			my ($pos, $tile, @items) = split;
 			($y1, $x1) = $self->get_pos($pos, $rel_pos);
-			#say "xy= $x1,$y1 tile $tile rel $rel_pos";
 			$off_x = $off_xy->[$level][0] || 0;
 			$off_y = $off_xy->[$level][1] || 0;
 			$plane_type = $off_xy->[$level][2] || 3;
-			#say "plane $plane_type offxy=$off_x $off_y";
-			#say "ground xy $off_xy->[0][0] $off_xy->[0][1]";
 			if (! defined $tile) {
 				$self->error("Position without further data");
 				next;
@@ -831,7 +833,6 @@ sub parse_run {
 				$planenum->{$level} = [$x1, $y1, $plane_type];
 				$level_line_seen = 0;
 				push @$rules, [$tid++, $1, $x1, $y1, undef, undef, undef, $level];
-				#next;
 			}
 			# tile must be on a transparent plane for level > 0
 			my $delta = $plane_type - 1;
@@ -841,7 +842,7 @@ sub parse_run {
 				or abs($x1 - $off_x) + abs($y1 - $off_y) > $delta + 1);
 			# no further analysis if position missing, error reported in get_pos
 			next if ! defined $y1;
-			### height, tile, orientation
+			# height, tile, orientation
 			$z = 0;
 			my $elem;
 			# wall lines
@@ -852,10 +853,8 @@ sub parse_run {
 				$num_wall++;
 				my ($x2, $y2) = $self->rail_xy($elem, $x1, $y1, $dir);
 				($xw, $yw) = ($x1, $y1);
-				#print "wall $elem dir $dir with detail $detail at $xw,$yw to $x2, $y2 seen @pos_L\n";
 				$num_L = $pos_L[$detail - 1] || 0;
 				$num_W = @{$rules->[$num_L]};
-				#use Data::Dumper;print Dumper $detail, $num_L, \@pos_L,$rules->[$num_L-1],$rules->[$num_L],$rules->[$num_L+1];
 				push @{$rules->[$num_L]}, [$x2, $y2, $elem, $dir, $num_wall, $x1, $y1];
 			}
 			# double balcony lines (2nd hole)
@@ -878,7 +877,6 @@ sub parse_run {
 					}
 					$rules->[$pos_E[$num_E]][6] = $dir;
 					$z = $rules->[$pos_E[$num_E++]][4];
-					#print "double balcony at $x1,$y1,$z seen\n";
 					push @$rules,
 						[$tid++, $elem, $x1, $y1, $z, $num_E, $dir, $level] if $elem;
 				}
@@ -912,13 +910,11 @@ sub parse_run {
 					# we need z at the bottom of the wall, i.e. 28 units less
 					$z = 2*$hole;
 					$z += $rules->[$num_L][4]-14 if defined $rules->[$num_L][4];
-					#print "balcony on wall $num_wall at $x1,$y1,$z seen\n";
 					push @$rules,
 						[$tid++, $elem, $x1, $y1, $z, $detail, $dir, $level] if $elem;
 				}
 			}
 			# other height elements 1..9,+,E,L,xL
-			#while ($tile =~ s/^([+\dEL=^]|xL)//) {
 			while ($tile =~ s/^([+\dEL]|xL)//) {
 				$elem = $1;
 				# direction for balconies and pillars (for pillar optional)
@@ -1045,7 +1041,6 @@ sub parse_run {
 				if (s/^(x?[A-Za-w])//) {
 				# all known rails (exists and range of small letters)
 					$r = $1;
-					#print "rail $r: $_\n";
 					my $w_detail;
 					if ($r !~ /^(x?[a-egl-nqs-v])/
 							or ! exists $self->{elem_name}{$r}) {
@@ -1101,13 +1096,11 @@ sub parse_run {
 			push @$rules, $f;
 		}
 	}
-	#use Data::Dumper;print Dumper $planenum, $planepos;
 	unshift @$rules, [0, 'name', $run_name];
 	# add the height of transparent planes to the level line and the tiles
 	$self->level_height($rules, $planenum, $planepos);
 	# find wall for the balconies, check orientation and adjust height and level
 	undef $self->{line};
-	#use Data::Dumper;print Dumper $rules;exit;
 	return $rules;
 }
 
@@ -1337,6 +1330,20 @@ $g->verify_rail_endpoints($data);
 verifies that the rails end on a tile. The data arrayref is the intermediate
 format after parsing and before storage in the DB. Called from store_run.
 
+=head2 resolve_z
+
+$g->resolve_z($rail, $z_from, $z_to, $from_pos, $data);
+
+find the best end point for the rail from $from_pos described by $rail data
+using the possible z positions $z_from and $z_to.
+
+=head2 rail_connection
+
+$z_arrayref = $g->rail_connection($tile, $rail, $reverse);
+
+checks if a rail connection between the starting tile $tile and the rail
+$rail is possible. Returns possible z (height) values.
+
 =head2 store_person
 
 $id = $g->store_person($person_name, $main_user_flagi, $comment);
@@ -1364,6 +1371,10 @@ $run_id = $g->store_run($data);
 
 stores the parsed run data in the DB and returns the run id
 
+=head $g->update_meta_data($run_id);
+
+add global meta data such as the board size to the run in the DB.
+
 =head2 get_pos
 
 ($x, $y) = $g->get_pos($pos, $relative);
@@ -1373,6 +1384,11 @@ input string and checks its correctness. Both absolute notation 1..9a..z
 and relative positions are handled. Returns (0, 0) on error, which is
 a position outside of the board.
 
+=head2 plane_lines
+
+$off_xy = $g->plane_lines($lines);
+
+searches for plane lines in the input and stores the xy offsets.
 =head2 level_height
 
 $g->level_height($rules, $off_xy, $h);
