@@ -93,8 +93,8 @@ sub verify_rail_endpoints {
 		next if $self->no_rail_connection($t->[1]);
 		my $z = $t->[4] || 0;
 		my $pos = $self->num2pos($t->[2], $t->[3]);
-		$self->error("At %1 level %2 ($z) is already a tile %3", $pos, $level,
-			$data->[$t_pos->{$pos}{$z}][1]) if exists $t_pos->{$pos}{$z};
+		$self->error("At %1 level %2 (%3) is already a tile %4", $pos, $level,
+			$z, $data->[$t_pos->{$pos}{$z}][1]) if exists $t_pos->{$pos}{$z};
 		$z -= 14 if $t->[1] =~ /L/;
 		$t_pos->{$pos}{$z} = $i;
 	}
@@ -159,11 +159,11 @@ sub verify_rail_endpoints {
 				}
 			}
 			my $chr = defined $t->[6] ? chr(97 + $t->[6]) : '?';
-			if (! @{$z_from}) {
+			if (! $z_from or ! @{$z_from}) {
 				my $to_chr = defined $r->[3] ? chr(97 + $r->[3]) : '?';
 				$self->error("No connection between tile %1 at %2 orientation %3 and rail %4%5", $t->[1], $from, $chr, $r->[2], $to_chr);
 			}
-			if (! @{$z_to}) {
+			if (! $z_to or ! @{$z_to}) {
 				my $rail_dir = ($r->[3] + $reverse) % 6;
 				my $to_chr = defined $rail_dir ? chr(97 + $rail_dir) : '?';
 				$self->error("No connection to a tile from %1 at %2 orientation %3 and rail %4%5", $t->[1], $from, $chr, $r->[2], $to_chr);
@@ -176,7 +176,7 @@ sub verify_rail_endpoints {
 
 sub resolve_z {
 	my ($self, $r, $from, $to, $t_pos, $data) = @_;
-	return if ! @$from or ! @$to;
+	return if ! $from or ! $to or ! @$from or ! @$to;
 	$r->[5] = $data->[$to->[0][0]][0] if @$to == 1;
 	return if @$from == 1 and @$to == 1;
 	$from = [sort {$a <=> $b} @$from];
@@ -512,7 +512,7 @@ sub store_run {
 		undef $id if defined $id and $id == $r->[0];
 		# finish lines have no end tile
 		if ($id or $r->[10] eq 'e') {
-			$sth_sel_rr->execute($id, $r->[1], $run_id);
+			$sth_sel_rr->execute($id, $r->[0], $run_id);
 			if ($sth_sel_rr->fetchrow_array) {
 				$self->error("%1 already registered from %2 to %3",
 					loc($self->{elem_name}{$r->[10]}), $self->num2pos($r->[8],
@@ -521,12 +521,13 @@ sub store_run {
 				say "store $r->[0], $id, @{$r}[10, 11]" if $dbg;
 				$sth_i_rr->execute($run_id, $r->[0], $id, @{$r}[10, 11, 12]);
 			}
-		} else {
-			$self->error("No end point for %1 from %2 to %3",
-				$r->[10],
-				#loc($self->{elem_name}{$r->[10]}),
-				$self->num2pos($r->[2], $r->[3]),
-				$self->num2pos($r->[8], $r->[9]));
+		# error already reported
+		#} else {
+		#	$self->error("No end point for %1 from %2 to %3",
+		#		$r->[10],
+		#		#loc($self->{elem_name}{$r->[10]}),
+		#		$self->num2pos($r->[2], $r->[3]),
+		#		$self->num2pos($r->[8], $r->[9]));
 		}
 	}
 	if (! $run_id) {
@@ -1017,6 +1018,7 @@ sub parse_run {
 			} elsif ($tile) {
 				$self->error("Wrong tile char '%1'", $tile) if $tile !~ /^\|/;
 			} else {
+				# not reached
 				$self->error("In %1 no tile data found","@items")
 					if $tile and grep {$_ !~ /x[lms]/} @items;
 			}
@@ -1050,6 +1052,7 @@ sub parse_run {
 						if ($r eq 'xt') {
 							if (! s/^([a-f])//i) {
 								$self->error("Flextube needs two directions");
+								$w_detail = 0;
 							} else {
 								$detail = $1;
 								($dir, $detail) = ($detail, $dir);

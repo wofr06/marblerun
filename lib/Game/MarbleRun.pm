@@ -123,7 +123,7 @@ sub features {
 		['xD', 'F',   5,      7,      0,     0,       0],
 		['xD',   1,   1,      0,      0,     1],
 		['xD',   5,   5,      0,      0,     0],
-		['xF', 'detail2', 0,  0, '7*(detail1-1)', '3*(detail1-1)o0', 'o0'],
+		['xF',   0, 'detail2', 0, '7*(detail1-1)', '3*(detail1-1)o3', 'o3'],
 		['xH', 'detail %6', 0, 'detail', 0,  0],
 		['xH', 'M',   0, 'detail',    0,     0],
 		['xI',   0,   3,      0,      0,   'r'],
@@ -605,6 +605,8 @@ sub prompt {
 
 sub num2pos {
 	my ($self, $posx, $posy, $plain) = @_;
+	$posx ||= 0;
+	$posy ||= 0;
 	my $loc_pos = loc('pos');
 	my $loc_plane = loc('plane');
 	if (! $self->{relative} and $posx < 36 and $posy < 36) {

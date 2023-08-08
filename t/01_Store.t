@@ -28,10 +28,10 @@ my $material = [['owner', 'john doe', '*'],[1, 'Starter Set']];
 like(capture_stdout{$g->store_material($material)}, qr/john/, 'store material');
 like(capture_stdout{$g->inventory(1)}, qr/40/, 'inventory');
 
-my $run = [['name', 'basic_a'],['A', 3, 4, 5, '', 2, 0,[5, 5, 's',2],
-	['o', 2, undef]],	['C', 5, 5, 3, '', 5, 0,[5, 8, 'm', 3]],
-	['C', 5, 8, 3, '', 5, 0,[9, 6, 'l',1]], ['C', 9, 6, 0, '', 4, 0],
-	['C', 10, 6, 0, '', 5, 0],['Z', 10, 7, 0, '', 1, 0]];
+my $run = [[0, 'name', 'basic_a'],[1, 'A', 3, 4, 5, '', 2, 0,[5, 5, 's',2],
+	['o', 2, undef]],	[2, 'C', 5, 5, 3, '', 5, 0,[5, 8, 'm', 3]],
+	[3, 'C', 5, 8, 3, '', 5, 0,[9, 6, 'l',1]], [4, 'C', 9, 6, 0, '', 4, 0],
+	[5, 'C', 10, 6, 0, '', 5, 0],[6, 'Z', 10, 7, 0, '', 1, 0]];
 ok((capture_stdout{$g->store_run($run)}) eq '', 'store run');
 
 # check correctness of predicting rail end points

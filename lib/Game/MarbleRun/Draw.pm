@@ -1009,7 +1009,7 @@ sub display_balls {
 sub get_moving_marbles {
 	my ($self, $marbles) = @_;
 	my $xT_delay = 0.8;
-	my $same_pos_delay = 30;
+	my $same_pos_delay = 90;
 	for my $id (grep {$self->{tiles}{$_}[7]} keys %{$self->{tiles}}) {
 		my $t = $self->{tiles}{$id};
 		next if ($t->[8] || 0) > $self->{ticks};
@@ -1139,6 +1139,9 @@ sub tile_rule {
 			$tile_z += $t->{$t_id}[5];
 			my $in = spiral_dir($t->{$t_id}[4], $t->{$t_id}[5]);
 			next if $dir != ($in + 3) % 6;
+		} elsif ($t->{$t_id}[0] eq 'xF') {
+			$self->{rules}{xF}[0]= ['xF', 0, ord($2) - 97, 0, 7*($1 - 1), 'o3'x (3*($1 - 1)), 'o3']
+				if $t->{$t_id}[5] =~ /(^\d)([a-f])/;
 		}
 		for (@{$self->{rules}{$t->{$t_id}[0]}}) {
 			say "   zcheck z=$z, tile_z=$tile_z, rule: $_->[3] -> $_->[4]" if $dbg;
@@ -1237,6 +1240,10 @@ sub next_dir {
 	}
 	#print "tile", Dumper $t, $marble, $marble->[6],$t->[4] if $t->[0] eq 'S';
 	for my $rule (@{$self->{rules}{$t->[0]}}) {
+		if ($t->[0] eq 'xF') {
+			$rule = ['xF', 0, ord($2) - 97, 0, 7*($1 - 1), 'o3'x (3*($1 - 1)), 'o3']
+				if $t->[5] =~ /(^\d)([a-f])/;
+		}
 		say "$marble->[0]: rule $rule->[0] $rule->[1] -> $rule->[2]" if $dbg;
 		# handle state, set new state;
 		if (defined $rule->[6] and $rule->[6] =~ /^[0-5]$/) {
@@ -1260,8 +1267,8 @@ sub next_dir {
 			$marble->[5] += $rule->[3] if $rule->[1]  eq 'F';
 			$marble->[5] += ($rule->[4] - $rule->[3]) if $rule->[4] =~ /^\d$/;
 			return $rule->[2] eq 'F' ? $marble->[7] : $marble->[6];
-		} elsif ($rule->[1] eq 'F' or ($rule->[1] =~ /^[0-5]$/
-			and $rule->[1] == ($marble->[6] - $t->[4]) % 6)) {
+		} elsif ($marble->[6] =~ /\d/ and ($rule->[1] eq 'F' or ($rule->[1] =~ /^[0-5]$/
+			and $rule->[1] == ($marble->[6] - $t->[4]) % 6))) {
 			# update z if required
 			$marble->[5] += $rule->[4] if $rule->[4] > 0;
 			#$marble->[5] -= $rule->[3] if $rule->[3] > 0;
@@ -1356,7 +1363,7 @@ sub generate_path {
 			$path .= spiral_path($x - $x0, $y -$y0, $r, $turns, $dir);
 		} elsif ($sym !~ /^[ADMZ]$|^xT$/) {
 			my $out = $xyz->[$i+1][4];
-			$out = ($out + 3) % 6 if $xyz->[$i+1][0] eq 't';
+			$out = ($out + 3) % 6 if defined $xyz->[$i+1][0] and $xyz->[$i+1][0] eq 't';
 			$out = $dir if ! defined $out or $out !~ /^\d$/;
 			my ($dx, $dy) = ($self->{middle_x}[$out], $self->{middle_y}[$out]);
 			$x += $dx - $x0;
