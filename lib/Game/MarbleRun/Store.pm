@@ -233,7 +233,7 @@ sub rail_connection {
 		my $case2;
 		if ($tile eq 'xH') {
 			# direction in for spiral depends on number of elements
-			my $in = $1 if $t->[5] =~ /([0-5])/;
+			my $in = $t->[5] % 6 if $t->[5] =~ /^\d+$/;
 			$case2 = [[(2*$in - 1)%6, $in]] if defined $in;
 		} elsif ($tile eq 'xF') {
 			# direction out for lift at z!=0 is stored in detail
@@ -423,7 +423,7 @@ sub store_run {
 		}
 		# collect header data
 		if ($d->[1] =~ /^name|^date|^author|^source/) {
-			$hdr->{$d->[1]} = $d->[2];
+			($hdr->{$d->[1]} = $d->[2]) =~ s/^\s*//;
 			$level = 0;
 			$marbles = 0;
 			$run_id = undef;
@@ -474,7 +474,7 @@ sub store_run {
 		my @val = @{$d}[0..7];
 		$val[4] ||= 0; # check for unassigned z value
 		say "store $val[0], $run_id", map {defined $_ ? " $_" : ' ?'} @val[1 .. 7] if $dbg;
-		$sth_i_rt->execute($val[0], $run_id, @val[1 .. 7]);
+		$sth_i_rt->execute($val[0], $run_id, @val[1 .. 7]) if $val[1];
 		next if $self->no_rail_connection($val[1]) and ! $comment;
 		my $id = $val[0];
 		$dbh->do("INSERT OR IGNORE INTO run_comment (run_id,tile_id,comment)
@@ -833,7 +833,7 @@ sub parse_run {
 				}
 				$planenum->{$level} = [$x1, $y1, $plane_type];
 				$level_line_seen = 0;
-				push @$rules, [$tid++, $1, $x1, $y1, undef, undef, undef, $level];
+				#push @$rules, [$tid++, $1, $x1, $y1, undef, undef, undef, $level];
 			}
 			# tile must be on a transparent plane for level > 0
 			my $delta = $plane_type - 1;

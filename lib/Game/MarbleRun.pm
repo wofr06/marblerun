@@ -1043,6 +1043,7 @@ sub delete_run {
 	$dbh->do("DELETE FROM run_tile WHERE run_id=$id");
 	$dbh->do("DELETE FROM run_rail WHERE run_id=$id");
 	$dbh->do("DELETE FROM run_marble WHERE run_id=$id");
+	$dbh->do("DELETE FROM run_no_elements WHERE run_id=$id");
 }
 
 sub list_marble_runs {
