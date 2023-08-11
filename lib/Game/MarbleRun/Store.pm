@@ -52,7 +52,7 @@ sub process_input {
 
 sub no_rail_connection {
 	my ($self, $elem) = @_;
-	return 1 if ! $elem or $elem =~ /\d+|^[+\^=BEOR]|\|/;
+	return 1 if ! $elem or $elem =~ /\d+|^[+\^=BEOR]/;
 }
 
 sub rail_xy {
@@ -215,13 +215,14 @@ sub resolve_z {
 	warn loc("Warning: height difference %1 from z=%4 at %5 for rail %2 at %3 maybe too small\n",
 		$zdiff/2., $r->[2], $t_pos, $z/2., $self->num2pos($xf, $yf)) if $zdiff < $zlow;
 	warn loc("Warning: height difference %1 from z=%4 at %5 for rail %2 at %3 maybe too large\n",
-		$zdiff/2., $r, $t_pos, $z/2.,
+		$zdiff/2., $r->[2], $t_pos, $z/2.,
 		$self->num2pos($xf, $yf)) if $zdiff > $zhigh;
 }
 
 sub rail_connection {
 	my ($self, $t, $r, $reverse) = @_;
 	my $tile = $t->[1];
+	return [[0]] if $tile =~ /\|/;
 	my $z_from;
 	$reverse ||= 0;
 	my $rail_dir = ($r->[3] + $reverse) % 6;
@@ -423,7 +424,7 @@ sub store_run {
 		}
 		# collect header data
 		if ($d->[1] =~ /^name|^date|^author|^source/) {
-			($hdr->{$d->[1]} = $d->[2]) =~ s/^\s*//;
+			($hdr->{$d->[1]} = $d->[2]) =~ s/^\s*// if defined $d->[2];
 			$level = 0;
 			$marbles = 0;
 			$run_id = undef;
@@ -588,14 +589,12 @@ sub plane_lines {
 		my ($what, $value) = $self->header_line($_);
 		next if $what and $what ne 'level';
 		$added = 0, next if $added;
-		if (/^[=^#]*_/) {
-			if (/^_\s*(\d+)\D+(\d+)/) {
-				$relative = $self->{relative} = 1;
-				next if ! $2;
-				$col = 5*($1 - 1);
-				$row = 6*($2 - 1);
-				$off->[0] = [$row, $col, 0];
-			}
+		if (/^_\s*(\d+)\D+(\d+)/) {
+			$relative = $self->{relative} = 1;
+			next if ! $2;
+			$col = 5*($1 - 1);
+			$row = 6*($2 - 1);
+			$off->[0] = [$row, $col, 0];
 			$level = 0;
 			$level_pos = 0;
 		# analyse level line
@@ -610,13 +609,13 @@ sub plane_lines {
 				$type = ($2 eq '=') ? 2 : 3;
 				($row, $col) = $self->get_pos($1, $relative);
 			}
-			if (! $level_pos) {
+			if (! $level_pos and $type > 0) {
 				# add level line
 				$level = ++$max_level;
 				splice @$lines, $line - 1, 0, "$orig_line Level $level";
 				$added = 1;
 				$level_pos = $line - 1;
-			} elsif ($level_pos < $line - 1) {
+			} elsif ($type > 0 and $level_pos < $line - 1) {
 				# move transparent plane definition up after the level line
 				splice @$lines, $level_pos, 0, splice(@$lines, $line - 1, 1);
 			}
@@ -778,17 +777,21 @@ sub parse_run {
 		} elsif ($what) {
 			push @$rules, [0, $what, $value];
 		# ground planes
-		} elsif (s/^_\s+//) {
-			if (/(\d+)\D+(\d+)/) {
+		} elsif (s/^_\s*// or /\*/) {
+			# small round ground plane
+			if (/^(\S+)\s+\*/) {
+				($off_x, $off_y) = $self->get_pos($1, $rel_pos);
+				$off_xy->[0] = [$off_x, $off_y, -3];
+			} elsif (/(\d+)\D+(\d+)/) {
 				$off_x = 6*($2 - 1);
 				$off_y = 5*($1 - 1);
 				$off_xy->[0] = [$off_x, $off_y];
 				$rel_pos = 1;
-				push @$rules, [0, 'level', 0] if $level;
-				$level = 0;
 			} else {
 				$self->error("Incorrect ground plane numbering '%1'", $_);
 			}
+			push @$rules, [0, 'level', 0] if $level;
+			$level = 0;
 		# ground planes not to be drawn
 		} elsif (s/^!\s*//) {
 			if (/(\d+)\D+(\d+)/) {
@@ -985,7 +988,7 @@ sub parse_run {
 			} elsif ($tile =~ s/xM([a-f])([a-f])/xM$2/) {
 				$detail = ord(lc $1) - 97;
 				$dir = ord(lc $2) - 97;
-				$self->error("For the mixer orientation %1 the direction %2 of the outgoing ball is not possible", $1, $2) if  ($dir + $detail) % 2;
+				$self->error("For the mixer orientation %1 the direction %2 of the outgoing ball is not possible", $1, $2) if ! ($dir + $detail) % 2;
 			# open basket
 			} elsif ($tile =~ /^O/) {
 				$self->error("Tile 'O' needs no height data") if $z;

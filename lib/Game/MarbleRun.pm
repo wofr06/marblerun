@@ -11,7 +11,7 @@ use Locale::Maketext::Simple (Style => 'gettext');
 $Game::MarbleRun::VERSION = '1.11';
 my $homedir = $ENV{HOME} || $ENV{HOMEPATH} || die "unknown homedir\n";
 $Game::MarbleRun::DB_FILE = "$homedir/.gravi.db";
-$Game::MarbleRun::DB_SCHEMA_VERSION = 11;
+$Game::MarbleRun::DB_SCHEMA_VERSION = 12;
 
 sub new {
 	my ($class, %attr) = @_;
@@ -130,15 +130,15 @@ sub features {
 		['xI',   1,   2,      0,      0,   'r'],
 		['xI',   4,   5,      0,      0,   'r'],
 		['xK',   3, 'F',      0,    -15,      0,      1],
-		['xM',   0,   0,      7,      0,      0,      4],
-		['xM',   0,   4,      7,      0,      4,      2],
-		['xM',   0,   2,      7,      0,      2,      0],
-		['xM',   2,   0,      7,      0,      0,      4],
-		['xM',   2,   4,      7,      0,      4,      2],
-		['xM',   2,   2,      7,      0,      2,      0],
-		['xM',   4,   0,      7,      0,      0,      4],
-		['xM',   4,   4,      7,      0,      4,      2],
-		['xM',   4,   2,      7,      0,      2,      0],
+		['xM',   0,   1,      7,      0,      0,      5],
+		['xM',   0,   5,      7,      0,      4,      3],
+		['xM',   0,   3,      7,      0,      2,      1],
+		['xM',   2,   5,      7,      0,      0,      3],
+		['xM',   2,   3,      7,      0,      4,      1],
+		['xM',   2,   1,      7,      0,      2,      5],
+		['xM',   4,   5,      7,      0,      0,      3],
+		['xM',   4,   3,      7,      0,      4,      1],
+		['xM',   4,   1,      7,      0,      2,      5],
 		['xP',   0, 'M',      0,      0,   'oM',   'o3'],
 		['xP',   3, 'M',      0,      0,   'oM',   'o0'],
 		['xQ',   0,   1,      0,      0,   'r'],
@@ -459,7 +459,7 @@ EOF
 	# use arrayrefs to keep the ordering (letters 'cwy' unused)
 	my $elems = [
 		# Basic elements #
-		_=>'Base Plate', '^'=>'Transparent Level',
+		_=>'Base Plate', '*'=>'Small Base Plate', '^'=>'Transparent Level',
 		'='=>'Small Transparent Level', o=>'Ball',
 		1=>'Height Tile large', '+'=>'Height Tile small', A=>'Launch Pad',
 		Z=>'Landing', e=>'Finish Line', C=>'Curve', X=>'Junction',
@@ -481,7 +481,7 @@ EOF
 		xI=>'Straight with 2 Curves', xX=>'Straight 3x', xW=>'2x 2 in 1 left',
 		yW=>'2x 2 in 1 right', xY=>'2 in 1 left with Curve',
 		yY=>'2 in 1 right with Curve', yX=>'3 Curves, 2 crossing',
-		yI=>'Cross Straight and Curve', xP=>'Color Swap',
+		yI=>'Cross Straight and Curve', xP=>'Color Swap', yR=>'Releaser',
 		# Rails
 		s=>'Rail Short', m=>'Rail Medium', l=>'Rail Long', b=>'Rail Bernoulli',
 		v=>'Drop Rail Concave', u=>'Drop Rail Convex', g=>'Rail Overlong',
@@ -543,14 +543,21 @@ EOF
 		'Dispenser', 24, [xM=>1],
 		'Catapult', 25, [xK=>1, o=>4],
 		# 2021
-		'Dipper', 26, [xD => 1, 1 => 4, o => 1],
-		'Spinner', 27, [o => 6, xS => 1],
-		'Flextube', 28, [xt => 4, 1 => 4],
+		'Dipper', 26, [xD=>1, 1=>4, o=>1],
+		'Spinner', 27, [o=>6, xS=>1],
+		'Flextube', 28, [xt=>4, 1=>4],
 		'Helix', 29, [yH => 1],
 		'Turntable', 30, [yT => 1],
 		# 2022
-		'Color Swap', 32, [xP => 3],
-		'Carousel', 33, [yK => 1],
+		'Color Swap', 32, [xP=>3],
+		'Carousel', 33, [yK=>1],
+		# Game sets
+		'Game Flow', 34, ['*'=>2, '='=>1, C=>7, V=>1, G=>1, X=>1, A=>1, Z=>1,
+			1=>11, '+'=>1, xt=>2, l=>1, m=>2, s=>3, o=>1],
+		'Game Impact', 35, ['*'=>3, C=>7, X=>1, A=>1, H=>1, Z=>1, 1=>4, l=>2,
+			m=>2, s=>3, o=>1],
+		'Game Course', 36, ['*'=>4, X=>1, A=>1, S=>1, Z=>1, 1=>6, W=>1, xQ=>1,
+			yI=>1, xW=>1, yW=>1, xY =>1, yY=>1, yX=>1, l=>2, m=>2, s=>3, o=>2],
 	];
 	# create tables (only single sql statements allowed)
 	$dbh->do($_) for split /;/, $sql;
