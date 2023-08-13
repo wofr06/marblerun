@@ -226,17 +226,19 @@ sub draw_tile {
 		$self->put_Spinner($x, $y);
 	} elsif ($elem eq 'M') {
 		$self->put_Cannon($x, $y, $orient);
-	} elsif (($_) = grep {$elem eq $_} qw(J K M Q)) {
+	} elsif (($_) = grep {$elem eq $_} qw(K Q)) {
 		$self->put_hexagon($x, $y);
 		$self->put_through_line($x, $y, $orient, 0.3);
 		$self->put_through_line($x, $y, $orient + 3, 0.3);
 		$self->put_text($x, $y, $_);
 	} elsif ($elem eq 'xA') {
-		$self->put_Zipline($x, $y, $orient);
-	} elsif ($elem eq 'xZ') {
 		$self->put_Zipline($x, $y, ($orient+3)%6);
+	} elsif ($elem eq 'xZ') {
+		$self->put_Zipline($x, $y, $orient);
 	} elsif ($elem eq 'H') {
 		$self->put_Hammer($x, $y, $orient);
+	} elsif ($elem eq 'J') {
+		$self->put_Jumper($x, $y, $orient);
 	} elsif ($elem eq 'xH') {
 		$self->put_Spiral($x, $y, $orient, $detail);
 	} elsif ($elem eq 'G') {
@@ -275,7 +277,8 @@ sub draw_tile {
 	# special cases for generic elements
 	} elsif ($elem eq 'xG') {
 		$self->put_BasicTile($x, $y, $orient);
-	# other tiles (F,R,xD,xM,xR,xS,xV) handled here (hexagon plus symbol)
+	# other tiles (F,R,xM,xP,xR,xS,yH,yK,yR,yS,yT) handled here
+	# (hexagon plus symbol) (K, Q also with through line)
 	} else {
 		$self->put_Tile($x, $y, $elem, $orient, $detail);
 	}
@@ -326,7 +329,7 @@ sub put_Tile {
 			$r = 0.5 - $thickness if $orient2 == 0;
 			$r = 7/60 if $orient2 == 1;
 			$style = {fill => '#d5d5d5'} if $orient2 == 1;
-			$self->put_circle($x, $y, $r, $style);
+			$self->put_circle($x, $y, $r, '', '', '', $style);
 		} elsif ($type eq 'I') {
 			my $frac = $thickness if grep {$elem eq $_} qw(V xV);
 			$self->put_through_line($x, $y, $orient, $frac);
@@ -490,14 +493,19 @@ sub put_arc {
 }
 
 sub put_circle {
-	my ($self, $posx, $posy, $r, $style_in) = @_;
+	my ($self, $xm, $ym, $r, $off_x, $off_y, $dir, $style_in) = @_;
+	my ($x, $y) = $self->center_pos($xm, $ym);
+	if ($off_x or $off_y) {
+		my ($x1, $y1) = $self->center_pos($self->to_position($xm, $ym, $dir,1));
+		my ($dx, $dy) = ($x1 - $x, $y1 - $y);
+		($x, $y) = ($x - $off_y*$dx - $off_x*$dy, $y - $off_y*$dy + $off_x*$dx);
+	}
 	my $svg = $self->{svg};
-	my ($x, $y) = $self->center_pos($posx, $posy);
 	my $style = {stroke=>'black', fill=>'none'};
 	if ($style_in) {
 		$style->{$_} = $style_in->{$_} for keys %$style_in;
 	}
-	$svg->circle(cx=>int $x, cy=>int $y, r=>$r*$self->{size}, style=>$style);
+	$svg->circle(cx=>$x, cy=>$y, r=>$r*$self->{size}, style=>$style);
 }
 
 sub put_through_line {
@@ -623,44 +631,34 @@ sub put_lever {
 }
 
 sub put_Looptile {
-	my ($self, $posx, $posy, $orient) = @_;
-	my $svg = $self->{svg};
-	$self->put_hexagon($posx, $posy);
-	my ($x, $y) = $self->center_pos($posx, $posy);
-	my $angle = $orient*6.2832/6.;
+	my ($self, $x, $y, $orient) = @_;
+	$self->put_hexagon($x, $y);
 	my $dy0 = 0.1;
 	my $dx0 = -$dy0/sqrt(3);
-	my $r = 1./3.*$self->{size};
 	my $style = {fill => 'none', stroke=>'black'};
-	my $dx = $self->{size}*(cos($angle)*$dx0 - sin($angle)*$dy0);
-	my $dy = $self->{size}*(sin($angle)*$dx0 + cos($angle)*$dy0);
-	$svg->circle(cx => $x + $dx, cy => $y +$dy, r => $r, style => $style);
-	$self->put_through_line($posx, $posy, $orient, 0.275);
-	$self->put_through_line($posx, $posy, $orient + 1, 0.275);
+	$self->put_circle($x, $y, 1/3., $dx0, $dy0, $orient);
+	$self->put_through_line($x, $y, $orient, 0.275);
+	$self->put_through_line($x, $y, $orient + 1, 0.275);
 }
 
 sub put_Zipline {
 	my ($self, $x, $y, $dir) = @_;
 	$self->put_hexagon($x, $y);
 	my ($x1, $y1) = $self->center_pos($x, $y);
-	my $svg = $self->{svg};
-	my $angle = $dir*6.2832/6.;
-	my $dist = 0.3;
-	my $r = 0.05*$self->{size};
+	my $disty = 0.3;
+	my $r = 0.05;
 	$self->put_through_line($x, $y, $dir, 0.7);
-	$self->put_middleBar($x, $y, $dir, 0.05, 2/3.+0.05);
-	my $dx = -$self->{size}*sin($angle)*$dist;
-	my $dy = $self->{size}*cos($angle)*$dist;
-	my $style = {fill => 'none', stroke=>'black'};
-	$svg->circle(cx => $x1 + $dx, cy => $y1 +$dy, r => $r, style => $style);
+	$self->put_middleBar($x, $y, $dir, $r, 2/3. + $r);
+	$self->put_circle($x, $y, $r, 0, $disty, $dir);
 }
 
 sub put_Hammer {
 	my ($self, $x, $y, $orient) = @_;
 	$self->put_hexagon($x, $y);
+	my $style = {stroke=>'lightgray', 'stroke-width' => 0.03*$self->{size}};
+	$self->put_arrows($x, $y, $orient, 1/12., 1/16., $style);
 	$self->put_circle($x, $y, 1/3.);
-	$self->put_arrows($x, $y, 1, 1/12., 1/24.);
-	$self->put_Marble($x, $y, 0, 'S', 0.125);
+	$self->put_Marble($x, $y, 0, 0, $orient, 'S', 0.125);
 	$self->put_middleBar($x, $y, $orient, 0.05, 2/3.+0.05);
 	$self->put_middleBar($x, $y, $orient, 0.075, 1/3., 'url(#mygreen)');
 	$self->put_middleBar($x, $y, $orient, 0.025, 1/6., 'url(#mygreen)');
@@ -668,21 +666,32 @@ sub put_Hammer {
 	$self->put_through_line($x, $y, $orient + 3, 1/6.);
 }
 
+sub put_Jumper {
+	my ($self, $x, $y, $dir) = @_;
+	$self->put_hexagon($x, $y, 1, {fill => 'url(#mygreen)'});
+	my $style = {stroke=>'white', 'stroke-width' => 0.07*$self->{size}};
+	$self->put_arrows($x, $y, $dir, 0.23, 0.1, $style);
+	my $offset = 0.125;
+	$self->put_middleBar($x, $y, $dir, $offset, 1, '', 'none', 1);
+	$self->put_through_line($x, $y, $dir, 1.);
+}
+
 sub put_arrows {
-	my ($self, $x, $y, $dir, $offset, $size) = @_;
+	my ($self, $x, $y, $dir, $offset, $size, $style) = @_;
 	my $svg = $self->{svg};
+	$style ||= [];
 	my ($x1, $y1) = $self->center_pos($x, $y);
 	my $d2 = ($dir + 2) % 6;
 	my ($cx, $cy) = (2*$self->{corner_x}[0][$d2], 2*$self->{corner_y}[0][$d2]);
 	my ($dx, $dy) = ($size*$cx, $size*$cy);
 	my ($xd, $yd) = (0.67*$size*$cy, -0.67*$size*$cx);
-	for my $i (-3.5, 0.5, 4.5) {
+	for my $i (-1., 0.5, 2.) {
 		for my $j (-1, 1) {
-			my ($x, $y) = ($x1 + $j*$offset*$cx + $i*$xd, $y1 + $j*$offset*$cy+ $i*$yd);
-			my ($x2, $y2) = ($x + $dx - $xd, $y + $dy - $yd);
-			$svg->line(x1=> $x, y1=> $y, x2=> $x2, y2=> $y2, class=>'tile');
-			($x2, $y2) = ($x - $dx - $xd, $y - $dy - $yd);
-			$svg->line(x1=> $x, y1=> $y, x2=> $x2, y2=> $y2, class=>'tile');
+			my ($xa, $ya) = ($x1 + $j*$cx*$offset + $i*$dy + $dx - $xd, $y1 + $j*$cy*$offset + $dy - $yd - $i*$dx);
+			my ($dx1, $dy1) = ($xd - $dx, $yd - $dy);
+			my ($dx2, $dy2) = (-$dx - $xd, -$dy - $yd);
+			my ($dx3, $dy3) = (-$dx2, -$dy2);
+			$svg->path(d=>"M $xa,$ya l $dx1,$dy1 l $dx2,$dy2 l $dx3,$dy3", style=>$style);
 		}
 	}
 }
@@ -698,12 +707,15 @@ sub put_Cannon {
 }
 
 sub put_middleBar {
-	my ($self, $x, $y, $dir, $offset, $length, $fill, $stroke) = @_;
+	my ($self, $x, $y, $dir, $offset, $length, $fill, $stroke, $rot90) = @_;
 	my $svg = $self->{svg};
 	my $style = {'fill' => $fill || 'white', stroke => $stroke|| 'black'};
 	my ($x1, $y1) = $self->center_pos($x, $y);
 	my $d2 = ($dir + 2) % 6;
 	my ($cx, $cy) = (2*$self->{corner_x}[0][$d2], 2*$self->{corner_y}[0][$d2]);
+	if ($rot90) {
+		($cx, $cy) = (2*$self->{middle_x}[$dir], 2*$self->{middle_y}[$dir]);
+	}
 	my ($dx, $dy) = ($length*$cx, $length*$cy);
 	my ($xd, $yd) = (2*$offset*$cy, -2*$offset*$cx);
 	my ($xdm, $ydm) = (-$xd, -$yd);
@@ -769,14 +781,33 @@ sub put_Balls {
 	}
 }
 
+{
+	my $m_id='marble000';
 sub put_Marble {
-	my ($self, $x, $y, $offset, $color, $r) = @_;
-	my $marble_id = ($self->{max_marble} || 999) + 1;
-	
-	($self->{r_ball}, $r) = ($r, $self->{r_ball}) if $r;
-	$self->{max_marble} = $marble_id;
-	$self->put_Balls($x, $y, $offset, [$marble_id, 0, $color]);
-	($r, $self->{r_ball}) = ($self->{r_ball}, $r) if $r;
+	my ($self, $xm, $ym, $off_x, $off_y, $dir, $color, $r) = @_;
+	my $svg = $self->{svg};
+	$dir ||= 0;
+	$color ||= 'S';
+	$color = $self->{srgb}{$color};
+	$r ||= $self->{r_ball};
+	$r *= $self->{size};
+	my ($x, $y) = $self->center_pos($xm, $ym);
+	if ($off_x or $off_y) {
+		my ($x1, $y1) = $self->center_pos($self->to_position($xm, $ym, $dir,1));
+		my ($dx, $dy) = ($x1 - $x, $y1 - $y);
+		($x, $y) = ($x + $off_y*$dx - $off_x*$dy, $y + $off_y*$dy + $off_x*$dx);
+	}
+	$svg->circle(cx=>$x, cy=>$y, r=>$r, style=>{fill=>$color});
+	my $tag = $svg->gradient(-type => 'radial', id => $m_id,
+		gradientUnits => 'userSpaceOnUse', cx => $x, cy => $y, r => $r,
+		fy => $y - 0.4*$r, fx => $x - 0.4*$r);
+	$tag->stop(style=>{"stop-color"=>"#fff"});
+	$tag->stop(style=>{"stop-color"=>"#fff"},"stop-opacity"=>0,offset=>.25);
+	$tag->stop(style=>{"stop-color"=>"#000"},"stop-opacity"=>0,offset=>.25);
+	$tag->stop(style=>{"stop-color"=>"#000"},"stop-opacity"=>0.7,offset=>1);
+	$svg->circle(cx=>$x,cy=>$y,r=>$r, style=>{fill=>"url(#$m_id)"});
+	$m_id++;
+}
 }
 
 sub put_FinishLine {
@@ -801,22 +832,22 @@ sub put_DoubleBalcony {
 	$self->put_hexagon($x, $y, 1, '', 2, $orient);
 }
 
-# the following two routines still need to be improved
 sub put_BridgeTile {
 	my ($self, $x, $y, $orient, $detail) = @_;
 	my $thickness = (1 - $self->{twoby3})/2.;
 	$self->put_hexagon($x, $y);
-	$self->put_through_line($x, $y, $orient, 0.3);
-	$self->put_through_line($x, $y, $orient + 3, 0.3);
-	$self->put_text($x, $y, 'xB');
+	$self->put_through_line($x, $y, $orient, 1);
+	$self->put_Marble($x, $y, @{$self->{offset}{xB}[$_]}, $orient) for (0, 1);
 }
 
+# the following routine still needs to be improved
 sub put_Catapult {
 	my ($self, $x, $y, $orient) = @_;
 	my $thickness = (1 - $self->{twoby3})/2.;
 	$self->put_hexagon($x, $y);
 	$self->put_through_line($x, $y, $orient, 0.3);
 	$self->put_through_line($x, $y, $orient + 3, 0.3);
+	$self->put_Marble($x, $y, @{$self->{offset}{xK}[$_]}, $orient) for (0 .. 3);
 	$self->put_text($x, $y, 'xK');
 }
 
@@ -887,7 +918,7 @@ sub put_Spiral {
 	$elems ||= 0;
 	my $thickness = 0.1;
 	$self->put_hexagon($x, $y);
-	$self->put_circle($x, $y, 0.5 - $thickness, {fill=>'url(#mygreen)'});
+	$self->put_circle($x, $y, 0.5 - $thickness, '', '', '', {fill=>'url(#mygreen)'});
 	$self->put_through_line($x, $y, $orient, $thickness);
 	my $orient_in = ($orient + 2*$elems - 1) % 6;
 	$self->put_through_line($x, $y, $orient_in, $thickness);
@@ -921,8 +952,8 @@ sub put_Spinner {
 	$self->put_hexagon($x, $y);
 	$self->put_hexagon($x, $y, $self->{twoby3}, {fill=>'white'});
 	$self->put_through_line($x, $y, $_, $thickness) for 0 .. 5;
-	$self->put_circle($x, $y, 0.4, {fill => 'url(#mygreen)'});
-	$self->put_circle($x, $y, 0.1, {fill => 'url(#mygreen)'});
+	$self->put_circle($x, $y, 0.4, '', '', '', {fill => 'url(#mygreen)'});
+	$self->put_circle($x, $y, 0.1, '', '', '', {fill => 'url(#mygreen)'});
 	my ($cx, $cy) = $self->center_pos($x, $y);
 	my $r = 7./60.*$self->{size};
 	my ($x2, $y2) = ($cx - $r, $cy - 0.375*$self->{size});
@@ -939,7 +970,7 @@ sub put_Start {
 	$self->put_BasicTile($x, $y, $orient);
 	$self->put_hexagon($x, $y, $self->{twoby3}, {fill => 'url(#mygreen)'});
 	$self->put_circle($x, $y, 0.125);
-	$self->put_circle($x, $y, 0.02, {fill => 'black'});
+	$self->put_circle($x, $y, 0.02, '', '', '', {fill => 'black'});
 	my $sign = 1 - 2*($orient % 2);
 	my ($cx, $cy) = $self->center_pos($x, $y);
 	my $r = 7./60.*$self->{size};
@@ -1382,8 +1413,10 @@ sub generate_path {
 			$dir = $xyz->[$i - 1][4];
 			$dir = $xyz->[$i - 2][4] if $dir eq 'M';
 			$dir = ($dir + 3) % 6;
-			say "finish: xyz=$xc $yc $z dir=$dir" if $dbg;
+			say "finish: at $sym xyz=$xc $yc $z dir=$dir" if $dbg;
 			my $frac = 3*$self->{r_ball};
+			$frac = -3*$self->{r_ball} if $sym eq 'xA';
+			$frac = 3*$self->{r_ball} if $sym eq 'xZ';
 			# end of path finish line and tiptube (e, xT)
 			if ($sym =~ /^e$|^xT$/) {
 				$frac = 4*$self->{r_ball}*(($balls -1)%3);
