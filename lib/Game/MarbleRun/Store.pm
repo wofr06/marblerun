@@ -52,7 +52,7 @@ sub process_input {
 
 sub no_rail_connection {
 	my ($self, $elem) = @_;
-	return 1 if ! $elem or $elem =~ /\d+|^[+\^=BEOR]/;
+	return 1 if ! $elem or $elem =~ /\d+|^[+\^=BEOR]|^z\+/;
 }
 
 sub rail_xy {
@@ -919,7 +919,7 @@ sub parse_run {
 				}
 			}
 			# other height elements 1..9,+,E,L,xL
-			while ($tile =~ s/^([+\dEL]|xL)//) {
+			while ($tile =~ s/^([+\dEL]|xL|z[12+])//) {
 				$elem = $1;
 				# direction for balconies and pillars (for pillar optional)
 				if ($elem =~ /^[EL]|xL/) {
@@ -931,12 +931,12 @@ sub parse_run {
 						$dir = 0;
 					}
 				}
-				if ($elem =~ /^(\d)/) {
+				if ($elem =~ /^z?(\d)/) {
 					$z += 2*$1;
 				} elsif ($elem =~ /^[=^]/) {
 					push @$planepos, [$x1, $y1, $z, $level];
 					$z++;
-				} elsif ($elem eq '+') {
+				} elsif ($elem =~ /^z?\+/) {
 					$z++;
 				} elsif ($elem eq 'E') {
 					$num_E = 0;

@@ -11,7 +11,7 @@ use Locale::Maketext::Simple (Style => 'gettext');
 $Game::MarbleRun::VERSION = '1.11';
 my $homedir = $ENV{HOME} || $ENV{HOMEPATH} || die "unknown homedir\n";
 $Game::MarbleRun::DB_FILE = "$homedir/.gravi.db";
-$Game::MarbleRun::DB_SCHEMA_VERSION = 12;
+$Game::MarbleRun::DB_SCHEMA_VERSION = 13;
 
 sub new {
 	my ($class, %attr) = @_;
@@ -482,6 +482,9 @@ EOF
 		yW=>'2x 2 in 1 right', xY=>'2 in 1 left with Curve',
 		yY=>'2 in 1 right with Curve', yX=>'3 Curves, 2 crossing',
 		yI=>'Cross Straight and Curve', xP=>'Color Swap', yR=>'Releaser',
+		'z+'=>'Light Tile Small', z1=>'Light Tile large', z2=>'Light Tile Base',
+		zA=>'DomeStarter', zE=>'Elevator', zF=>'FinishTrigger', zL=>'Lever',
+		zQ=>'Queue', zS=>'DropDownSwitch', zT=>'Trigger', zZ=>'FinishArena',
 		# Rails
 		s=>'Rail Short', m=>'Rail Medium', l=>'Rail Long', b=>'Rail Bernoulli',
 		v=>'Drop Rail Concave', u=>'Drop Rail Convex', g=>'Rail Overlong',
@@ -1326,8 +1329,8 @@ sub display_run {
 					}
 				}
 				# accumulate height elements
-				if ($sym =~ /[+L\d]/) {
-					if ($sym =~ /[\d]/) {
+				if ($sym =~ /^[+L\d]/) {
+					if ($sym =~ /^[\d]/) {
 						$num += $sym;
 						$sym = 1;
 						# next tile at same position of same kind ?
