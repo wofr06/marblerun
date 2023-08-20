@@ -1057,7 +1057,7 @@ sub do_run {
 		} elsif ($_->[0] eq 'd') {
 			$_->[7] = ($_->[1] + 4) % 6;
 		} elsif ($_->[0] eq 'xt') {
-			$_->[7] = $_->[6];
+			$_->[7] = ($_->[6] + 3) % 6;
 		} else {
 			$_->[7] = ($_->[1] + 3) % 6;
 		}
@@ -1187,18 +1187,21 @@ sub move_marbles {
 		}
 		my $m_dir = $m->[7];
 		my $t_id = $m->[1];
+		#say "### marble=@$m $t_id $self->{tiles}{111}[0]" if $m;
 		#print Dumper $rails, $self->{tiles};exit;
 		# find outgoing connecting rail
 		my @out = grep {$t_id == $_->[2] and $m_dir eq $_->[1]} @$rails;
+		#print Dumper "out: $m_dir", \@out;
 		#say "$m0: search for rail in direction $m_dir connected to tile $t_id";
-		if (defined $out[0]) {
+		if (defined $out[0] and $self->{tiles}{$t_id}[0] ne 'F') {
 			say "$m0: rail out $out[0]->[0] found, dir $out[0]->[1]" if $dbg;
 			say "$m0: next tile $self->{tiles}{$out[0]->[4]}[0] in dir = $out[0]->[7]" if $dbg;
 			$m = $self->update_marble($m, $out[0]->[4], $out[0]->[7], $out[0]);
 		} else {
 			# find incoming connecting rail
 			my @in = grep {$t_id == $_->[4] and $m_dir eq $_->[7]} @$rails;
-			if (defined $in[0]) {
+			#print Dumper "in: $m_dir ", \@in;
+			if (defined $in[0] and $self->{tiles}{$t_id}[0] ne 'F') {
 				say "$m0: rail in $in[0]->[0] found, dir $in[0]->[7]" if $dbg;
 				say "$m0: next tile $self->{tiles}{$in[0]->[2]}[0] in_dir = $in[0]->[1]" if $dbg;
 				$m = $self->update_marble($m, $in[0]->[2], $in[0]->[1], $in[0]);
@@ -1365,6 +1368,7 @@ sub next_dir {
         } elsif ($rule->[2] =~ /^[FR]$/) {
 			$marble->[5] += $rule->[3] if $rule->[1]  eq 'F';
 			$marble->[5] += ($rule->[4] - $rule->[3]) if $rule->[4] =~ /^\d$/;
+			#say "### rule4 $rule->[4] ,new z=$marble->[5]";
 			return $rule->[2] eq 'F' ? $marble->[7] : $marble->[6];
 		} elsif ($marble->[6] =~ /\d/ and ($rule->[1] eq 'F' or ($rule->[1] =~ /^[0-5]$/
 			and $rule->[1] == ($marble->[6] - $t->[4]) % 6))) {
