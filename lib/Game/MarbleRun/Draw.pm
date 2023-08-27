@@ -437,7 +437,7 @@ sub put_hexagon {
 		$angle = 60*(($orient + 5) % 6) if $shape == 1;
 		%rot = (transform => "rotate($angle, $x, $y)");
 	}
-	$hex =~ s/\.\d+ / /g;
+	$hex =~ s/(\.\d)\d+([, ])/$1$2/g;
 	$self->{svg}->path(d => $hex, %rot, style => $style, class =>'tile');
 	if ($shape == 1) {
 		$mx = $x + 1.5*$self->{width3};
@@ -447,10 +447,9 @@ sub put_hexagon {
 		my $dly = 3*$dlx2;
 		my $dly2 = 0.5*$dly;
 		my $clip = "M$mx $my l0 $dly l-$dlx 0 l-$dlx2 -$dly2 l$dlx2 -$dly2 Z";
-		$clip =~ s/\.\d+ / /g;
-		$self->{svg}->path(d => $clip,
-			style => {stroke => 'url(#mygreen)', fill => 'url(#mygreen)'},
-			%rot, class =>'tile');
+		$clip =~ s/(\.\d)\d+([, ])/$1$2/g;
+		$self->{svg}->path(d => $clip, style => {stroke => 'url(#mygreen)',
+			fill => 'url(#mygreen)'}, %rot, class =>'tile');
 	}
 }
 
@@ -485,11 +484,13 @@ sub put_arc {
 		$r += $self->{width3};
 		$orient += 4;
 	}
-	$x1 = int($x + $self->{middle_x}[($orient) % 6]);
-	$y1 = int($y + $self->{middle_y}[($orient) % 6]);
-	$x2 = int($x + $self->{middle_x}[($size+$orient) % 6]);
-	$y2 = int($y + $self->{middle_y}[($size+$orient) % 6]);
-	$svg->path(d => "M $x1 $y1 A $r $r 0 0 0 $x2 $y2", class => 'tile');
+	$x1 = $x + $self->{middle_x}[($orient) % 6];
+	$y1 = $y + $self->{middle_y}[($orient) % 6];
+	$x2 = $x + $self->{middle_x}[($size+$orient) % 6];
+	$y2 = $y + $self->{middle_y}[($size+$orient) % 6];
+	my $str = sprintf("M%.1f %.1f A%.1f %.1f 0 0 0 %.1f %.1f",
+		$x1, $y1, $r, $r, $x2, $y2);
+	$svg->path(d => $str, class => 'tile');
 }
 
 sub put_circle {
@@ -505,7 +506,9 @@ sub put_circle {
 	if ($style_in) {
 		$style->{$_} = $style_in->{$_} for keys %$style_in;
 	}
-	$svg->circle(cx=>$x, cy=>$y, r=>$r*$self->{size}, style=>$style);
+	$r *= $self->{size};
+	$_ = sprintf("%.1f", $_) for ($x, $y, $r);
+	$svg->circle(cx=>$x, cy=>$y, r=>$r, style=>$style);
 }
 
 sub put_through_line {
@@ -588,10 +591,10 @@ sub put_TransparentPlane {
 	$plane .= "l-$dx2,$dy l-$dx,0 " x ($num - 1);
 	$plane .= "l-$dx2,$dy l$dx2,$dy " x $num;
 	$plane .= "l$dx,0 l$dx2,$dy " x ($num - 1);
-	$plane =~ s/\.\d+([, ])/$1/g;
-	$holes =~ s/\.\d+([, ])/$1/g;
+	$plane =~ s/(\.\d)\d+([, ])/$1$2/g;
+	$holes =~ s/(\.\d)\d+([, ])/$1$2/g;
 	my $style = {stroke=>'lightblue', fill=>'lightblue', opacity=>'0.5'};
-	$svg->path(d=>"M $m0x,$m0y $plane Z$holes", style => $style);
+	$svg->path(d=>"M$m0x,$m0y $plane Z$holes", style => $style);
 }
 
 sub put_1 {
@@ -691,7 +694,9 @@ sub put_arrows {
 			my ($dx1, $dy1) = ($xd - $dx, $yd - $dy);
 			my ($dx2, $dy2) = (-$dx - $xd, -$dy - $yd);
 			my ($dx3, $dy3) = (-$dx2, -$dy2);
-			$svg->path(d=>"M $xa,$ya l $dx1,$dy1 l $dx2,$dy2 l $dx3,$dy3", style=>$style);
+			my $str = sprintf("M%.1f,%.1f l%.1f,%.1f l%.1f,%.1f l%.1f,%.1f",
+				$xa,$ya,$dx1,$dy1,$dx2,$dy2,$dx3,$dy3);
+			$svg->path(d => $str, style => $style);
 		}
 	}
 }
@@ -721,7 +726,9 @@ sub put_middleBar {
 	my ($xdm, $ydm) = (-$xd, -$yd);
 	my ($dxm, $dym) = (-$dx, -$dy);
 	my ($xl, $yl) = ($x1-$dx/2-$xd/2, $y1-$dy/2-$yd/2);
-	$svg->path(d=>"M $xl,$yl l $xd,$yd l $dx,$dy l $xdm,$ydm l $dxm,$dym Z", style => $style);
+	my $str = sprintf("M%.1f,%.1f l%.1f,%.1f l%.1f,%.1f l%.1f,%.1f l%.1f,%.1f Z",
+			$xl,$yl,$xd,$yd,$dx,$dy,$xdm,$ydm,$dxm,$dym);
+	$svg->path(d => $str, style => $style);
 }
 
 sub put_arc_or_bezier {
@@ -743,10 +750,14 @@ sub put_arc_or_bezier {
 	if ($bezier) {
 		my $dq1 = ($x2 + $x1)/2. - $r*$dx1;
 		my $dq2 = ($y2 + $y1)/2. - $r*$dy1;
-		$svg->path(d => "M $x1 $y1 Q $dq1 $dq2 $x2 $y2 $z", class => 'tile');
+		my $str = sprintf("M%.1f %.1f Q%.1f %.1f %.1f %.1f %s",
+			$x1, $y1, $dq1, $dq2, $x2, $y2, $z);
+		$svg->path(d => $str, class => 'tile');
 	} else {
 		$r *= $self->{size};
-		$svg->path(d => "M $x1 $y1 A $r $r 0 0 0 $x2 $y2 $z", class => 'tile');
+		my $str = sprintf("M%.1f %.1f A%.1f %.1f 0 0 0 %.1f %.1f %s",
+			$x1, $y1, $r, $r, $x2, $y2, $z);
+		$svg->path(d => $str, class => 'tile');
 	}
 }
 
@@ -766,6 +777,7 @@ sub put_Balls {
 		($x, $y) = ($x + $offset*($x1 - $x), $y + $offset*($y1 - $y));
 	}
 	my $g = $svg->group(id => "marble$id");
+	$_ = sprintf("%.1f", $_) for ($x, $y, $r);
 	$g->circle(cx=>$x, cy=>$y, r=>$r, style=>{fill=>$color});
 	my $tag = $g->gradient(-type => 'radial', id => "radial$id",
 		gradientUnits => 'userSpaceOnUse', cx => $x, cy => $y, r => $r,
@@ -797,6 +809,7 @@ sub put_Marble {
 		my ($dx, $dy) = ($x1 - $x, $y1 - $y);
 		($x, $y) = ($x + $off_y*$dx - $off_x*$dy, $y + $off_y*$dy + $off_x*$dx);
 	}
+	$_ = sprintf("%.1f", $_) for ($x, $y, $r);
 	$svg->circle(cx=>$x, cy=>$y, r=>$r, style=>{fill=>$color});
 	my $tag = $svg->gradient(-type => 'radial', id => $m_id,
 		gradientUnits => 'userSpaceOnUse', cx => $x, cy => $y, r => $r,
@@ -889,7 +902,10 @@ sub put_Dipper {
 	my ($x4, $x5, $y4, $y5) = ($xc + $dx, $xc - $dx, $yc + $dy, $yc - $dy);
 	$x5 = $x4 + ($x5 - $x4)*$len;
 	$y5 = $y4 + ($y5 - $y4)*$len;
-	$svg->path(d => "M $x1 $y1 L $x2 $y2 A $r $r 0 0 1 $x3 $y3 A $r $r 0 0 1 $x5 $y5 L $x4 $y4", class => 'tile');
+	my $str = sprintf("M%.1f,%.1f L%.1f,%.1f A%.1f,%.1f 0 0 1 %.1f,%.1f A%.1f,%.1f 0 0 1 L%.1f,%.1f",
+			$x1,$y1,$x2,$y2,$r,$r,$x3,$y3,$r,$r,$x5,$y5,$x4,$y4);
+	$svg->path(d => $str, class => 'tile');
+	#$svg->path(d => "M $x1 $y1 L $x2 $y2 A $r $r 0 0 1 $x3 $y3 A $r $r 0 0 1 $x5 $y5 L $x4 $y4", class => 'tile');
 	$self->put_small_lever($x, $y, $orient + 3, $detail);
 }
 
@@ -933,7 +949,7 @@ sub put_TipTube {
 	$self->put_hexagon($x, $y);
 	# small curve
 	$self->put_arc($x, $y, 1, $orient - 1);
-	$self->put_text($x, $y, 't');
+	$self->put_text($x, $y, 'xT');
 }
 
 sub put_BasicTile {
@@ -958,7 +974,7 @@ sub put_Spinner {
 	my $r = 7./60.*$self->{size};
 	my ($x2, $y2) = ($cx - $r, $cy - 0.375*$self->{size});
 	my ($x3, $y3) = ($cx + $r, $cy - 0.375*$self->{size});
-	my %half_circle = (d => "M $x2 $y2 A $r $r 0 0 0 $x3 $y3");
+	my %half_circle = (d => "M$x2 $y2 A$r $r 0 0 0 $x3 $y3");
 	my $style = {stroke=>'black', fill=>'none'};
 	$self->{svg}->path(%half_circle, style => $style);
 	$self->{svg}->path(%half_circle, transform => "rotate($_, $cx, $cy)",
@@ -978,7 +994,7 @@ sub put_Start {
 	my ($x2, $y2) = ($cx - $sign*$r, $cy - $sign*0.25*$self->{size});
 	my ($x3, $y3) = ($cx + $sign*$r, $cy - $sign*0.25*$self->{size});
 	my ($x4, $y4) = ($cx + $sign*$r, $cy - $sign*0.3*$self->{size});
-	my %half_circle = (d => "M $x1 $y1 L $x2 $y2 A $r $r 0 0 0 $x3 $y3 L $x4 $y4", fill => 'white');
+	my %half_circle = (d => "M$x1 $y1 L$x2 $y2 A$r $r 0 0 0 $x3 $y3 L$x4 $y4", fill => 'white');
 	$self->{svg}->path(%half_circle);
 	$self->{svg}->path(%half_circle, transform => "rotate(120, $cx, $cy)");
 	$self->{svg}->path(%half_circle, transform => "rotate(240, $cx, $cy)");
@@ -1111,14 +1127,13 @@ sub get_moving_marbles {
 	my $same_pos_delay = 90;
 	for my $id (grep {$self->{tiles}{$_}[7]} keys %{$self->{tiles}}) {
 		my $t = $self->{tiles}{$id};
-		next if ($t->[8] || 0) > $self->{ticks};
+		next if ($t->[8] || 0) > $self->{ticks}; ###
 		my $t_dir = $t->[4];
-		# do not honor tile direction for A and xS
-		#$t_dir = $t->[4] % 2 if $t->[0] eq 'A';
-		#$t_dir = 0 if $t->[0] eq 'xS';
 		for my $rule (@{$self->{rules}{$t->[0]}}) {
+			# a rule with an outgoing marbe exists
 			next if ! defined $rule->[6] or $rule->[6] !~ /o/;
 			my %dirs;
+			# calculate possible marble dirs from the marble on the tile
 			for my $str (grep {$_} split /:/, $t->[7]) {
 				my ($m_dir) = ($str =~ /\d+o(.).$/);
 				$m_dir eq 'M' ? $dirs{M}++ : $dirs{($m_dir - $t_dir) % 6}++;
@@ -1127,6 +1142,7 @@ sub get_moving_marbles {
 			my $cond = $rule->[5];
 			(my $num_r) = ($cond =~ /(\d?)o./);
 			$num_r ||= 1;
+			# check if conditionis fulfilled
 			while ($cond =~ s/(\d?)o(.)//) {
 				my $num = $1 || 1;
 				$match = 0 if ! exists $dirs{$2} or $dirs{$2} < $num;
@@ -1141,21 +1157,21 @@ sub get_moving_marbles {
 					$self->{ticks} += $xT_delay;
 				}
 				# now no marble at orientation $dir
-				my $inc = 0;
+				my $inc = 1;
 				while ($t->[7] =~ s/:(\d+)o$dir(.)//) {
 					my ($num, $color) = ($1, $2);
 					$marbles = [grep {$_->[0] != $num} @$marbles];
-					say "$num: start marble at ", $self->{ticks} + $inc,
-						" $self->{color}{lc $color} ($self->{dirchr}[$dir])"
-						if $dbg;
-					# id sym x y z dir_in dir_out total_time inc_time len
+					say "$num: start marble at xy=$t->[1],$t->[2] t=",
+						$self->{ticks} + $inc, " $self->{color}{lc $color}",
+						" ($self->{dirchr}[$dir])" if $dbg;
+					# id sym x y z dir_in dir_out total_time inc_time len energy
 					my $len = 0.5;
 					$len -= $self->{offset}{$t->[0]}
 						if exists $self->{offset}{$t->[0]};
 					my $e = 10*$t->[3] + 5;
 					push @$marbles, [$num, $id, undef, @$t[1..3],
 						undef, $dir, $self->{ticks}+$inc, 0, $color, $len, $e];
-					# inhibit emitting new marbles for 30 ticks
+					# inhibit emitting new marbles for 90 ticks
 					$inc += $same_pos_delay if $rule->[2] ne '';
 					$self->{ticks} += $xT_delay if $t->[0] eq 'xT';
 					my $left = $t->[7] =~ s/(o$dir)/$1/g;
@@ -1187,35 +1203,43 @@ sub move_marbles {
 		}
 		my $m_dir = $m->[7];
 		my $t_id = $m->[1];
-		#say "### marble=@$m $t_id $self->{tiles}{111}[0]" if $m;
-		#print Dumper $rails, $self->{tiles};exit;
+		my $t_name = $self->{tiles}{$t_id}[0];
 		# find outgoing connecting rail
 		my @out = grep {$t_id == $_->[2] and $m_dir eq $_->[1]} @$rails;
-		#print Dumper "out: $m_dir", \@out;
+		@out = () if $self->{rules}{$t_name}[0][2] eq 'F';
 		#say "$m0: search for rail in direction $m_dir connected to tile $t_id";
-		if (defined $out[0] and $self->{tiles}{$t_id}[0] ne 'F') {
+		if (defined $out[0]) {
 			say "$m0: rail out $out[0]->[0] found, dir $out[0]->[1]" if $dbg;
 			say "$m0: next tile $self->{tiles}{$out[0]->[4]}[0] in dir = $out[0]->[7]" if $dbg;
 			$m = $self->update_marble($m, $out[0]->[4], $out[0]->[7], $out[0]);
 		} else {
 			# find incoming connecting rail
 			my @in = grep {$t_id == $_->[4] and $m_dir eq $_->[7]} @$rails;
-			#print Dumper "in: $m_dir ", \@in;
-			if (defined $in[0] and $self->{tiles}{$t_id}[0] ne 'F') {
+			if (@in) {
+				$t_name = $self->{tiles}{$in[0]->[4]}[0];
+				@in = () if $self->{rules}{$t_name}[0][2] eq 'F';
+			}
+			if (defined $in[0]) {
 				say "$m0: rail in $in[0]->[0] found, dir $in[0]->[7]" if $dbg;
 				say "$m0: next tile $self->{tiles}{$in[0]->[2]}[0] in_dir = $in[0]->[1]" if $dbg;
 				$m = $self->update_marble($m, $in[0]->[2], $in[0]->[1], $in[0]);
 			} else {
 				# find neighboring tile
 				my $tiles = $self->{tiles};
-				my ($x, $y) = $self->to_position($m->[3], $m->[4], $m_dir, 1);
+				$m_dir = ($m_dir + 3) % 6 if $t_name eq 'F';
+				my $d = $t_name eq 'xK' ? 2 : 1;
+				my ($x, $y) = $self->to_position($m->[3], $m->[4], $m_dir, $d);
 				my $z = $m->[5];
+				$z += $self->{rules}{$t_name}[0][4] if $t_name eq 'xK';
+				$m_dir = 'M' if $t_name eq 'xK';
 				my $next = $self->tile_rule($x, $y, $z, $m_dir);
 				if ($next) {
 					my $tile = $tiles->{$next};
 					say "$m0: next tile $tile->[0], xyz=@$tile[1..3], dir ",
 						$tile->[4] || -1 if $dbg;
 					my $new_dir = $m->[7] eq 'M' ? $m->[7] : ($m->[7] + 3) % 6;
+					$new_dir = $m->[7] eq 'M' ? $m->[7] : ($m->[7] + 3) % 6;
+					$new_dir = $m->[7] if $t_name eq 'F';
 					$m = $self->update_marble($m, $next, $new_dir);
 				} else {
 					say "$m0: no connection xyz=$x $y $z dir $m_dir" if $dbg;
@@ -1246,7 +1270,7 @@ sub tile_rule {
 				if $t->{$t_id}[5] =~ /(^\d)([a-f])/;
 		}
 		for (@{$self->{rules}{$t->{$t_id}[0]}}) {
-			say "   zcheck z=$z, tile_z=$tile_z, rule: $_->[3] -> $_->[4]" if $dbg;
+			say "   zcheck marble z=$z, next tile_z=$tile_z, dir=$dir rule: $_->[3] -> $_->[4]" if $dbg;
 			if ($dir eq 'M') {
 				next if $_->[5] !~ /o/ and abs($_->[5]) > abs($z - $tile_z);
 			} elsif ($_->[4] < 0) {
@@ -1283,19 +1307,23 @@ sub update_marble {
 			($t->[1], $t->[2]) = $self->to_position($t->[1], $t->[2], $dir, 2);
 			$dir = 'M';
 		}
-		my $special = $self->{rail}{$rail->[0]}[4];
-		$len = $special eq 'fast' ? $len/2 : $special eq 'slow' ? $len*2 : $len;
+		#my $special = $self->{rail}{$rail->[0]}[4];
+		#$len = $special eq 'fast' ? $len/2 : $special eq 'slow' ? $len*2 : $len;
 		$marble->[8] += 10*($self->{rail}{$rail->[0]}[1] || 1);
+		$self->{ticks} = $marble->[8];
 		$marble->[7] = ($marble->[7] + 3) % 6 if $rail->[0] eq 't';
 		push @{$self->{xyz}[$m_id]}, [$rail->[0], @$t[1,2,3], $marble->[7],
 			$t->[5], $self->{ticks}];
 	}
 	$marble->[1] = $tile_id;
+	my $t_name = $self->{tiles}{$tile_id}[0];
 	$marble->[2] = undef;
 	@$marble[3,4,5] = @{$self->{tiles}{$tile_id}}[1,2,3];
 	$marble->[6] = $dir;
 	$marble->[7] = $self->next_dir($marble);
-	$marble->[8] += 10;
+	my $len = $self->path_length($tile_id, $dir, $marble->[7]);
+	$marble->[8] += 10*$len;
+	$self->{ticks} = $marble->[8];
 	my $new_dir = $marble->[6];
 	if ($marble->[6] ne 'M') {
 		$new_dir = ($marble->[6] - 3) % 6;
@@ -1323,6 +1351,28 @@ sub update_marble {
 		$self->{tiles}{$tile_id}[7] .= ":$marble->[0]o$marble->[6]$color";
 	}
 	return $marble;
+}
+
+sub path_length {
+	my ($self, $t_id, $in, $out) = @_;
+	my $t = $self->{tiles}{$t_id};
+	my $sym = $t->[0];
+	my %len = (A => 0.25, M => 2*$self->{r_ball},
+		N => 11./24. + $self->{r_ball}, P => 5./12. + $self->{r_ball}, Q => 3,
+		Z => 0.5, xA => 0.7, xK => 2.5, xS => 0.125, xT => 0.5, xZ => 0.7);
+	return 0.5 if ! $out;
+	return 0.5 if $in eq 'M' or $out eq 'M';
+	my $pi = 3.1416;
+	my $pi_by_sqrt3 = $pi/sqrt(3.);
+	$len{$sym} = 1 + 0.5*$t->[5] if $sym eq 'xB';
+	$len{$sym} = 2*$pi*0.4/3. + 2*$pi*0.21*$t->[5]/3. if $sym eq 'xH';
+	$len{$sym} = 2*$pi*0.33 + 0.6 if $sym eq 'xQ';
+	return $len{$sym} if exists $len{$sym};
+	my $diff = abs($in - $out);
+	return 1 if $diff == 3;
+	return $pi_by_sqrt3/2. if $diff == 2 or $diff == 4;
+	return $pi_by_sqrt3/6. if $diff == 1 or $diff == 5;
+
 }
 
 sub spiral_dir {
@@ -1368,14 +1418,11 @@ sub next_dir {
         } elsif ($rule->[2] =~ /^[FR]$/) {
 			$marble->[5] += $rule->[3] if $rule->[1]  eq 'F';
 			$marble->[5] += ($rule->[4] - $rule->[3]) if $rule->[4] =~ /^\d$/;
-			#say "### rule4 $rule->[4] ,new z=$marble->[5]";
 			return $rule->[2] eq 'F' ? $marble->[7] : $marble->[6];
 		} elsif ($marble->[6] =~ /\d/ and ($rule->[1] eq 'F' or ($rule->[1] =~ /^[0-5]$/
 			and $rule->[1] == ($marble->[6] - $t->[4]) % 6))) {
 			# update z if required
 			$marble->[5] += $rule->[4] if $rule->[4] > 0;
-			#$marble->[5] -= $rule->[3] if $rule->[3] > 0;
-			say "### new z $marble->[5]" if $rule->[3] and $dbg;
 			return ($rule->[2] + $t->[4]) % 6 if $rule->[2] =~ /^[0-5]$/;
 		}
 	}
@@ -1384,6 +1431,7 @@ sub next_dir {
 
 sub generate_path {
 	my ($self, $xyz) = @_;
+	#print Dumper $xyz;
 	my ($x0, $y0) = $self->center_pos($xyz->[0][1], $xyz->[0][2]);
 	# start tile needs an offset in marble direction
 	#print Dumper $xyz;
@@ -1400,16 +1448,27 @@ sub generate_path {
 	}
 	my $path = "M 0 0";
 	my $start;
-	for (my $i = 1; $i < @$xyz; $i++) {
+	for (my $i = 0; $i < @$xyz; $i++) {
 		$start = $xyz->[$i][6] || 0 if ! defined $start;
 		my ($sym, $xc, $yc, $z, $dir, $detail) = @{$xyz->[$i]};
 		last if ! $sym;
-		next if exists $xyz->[$i + 1] and $xyz->[$i + 1][4] ne 'M' and $xyz->[$i + 1] < 0;# and $sym =~ /x[AZ]/;
-		say " path sym $sym xyz=$xc $yc $z dir=",$dir if $dbg;
+		next if exists $xyz->[$i + 1] and $xyz->[$i + 1][4] ne 'M' and $xyz->[$i + 1] < 0;
+		say " path sym $sym xyz=$xc $yc $z dir=$dir tics=$xyz->[$i][6]" if $dbg;
 		my ($x, $y) = $self->center_pos($xc, $yc);
 		if ($sym eq 'xH') {
 			my $elems = $detail;
 			$path .= $self->helix_path($x - $x0, $y -$y0, $dir, $elems);
+		} elsif ($sym eq 'xQ') {
+			my $d2 = ($dir - 1)%6;
+			my $off = 0.18;
+			my $r =  0.33*$self->{width3};
+			my $r3 = 3*$r;
+			my ($dx, $dy) = ($self->{middle_x}[$dir], $self->{middle_y}[$dir]);
+			my ($dx2, $dy2) = ($self->{middle_x}[$d2], $self->{middle_y}[$d2]);
+			my ($x1, $y1) = ($x - $off*$dx - $x0, $y - $off*$dy - $y0);
+			my ($x2, $y2) = ($x - $off*$dx2 - $x0, $y - $off*$dy2 - $y0);
+			my ($x3, $y3) = ($x - $dx2 - $x0, $y - $dy2 - $y0);
+			$path .= " A $r3 $r3 0 0 1 $x2 $y2 A $r $r 1 1 0 $x1 $y1 A $r3 $r3 0 0 1 $x3 $y3";
 		} elsif ($dir eq 'M') {
 			$path .= " L " . ($x - $x0) . ' ' . ($y - $y0);
 		} elsif ($dir < 0 || $dir eq '') {
@@ -1435,15 +1494,15 @@ sub generate_path {
 				$dir = (2*$balls + int($balls/3)) % 6;
 			}
 			my ($dx, $dy) = ($self->{middle_x}[$dir], $self->{middle_y}[$dir]);
-			my $to = ($x - $x0 + $frac*$dx) . ' ' . ($y - $y0+ $frac*$dy);
-			$path .= " L $to";
-			$path =~ s/(\.d)\d+ /$1 /g;
+			my ($xto, $yto) = ($x - $x0 + $frac*$dx, $y - $y0+ $frac*$dy);
+			$path .= " L $xto $yto";
+			$path =~ s/(\.\d)\d+ /$1 /g;
 			push @$paths, $path;
-			push @$starts, ($start + 10)/$self->{speed};
-			push @$lengths, ($xyz->[$i][6] - $start)/$self->{speed};
-			$path = " M $to";
+			push @$starts, ($start)/$self->{speed};
+			push @$lengths, (($xyz->[$i][6] || 0) - $start)/$self->{speed};
+			$path = " M $xto $yto";
 			$start = undef;
-		} elsif ($sym =~ /[a-w]$/) {
+		} elsif ($sym =~ /x?[a-w]$/) {
 			last if ! exists $xyz->[$i+1];
 			my ($x, $y) = $self->center_pos($xyz->[$i+1][1], $xyz->[$i+1][2]);
 			$dir = ($dir - $self->{rail}{$sym}[4]) % 6 if $sym =~ /^[cd]$/;
@@ -1453,7 +1512,12 @@ sub generate_path {
 			if ($sym =~ /^[cd]$/) {
 				my $r = 1.5*$self->{width3};
 				my $flip = $self->{rail}{$sym}[4] > 0 ? 0 : 1;
-				$path .= "A $r $r 0 0 $flip $x $y";
+				$path .= " A $r $r 0 0 $flip $x $y";
+			} elsif ($sym eq 'xt') {
+				$path .= " l $dx $dy";
+				my $out = $xyz->[$i+1][4];
+				($dx, $dy) = ($self->{middle_x}[$out], $self->{middle_y}[$out]);
+				$path .= " l $dx $dy";
 			} elsif ($sym eq 't') {
 				$dx = 0.5*$dx;
 				$dy = 0.5*$dy;
@@ -1474,23 +1538,24 @@ sub generate_path {
 			$x += $dx - $x0;
 			$y += $dy - $y0;
 			my $dir_diff = ($out - $dir - 3) % 6;
-			if ($dir_diff == 3) {
+			if (not $dir_diff % 3) {
 				$path .= " L $x $y";
 
 				$path .= " L " . ($x - 2*$dx) . ' ' . ($y - 2*$dy) . " L $x $y" 
-					if $sym eq 'Q'; # simulate looping
+					if $sym eq 'Q' or $sym eq 'F'; # simulate looping
 			} else {
 				my $r = (($dir_diff % 2) ? 0.5 : 1.5)*$self->{width3};
 				my $flip = $dir_diff < 3 ? 0 : 1;
-				$path .= "A $r $r 0 0 $flip $x $y";
+				$path .= " A $r $r 0 0 $flip $x $y";
 			}
 		}
 	}
 	if (! $paths) {
 		push @$paths, $path;
-		push @$starts, 10/$self->{speed};
-		push @$lengths, $xyz->[-2][6]/$self->{speed};
+		push @$starts, ($start)/$self->{speed};
+		push @$lengths, (($xyz->[-1][6] || 0) - $start)/$self->{speed};
 	}
+	#print Dumper $starts, $lengths;
 	return ($starts, $lengths, $paths);
 }
 
