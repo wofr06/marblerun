@@ -20,8 +20,6 @@ sub new {
 		speed => 20,
 		screen_x => $attr{screen_x} || 800,
 		screen_y => $attr{screen_y} || 600,
-		# text adjust in svg if dominant-baseline not understood
-		text_offset => $attr{text_offset} ? 1 : 0,
 	};
 	bless $self => $class;
 	# set viewport workaround for: style => {'viewport-fill' => 'white'}
@@ -46,6 +44,7 @@ sub svg_defs {
 	$svg->style()->cdata('path.tile {stroke: black; fill: none}');
 	$svg->style()->cdata('polygon.tile {stroke: black; fill: none}');
 	$svg->style()->cdata('line.tile {stroke: black; fill: none}');
+	$svg->style()->cdata('text.text {font-family: Arial; text-anchor: middle}');
 }
 
 sub gradient {
@@ -90,10 +89,13 @@ sub center_pos {
 
 sub orientations {
 	my ($self, $case) = @_;
-	my $start = 2;
-	my $shift = 6;
+	#$case = 'extra curves';
+	#$case = 'balcony';
+	#$case = 'all';
+	my $start = 4;
+	my $shift = 7;
 	my $elems = { '0.5' => 'Orientation', 2 => 'C', 4 => 'Y,S', 6 => 'X',
-		8 => 'G,D', 10 => 'Straight Tile', 12 => 'xG', 14 => 'B'};
+		8 => 'G,D', 10 => 'J,I', 12 => 'xG', 14 => 'B'};
 	$case ||= '';
 	if ($case eq 'balcony') {
 		$elems = { '0.5' => 'Orientation', 2 => 'B'};
@@ -104,35 +106,41 @@ sub orientations {
 		8 => 'yW', 10 => 'xY', 12 => 'yY', 14 => 'xX', 16 => 'yX', 18 => 'xI',
 		20 => 'yI', 22 => 'xQ', 24 => 'xV'};
 	} elsif ($case eq 'all') {
-		$start = 7;
-		$shift = 15;
+		$start = 6;
+		$shift = 11;
 		$elems = { '0.5' => 'Orientation', 2 => 'C', 4 => 'Y,S', 6 => 'X',
-        8 => 'G,D', 10 => 'Straight Tile', 12 => 'xG', 14 => 'B', 16 => 'xC',
+        8 => 'G,D', 10 => 'J,I', 12 => 'xG', 14 => 'B', 16 => 'xC',
 		18 => 'yC', 20 => 'xW', 22 => 'yW', 24 => 'xY', 26 => 'yY', 28 => 'xX',
-		30 => 'yX', 32 => 'xI', 34 => 'yI', 36 => 'xQ', 38 => 'xV,yS'};
+		30 => 'yX', 32 => 'xI', 34 => 'yI', 36 => 'xQ', 38 => 'xV'};
 	}
-	my %label;
+	my $off_start = $start % 2 ? 0 : -0.5;
+	my $off_shift = $shift % 2 ? 0 : -0.5;
+	my (%label, %drawing);
 	my $size_y= 0;
+	my $tg = $self->{svg}->group(
+		id => 'orient_txt', 'font-family'=> 'Arial', 'text-anchor' => 'middle');
 	for my $k (keys %$elems) {
 		if (length $elems->{$k} < 3 or $elems->{$k} =~ /,/) {
 			my @e = split /,/, $elems->{$k};
 			$label{$k} = join ', ', map {loc $self->{elem_name}{$_}} @e;
-			$elems->{$k} = $e[0];
+			$drawing{$k} = $e[0];
 		} else {
 			$label{$k} = loc($elems->{$k});
+			$drawing{$k} = $elems->{$k};
 		}
 		$size_y = $k if $k > $size_y;
 	}
 	$size_y = 20 if $size_y < 20;
 	$self->set_size(int $self->{screen_y}/($size_y + 2));
 	$elems->{'0.5'} = 'Symbol';
-	$self->put_text($start - 4, $_, $elems->{$_}) for sort keys %label;
-	$self->put_text($start, $_, $label{$_}) for sort keys %label;
-	delete $elems->{'0.5'};
-	for my $orient (0..5) {
-		my $x = 2*$orient + $shift;
-		$self->put_text($x, 0.5, chr($orient+97));
-		$self->draw_tile($elems->{$_}, $x, $_, $orient) for sort keys %$elems;
+	$self->put_text(1, $_, $elems->{$_}, {'font-size'=>''}, $tg) for sort keys %$elems;
+	$self->put_text($start, $_ + $off_start, $label{$_}, {'font-size'=>''}, $tg)
+		for sort keys %label;
+	delete $drawing{'0.5'};
+	for my $dir (0..5) {
+		$self->put_text(2*$dir+$shift, 0.5, chr($dir+97), {'font-size'=>''}, $tg);
+		$self->draw_tile($drawing{$_}, 2*$dir+$shift, $_+$off_shift, 0, $dir)
+			for sort keys %drawing;
 	}
 }
 
@@ -157,43 +165,55 @@ sub board {
 	my $screen_y = $self->{screen_y};
 	my $size = int min($screen_x/(6*$board_x + 1), $screen_y/(5*$board_y + 2));
 	$self->set_size($size);
+	# board attributes
+	my $scale = [1., 14./15., 0.5];
+	my (@hgy, @hgn);
+	$hgy[0] = $self->{svg}->group(
+		id => 'board_hex_gy0,', stroke => 'none', fill => 'url(#gray_yminus)');
+	$hgy[1] = $self->{svg}->group(
+		id => 'board_hex_gy1,', stroke => 'none', fill => 'url(#gray_plus)');
+	$hgy[2] = $self->{svg}->group(
+		id => 'board_hex_gy2,', stroke => 'none', fill => 'white');
+	$hgn[0] = $self->{svg}->group(
+		id => 'board_hex_gn0,', stroke => 'none', fill => 'url(#green_yminus)');
+	$hgn[1] = $self->{svg}->group(
+		id => 'board_hex_gn1,', stroke => 'none', fill => 'url(#green_yplus)');
+	$hgn[2] = $self->{svg}->group(
+		id => 'board_hex_gn2,', stroke => 'none', fill => 'white');
 	# write the coordinate labels
+	my $tg = $self->{svg}->group(
+		id => 'board_txt', 'font-family'=> 'Arial', 'text-anchor' => 'middle');
 	for my $x (1..6*$board_x) {
 		my $y = $x % 2 ? 0 : -0.5;
 		my $xx = $self->{relative} ? (($x - 1) % 6) + 1 : $x;
 		my $chr = $xx < 10 ? "$xx" : chr($x+87);
-		$self->put_text($x, $y, $chr) if ! $fill_coord;
+		$self->put_text($x, $y, $chr, '', $tg) if ! $fill_coord;
 	}
 	for my $y (1..5*$board_y) {
 		my $yy = $self->{relative} ? (($y - 1) % 5) + 1 : $y;
 		my $chr = $yy < 10 ? "$yy" : chr($y+87);
 		if (! $fill_coord) {
-			$self->put_text(0, $y, $chr);
-			$self->put_text(6*$board_x+1, $y, $chr);
+			$self->put_text(0, $y, $chr, '', $tg);
+			$self->put_text(6*$board_x+1, $y, $chr, '', $tg);
 		}
 	}
 	# draw the board
-	my $scale = [1., 14./15., 0.5];
-	my $fill = ['url(#gray_yminus)', 'url(#gray_yplus)', 'white'];
-	my $fill2 = ['url(#green_yminus)', 'url(#green_yplus)', 'white'];
 	for my $lay (0, 1, 2) {
 		for my $x (1..6*$board_x) {
 			for my $y (0..5*$board_y) {
 				my $shape = 0;
-				my $s = {fill => $fill->[$lay]};
+				my $s = $hgy[$lay];
 				if ($x % 2) {
-				next if $y == 0;
-					$s = {fill => $fill2->[$lay]} if $y % 5 == 1;
+					next if $y == 0;
+					$s = $hgn[$lay] if $y % 5 == 1;
 				} else {
-					$s = {fill => $fill2->[$lay]} if $y % 5 == 3;
+					$s = $hgn[$lay] if $y % 5 == 3;
 					$shape = 1 if $y == 0;
 					$shape = 2 if $y == 5*$board_y;
 				}
-				$s->{stroke} = 'none';
 				$self->put_hexagon2($x, $y, $scale->[$lay], $s, $shape);
 				my $pos = $self->num2pos($x, $y, 1);
-				$pos =~ s/.* (?!11)//;
-				$self->put_text($x, $y, $pos) if $fill_coord and ! $shape;
+				$self->put_text($x, $y, $pos, '', $tg) if $fill_coord and ! $shape;
 			}
 		}
 	}
@@ -215,8 +235,21 @@ sub board {
 	return 1;
 }
 
+sub put_hexagon2 {
+	my ($self, $posx, $posy, $rel_size, $group, $shape) = @_;
+	$shape = 0 if ! $shape or $shape > 2;
+	# 0=full hex, 1=upper half, 2=lower half
+	my ($xh, $yh);
+	my ($x, $y) = $self->center_pos($posx, $posy);
+	@$xh = map {int($x + $rel_size*$_)} @{$self->{corner_x}->[$shape]};
+	@$yh = map {int($y + $rel_size*$_)} @{$self->{corner_y}->[$shape]};
+	my $points = $group->get_path(x=>$xh, y=>$yh, -closed=>1, -type=>'polygon');
+	$group->polygon(%$points);
+
+}
+
 sub draw_tile {
-	my ($self, $elem, $x, $y, $orient, $detail) = @_;
+	my ($self, $elem, $x, $y, $z, $orient, $detail) = @_;
 	return if ! $self->{svg};
 	if ($elem eq 'A') {
 		$self->put_Start($x, $y, $orient);
@@ -230,7 +263,7 @@ sub draw_tile {
 		$self->put_hexagon($x, $y);
 		$self->put_through_line($x, $y, $orient, 0.3);
 		$self->put_through_line($x, $y, $orient + 3, 0.3);
-		$self->put_text($x, $y, $_);
+		$self->put_text($x, $y, $_, {class => 'text'});
 	} elsif ($elem eq 'xA') {
 		$self->put_Zipline($x, $y, ($orient+3)%6);
 	} elsif ($elem eq 'xZ') {
@@ -280,12 +313,12 @@ sub draw_tile {
 	# other tiles (F,R,xM,xP,xR,xS,yH,yK,yR,yS,yT) handled here
 	# (hexagon plus symbol) (K, Q also with through line)
 	} else {
-		$self->put_Tile($x, $y, $elem, $orient, $detail);
+		$self->put_Tile($x, $y, $z, $elem, $orient, $detail);
 	}
 }
 
 sub put_Tile {
-	my ($self, $x, $y, $elem, $orient_in, $detail) = @_;
+	my ($self, $x, $y, $z, $elem, $orient_in, $detail) = @_;
 	# a: small arc, A: large arc, C: circle H: hexagon I: straight line,
 	# S: switch lever, T: text
 	my %tiles = ('Straight Tile' => 'I0',
@@ -335,9 +368,9 @@ sub put_Tile {
 			$self->put_through_line($x, $y, $orient, $frac);
 		} elsif ($type eq 'S') {
 			my $scale = $self->{twoby3} if $elem eq 'U';
-			$self->put_lever($x, $y, $orient, $detail, $scale);
+			$self->put_lever($x, $y, $z, $orient, $detail, $scale);
 		} elsif ($type eq 'T') {
-			$self->put_text($x, $y, $elem);
+			$self->put_text($x, $y, $elem, {class => 'text'});
 		} elsif ($type eq 'H') {
 			$self->put_hexagon($x, $y, $self->{twoby3}, {fill=>'url(#mygreen)',
 				'fill-opacity' => '0.8',});
@@ -345,12 +378,21 @@ sub put_Tile {
 	}
 }
 
+{
+	my $first_call = 1;
 sub draw_rail {
 	my ($self, $elem, $posx1, $posy1, $posx2, $posy2, $dir, $detail) = @_;
 	#print "draw $elem $posx1,$posy1 -> $posx2,$posy2\n";
 	my $svg = $self->{svg};
 	return if ! $svg;
-	my $style = {'stroke-width' => $self->{small_width}};
+	if ($first_call) {
+		my $width = "stroke-width: $self->{small_width}";
+		my $width2 = "stroke-width: " . 3*$self->{small_width};
+		$svg->style()->cdata("line.rail {stroke: black; $width}");
+		$svg->style()->cdata("line.wall {stroke: lightblue; $width2}");
+		$first_call = 0;
+	}
+	my $class = 'rail';
 	# curved bernoulli rails
 	if ($elem =~ /^[cd]$/) {
 		my $inc = $elem eq 'c' ? -1 : 1;
@@ -366,9 +408,9 @@ sub draw_rail {
 		my $dx2 = $self->{middle_x}[$dir];
 		my $dy2 = $self->{middle_y}[$dir];
 		$svg->line(x1 => int($xm + $dx1), y1 => int($ym + $dy1), x2 => int $xm,
-			y2 => int $ym, style => $style, class=>'tile');
+			y2 => int $ym, class => $class);
 		$svg->line(x1 => int $xm, y1 => int $ym, x2 => int($xm - $dx2),
-			y2 => int($ym - $dy2), style => $style, class=>'tile');
+			y2 => int($ym - $dy2), class => $class);
 		return;
 	}
 	# straight rails
@@ -376,15 +418,16 @@ sub draw_rail {
 	my $dx = $self->{middle_x}[$dir];
 	my $dy = $self->{middle_y}[$dir];
 	my ($x2, $y2) = $self->center_pos($posx2, $posy2);
-	($style->{stroke}, $style->{fill}) = qw(lightblue lightblue)
-		if $elem =~ /x[sml]/;
+	#($style->{stroke}, $style->{fill}) = qw(lightblue lightblue)
+	$class = 'wall' if $elem =~ /x[sml]/;
 	# vertical rail
 	if ($elem eq 't') {
 		$x1 = $x1 + 2.5*$dx;
 		$y1 = $y1 + 2.5*$dy;
 	}
 	$svg->line(x1 => int($x1 - $dx), y1 => int($y1 - $dy), x2 => int($x2 + $dx),
-		y2 => int($y2 + $dy), style => $style, class=>'tile');
+		y2 => int($y2 + $dy), class => $class);
+}
 }
 
 sub put_hexagon {
@@ -440,7 +483,7 @@ sub put_hexagon {
 	$hex =~ s/(\.\d)\d+([, ])/$1$2/g;
 	$self->{svg}->path(d => $hex, %rot, style => $style, class =>'tile');
 	if ($shape == 1) {
-		$mx = $x + 1.5*$self->{width3};
+	$mx = $x + 1.5*$self->{width3} - 1.5*$self->{small_width};
 		$my = $y - 1.5*$self->{small_width};
 		my $dlx = 0.37*$self->{size};
 		my $dlx2 = $self->{small_width};
@@ -451,26 +494,6 @@ sub put_hexagon {
 		$self->{svg}->path(d => $clip, style => {stroke => 'url(#mygreen)',
 			fill => 'url(#mygreen)'}, %rot, class =>'tile');
 	}
-}
-
-sub put_hexagon2 {
-	my ($self, $posx, $posy, $rel_size, $style_in, $shape) = @_;
-	my $svg = $self->{svg};
-	my $style = {};
-	if ($style_in) {
-		$style->{$_} = $style_in->{$_} for keys %$style_in;
-	}
-	$shape = 0 if ! $shape or $shape > 2;
-	# 0=full hex, 1=upper half, 2=lower half
-	my ($xh, $yh);
-	my ($x, $y) = $self->center_pos($posx, $posy);
-	@$xh = map {int($x + $rel_size*$_)} @{$self->{corner_x}->[$shape]};
-	@$yh = map {int($y + $rel_size*$_)} @{$self->{corner_y}->[$shape]};
-
-	my $points = $svg->get_path(x => $xh, y => $yh,
-		-closed => 1, -type => 'polygon');
-	$svg->polygon(%$points, style => $style, class =>'tile');
-
 }
 
 sub put_arc {
@@ -527,21 +550,20 @@ sub put_through_line {
 }
 
 sub put_text {
-	my ($self, $posx, $posy, $text, $attrib_in) = @_;
+	my ($self, $posx, $posy, $text, $attrib_in, $svg_group) = @_;
 	my ($x, $y) = $self->center_pos($posx, $posy);
-	# adjust the text in pngs (dominant-baseline not understood)
-	my $svg = $self->{svg};
+	my $svg = $svg_group || $self->{svg};
 	my $rel_size = min($self->{screen_x}, $self->{screen_y})/600;
 	my $font_size = 16/600*min($self->{screen_x}, $self->{screen_y});
-	$y += 6*$rel_size if $self->{text_offset};
+	$y += 5*$rel_size;
 	my $attrib = {
-		'font-family' => 'Arial',
 		'font-size' => 12*$rel_size,
-		'text-anchor'=> 'middle',
-		'dominant-baseline' => 'central'
 	};
 	if ($attrib_in) {
-		$attrib->{$_} = $attrib_in->{$_} for keys %$attrib_in;
+		for (keys %$attrib_in) {
+			$attrib->{$_} = $attrib_in->{$_};
+			delete $attrib->{$_} if ! $attrib->{$_};
+		}
 	}
 	$svg->text(x => int $x, y => int $y, %$attrib)->cdata_noxmlesc($text);
 }
@@ -564,7 +586,7 @@ sub put_TransparentPlane {
 	my $m1x = $m0x + ($dx2 - $ldx2);
 	my $m1y = $m0y - 2*$dy + $ldy;
 	my $off_x = $dx + $dx2;
-	my $smallhex = "l$ldx,0 l$ldx2,$ldy l-$ldx2,$ldy l-$ldx,0 l-$ldx2,-$ldy Z";
+	my $smallhex = "l$ldx 0 l$ldx2 $ldy l-$ldx2 $ldy l-$ldx 0 l-$ldx2 -$ldy Z";
 	my $holes;
 	if ($elem eq '^') {
 		for my $x (-2 .. 2) {
@@ -572,7 +594,7 @@ sub put_TransparentPlane {
 				my $mx = $m1x + $x*$off_x;
 				my $my = $m1y - 2*$y*$dy + (abs($x) == 1 ? $dy : 0);
 				next if abs($x) >= 1 and ! $y or abs($x) == 2 and $y == 4;
-				$holes .= " M$mx,$my $smallhex";
+				$holes .= " M$mx $my $smallhex";
 			}
 		}
 	} else {
@@ -581,20 +603,20 @@ sub put_TransparentPlane {
 				my $mx = $m1x + $x*$off_x;
 				my $my = $m1y - 2*$y*$dy + (abs($x) == 1 ? $dy : 0);
 				next if $x and ! abs($y);
-				$holes .= " M$mx,$my $smallhex";
+				$holes .= " M$mx $my $smallhex";
 			}
 		}
 	}
-	my $plane = "l$dx,0 l$dx2,-$dy " x $num;
-	$plane .= "l-$dx2,-$dy l$dx2,-$dy " x ($num - 1);
-	$plane .= "l-$dx2,-$dy l-$dx,0 " x $num;
-	$plane .= "l-$dx2,$dy l-$dx,0 " x ($num - 1);
-	$plane .= "l-$dx2,$dy l$dx2,$dy " x $num;
+	my $plane = "l$dx,0 l$dx2 -$dy " x $num;
+	$plane .= "l-$dx2 -$dy l$dx2 -$dy " x ($num - 1);
+	$plane .= "l-$dx2 -$dy l-$dx 0 " x $num;
+	$plane .= "l-$dx2 $dy l-$dx 0 " x ($num - 1);
+	$plane .= "l-$dx2 $dy l$dx2 $dy " x $num;
 	$plane .= "l$dx,0 l$dx2,$dy " x ($num - 1);
 	$plane =~ s/(\.\d)\d+([, ])/$1$2/g;
 	$holes =~ s/(\.\d)\d+([, ])/$1$2/g;
 	my $style = {stroke=>'lightblue', fill=>'lightblue', opacity=>'0.5'};
-	$svg->path(d=>"M$m0x,$m0y $plane Z$holes", style => $style);
+	$svg->path(d=>"M$m0x $m0y $plane Z$holes", style => $style);
 }
 
 sub put_1 {
@@ -605,31 +627,31 @@ sub put_1 {
 }
 
 sub put_lever {
-	my ($self, $posx, $posy, $orient, $detail, $scale) = @_;
+	my ($self, $x, $y, $z, $orient, $detail, $scale) = @_;
 	my $svg = $self->{svg};
 	$scale ||= 1.;
-	my ($xc, $yc) = $self->to_position($posx, $posy, 0, 0.3*$scale);
-	my ($x, $y) = $self->center_pos($xc, $yc);
+	my ($xc, $yc) = $self->to_position($x, $y, 0, 0.3*$scale);
+	my ($xl, $yl) = $self->center_pos($xc, $yc);
 	my %c = (q => 50, lg => 45, r => 22.5, ly => 375, lx => 10);
 	$_ *= $self->{size}/600.*$scale for values %c; # scale coordinates
 	my $q2 = 2*$c{q};
 	my $q4 = 2*$q2;
 	my $lg2 = 2*$c{lg};
-	my $l0x = $x - $lg2 - $q2;
-	my $l0y = $y - sqrt(0.8*$c{r}**2);
-	my $l1y = $y + sqrt(0.8*$c{r}**2);
-	my $l2x = $x + $q2 + $lg2;
+	my $l0x = $xl - $lg2 - $q2;
+	my $l0y = $yl - sqrt(0.8*$c{r}**2);
+	my $l1y = $yl + sqrt(0.8*$c{r}**2);
+	my $l2x = $xl + $q2 + $lg2;
 	my $dx_bez = $q2 + $lg2 - 0.5*$c{lx};
 	my $dy_bez = $c{ly} - $c{q};
 	my $angle = 60 * (($orient + 3) % 6);
 	$detail = $detail ? ($detail eq '+' ? 15 : -15) : 0;
-	my ($xm, $ym) = $self->center_pos($posx, $posy);
-	my $g = $svg->group(id => "lever$posx$posy", style => {fill => 'url(#mygreen)'},
+	my ($xm, $ym) = $self->center_pos($x, $y);
+	my $g = $svg->group(id => "lever$x$y$z", style => {fill => 'url(#mygreen)'},
 		transform => "rotate($angle, $xm, $ym)");
-	$g->path(d =>"M $l0x $l1y A $c{r} $c{r} 0 0 1 $l0x $l0y l $lg2 -$c{lg}
-		q $q2 -$c{q} $q4 0 l $lg2 $c{lg} A $c{r} $c{r} 0 0 1 $l2x $l1y
-		c -$dx_bez $c{q} -$dx_bez $yc -$dx_bez $c{ly} l -$c{lx} 0
-		c 0 -$c{ly} -$q2 -$dy_bez -$dx_bez -$c{ly}",
+	$g->path(d =>"M$l0x $l1y A$c{r} $c{r} 0 0 1 $l0x $l0y l$lg2 -$c{lg}
+		q$q2 -$c{q} $q4 0 l$lg2 $c{lg} A$c{r} $c{r} 0 0 1 $l2x $l1y
+		c-$dx_bez $c{q} -$dx_bez $yc -$dx_bez $c{ly} l-$c{lx} 0
+		c0 -$c{ly} -$q2 -$dy_bez -$dx_bez -$c{ly}",
 		transform => "rotate($detail, $xm, $l1y)");
 }
 
@@ -694,7 +716,7 @@ sub put_arrows {
 			my ($dx1, $dy1) = ($xd - $dx, $yd - $dy);
 			my ($dx2, $dy2) = (-$dx - $xd, -$dy - $yd);
 			my ($dx3, $dy3) = (-$dx2, -$dy2);
-			my $str = sprintf("M%.1f,%.1f l%.1f,%.1f l%.1f,%.1f l%.1f,%.1f",
+			my $str = sprintf("M%.1f %.1f l%.1f %.1f l%.1f %.1f l%.1f %.1f",
 				$xa,$ya,$dx1,$dy1,$dx2,$dy2,$dx3,$dy3);
 			$svg->path(d => $str, style => $style);
 		}
@@ -726,7 +748,7 @@ sub put_middleBar {
 	my ($xdm, $ydm) = (-$xd, -$yd);
 	my ($dxm, $dym) = (-$dx, -$dy);
 	my ($xl, $yl) = ($x1-$dx/2-$xd/2, $y1-$dy/2-$yd/2);
-	my $str = sprintf("M%.1f,%.1f l%.1f,%.1f l%.1f,%.1f l%.1f,%.1f l%.1f,%.1f Z",
+	my $str = sprintf("M%.1f %.1f l%.1f %.1f l%.1f %.1f l%.1f %.1f l%.1f %.1f Z",
 			$xl,$yl,$xd,$yd,$dx,$dy,$xdm,$ydm,$dxm,$dym);
 	$svg->path(d => $str, style => $style);
 }
@@ -861,7 +883,7 @@ sub put_Catapult {
 	$self->put_through_line($x, $y, $orient, 0.3);
 	$self->put_through_line($x, $y, $orient + 3, 0.3);
 	$self->put_Marble($x, $y, @{$self->{offset}{xK}[$_]}, $orient) for (0 .. 3);
-	$self->put_text($x, $y, 'xK');
+	$self->put_text($x, $y, 'xK', {class => 'text'});
 }
 
 sub put_Lift {
@@ -902,10 +924,9 @@ sub put_Dipper {
 	my ($x4, $x5, $y4, $y5) = ($xc + $dx, $xc - $dx, $yc + $dy, $yc - $dy);
 	$x5 = $x4 + ($x5 - $x4)*$len;
 	$y5 = $y4 + ($y5 - $y4)*$len;
-	my $str = sprintf("M%.1f,%.1f L%.1f,%.1f A%.1f,%.1f 0 0 1 %.1f,%.1f A%.1f,%.1f 0 0 1 L%.1f,%.1f",
+	my $str = sprintf("M%.1f %.1f L%.1f %.1f A%.1f %.1f 0 0 1 %.1f %.1f A%.1f %.1f 0 0 1 L%.1f %.1f",
 			$x1,$y1,$x2,$y2,$r,$r,$x3,$y3,$r,$r,$x5,$y5,$x4,$y4);
 	$svg->path(d => $str, class => 'tile');
-	#$svg->path(d => "M $x1 $y1 L $x2 $y2 A $r $r 0 0 1 $x3 $y3 A $r $r 0 0 1 $x5 $y5 L $x4 $y4", class => 'tile');
 	$self->put_small_lever($x, $y, $orient + 3, $detail);
 }
 
@@ -926,7 +947,7 @@ sub put_small_lever {
 	$detail = $detail ? ($detail eq '+' ? 15 : -15) : 0;
 	my $g = $svg->group(id => "small lever$x$y", style => {fill => 'url(#mygreen)'},
 		transform => "rotate($angle, $x0, $y0)");
-    $g->path(d => "M $x1 $y1 A $c{r} $c{r} 0 1 1 $x2 $y1 C $x0 $y3 $x4 $y4 $x4 $y4 L $x5, $y4 C $x5 $y5 $x0 $y3 $x1 $y1", transform => "rotate($detail, $x0, $y1)");
+    $g->path(d => "M$x1 $y1 A$c{r} $c{r} 0 1 1 $x2 $y1 C$x0 $y3 $x4 $y4 $x4 $y4 L$x5, $y4 C$x5 $y5 $x0 $y3 $x1 $y1", transform => "rotate($detail, $x0, $y1)");
 }
 
 sub put_Spiral {
@@ -949,7 +970,7 @@ sub put_TipTube {
 	$self->put_hexagon($x, $y);
 	# small curve
 	$self->put_arc($x, $y, 1, $orient - 1);
-	$self->put_text($x, $y, 'xT');
+	$self->put_text($x, $y, 'xT', {class => 'text'});
 }
 
 sub put_BasicTile {
@@ -964,6 +985,7 @@ sub put_BasicTile {
 
 sub put_Spinner {
 	my ($self, $x, $y) = @_;
+	my $svg = $self->{svg};
 	my $thickness = (1 - $self->{twoby3})/2.;
 	$self->put_hexagon($x, $y);
 	$self->put_hexagon($x, $y, $self->{twoby3}, {fill=>'white'});
@@ -974,15 +996,17 @@ sub put_Spinner {
 	my $r = 7./60.*$self->{size};
 	my ($x2, $y2) = ($cx - $r, $cy - 0.375*$self->{size});
 	my ($x3, $y3) = ($cx + $r, $cy - 0.375*$self->{size});
-	my %half_circle = (d => "M$x2 $y2 A$r $r 0 0 0 $x3 $y3");
 	my $style = {stroke=>'black', fill=>'none'};
-	$self->{svg}->path(%half_circle, style => $style);
-	$self->{svg}->path(%half_circle, transform => "rotate($_, $cx, $cy)",
-		style => $style) for (60, 120, 180, 240,300);
+	my $str = sprintf("M%.1f %.1f A%.1f %.1f 0 0 0 %.1f %.1f",
+		$x2, $y2, $r, $r, $x3, $y3);
+	$svg->path(d => $str, style => $style);
+	$svg->path(d => $str, transform => "rotate($_, $cx, $cy)", style => $style)
+		for (60, 120, 180, 240,300);
 }
 
 sub put_Start {
 	my ($self, $x, $y, $orient) = @_;
+	my $svg = $self->{svg};
 	$self->put_BasicTile($x, $y, $orient);
 	$self->put_hexagon($x, $y, $self->{twoby3}, {fill => 'url(#mygreen)'});
 	$self->put_circle($x, $y, 0.125);
@@ -994,10 +1018,11 @@ sub put_Start {
 	my ($x2, $y2) = ($cx - $sign*$r, $cy - $sign*0.25*$self->{size});
 	my ($x3, $y3) = ($cx + $sign*$r, $cy - $sign*0.25*$self->{size});
 	my ($x4, $y4) = ($cx + $sign*$r, $cy - $sign*0.3*$self->{size});
-	my %half_circle = (d => "M$x1 $y1 L$x2 $y2 A$r $r 0 0 0 $x3 $y3 L$x4 $y4", fill => 'white');
-	$self->{svg}->path(%half_circle);
-	$self->{svg}->path(%half_circle, transform => "rotate(120, $cx, $cy)");
-	$self->{svg}->path(%half_circle, transform => "rotate(240, $cx, $cy)");
+	my $s = sprintf("M%.1f %.1f L%.1f %.1f A%.1f %.1f 0 0 0 %.1f %.1f L%.1f %.1f",
+		$x1, $y1, $x2, $y2, $r, $r, $x3, $y3, $x4, $y4);
+	$self->{svg}->path(d => $s, fill => 'white');
+	$svg->path(d => $s, fill => 'white', transform => "rotate(120, $cx, $cy)");
+	$svg->path(d => $s, fill => 'white', transform => "rotate(240, $cx, $cy)");
 }
 
 sub put_Landing {
@@ -1381,6 +1406,12 @@ sub spiral_dir {
 	return ($dir + 2*$elems - 1) % 6;
 }
 
+sub move_switch {
+	my ($self, $t) = @_;
+	my $svg = $self->{svg};
+	my $id = "$t->[3]_$t->[4]_$t->[5]";
+	return;
+}
 sub next_dir {
 	my ($self, $marble) = @_;
 	my $t = $self->{tiles}{$marble->[1]};
@@ -1406,6 +1437,8 @@ sub next_dir {
 			my $state = $t->[8] || 0;
 			next if $state ne $rule->[5];
 			$t->[8] = $rule->[6];
+			$self->move_switch($t) if $t->[0] =~ /^[SU]$/;
+				say $t->[8] if $t->[0] eq 'S';
 			say "state $state -> $rule->[6]" if $dbg;
 		}
 		# outgoing direction: middle
@@ -1671,7 +1704,7 @@ Game::MarbleRun::Draw - Create SVG visualizations from marble runs
 
   #!/usr/bin/perl
   use Game::MarbleRun::Draw;
-  $g = Game::MarbleRun::Draw->new(text_offset=>1);
+  $g = Game::MarbleRun::Draw->new();
   $g->board(2, 1);
   $g->put_Tile(6, 5, 'W', 3);	# a 3 in 1 tile
   $g->put_Tile(5, 4, 'C', 2);	# a curve
@@ -1711,8 +1744,6 @@ background. The following attrs can be used:
   db          => "<file name>"   alternate name andplace of the DB
   screen_x    => <screen x size in pixels> (default 800)
   screen_y    => <screen y size in pixels> (default 600)
-  text_offset => 1 (shift in y direction if svg instruction
-                    dominant-baseline is not respected)
 
 =head2 orientations
 
@@ -1888,12 +1919,11 @@ A fraction of the full size of a hexagon can be specified to draw shorter lines.
 
 =head2 put_text
 
-$g->put_text($x, $y, $text, $style);
+$g->put_text($x, $y, $text, $attributes);
 
-generates the svg code for placing text at x, y. The default style (font
-size etc.) can be overridden. The text is centered around x,y by setting the
-dominant-baseline attribute. As this is not always respected, a pixel offset
-can be added, if $g->{text_offset} is set.
+generates the svg code for placing text at x, y. The calculated font-size can
+be deleted with {'font-size'=>''} or be overridden in the hashref attributes.
+The text is centered around x,y.
 
 =head2 put_lever
 
@@ -1917,10 +1947,6 @@ Draw an arc or a bezier curve, if $bezier is true. The curve is closed if
 the corresponding flag is set. The distance between the start and end
 points of the curve is length, its distance from ce center is given by
 offset. The curvature is given by $r (also for the bezier curve).
-
-$g->put_text($x, $y, $text, $style);
-
-generates the svg code for placing text at x, y.
 
 =head1 SEE ALSO
 

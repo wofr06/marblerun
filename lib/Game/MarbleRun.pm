@@ -628,7 +628,7 @@ sub num2pos {
 	$posx = (($posx - 1) % 6) + 1;
 	my $by = int(($posy + 4)/5);
 	$posy = (($posy - 1) % 5) + 1;
-	return "$by,$bx $posy$posx" if $plain;
+	return "$by,$bx $posx$posy" if $plain;
 	return "$loc_plane $by,$bx $loc_pos $posy$posx";
 }
 
@@ -1285,7 +1285,7 @@ sub display_run {
 			say loc("Place %1 %2 with center at %3",
 				lcfirst loc($self->{elem_name}{$tp->[2]}),$l,$pos) if ! $quiet;
 			# SVG #
-			$self->draw_tile($tp_type, $tp_x, $tp_y, $tp->[6]) if $svg;
+			$self->draw_tile($tp_type, @{$tp}[2..6]) if $svg;
 			# SVG end #
 		}
 		# tile: id run_id element x y z orient detail level
@@ -1398,7 +1398,7 @@ sub display_run {
 				next if $sym eq 'E' and $detail;
 				# get marbles for that tile
 				my $ball = [grep {$_->[0] == $id} @$marble];
-				$self->draw_tile($sym, $x, $y, $tdir, $detail, $ball) if $svg;
+				$self->draw_tile($sym, $x, $y, $z, $tdir, $detail, $ball) if $svg;
 				# SVG end #
 			}
 			# rail placement: rail direction t1_id t1_level t2_id t2_level
