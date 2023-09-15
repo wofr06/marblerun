@@ -958,7 +958,7 @@ sub parse_run {
 			}
 			# candidates for transparent plane positions
 			push @$planepos, [$x1, $y1, $z, $level] if ! $tile and $elem !~ /[=^]|x[lms]/;
-			# tile special cases S,U,xH,xB,xF,O,xM,xD
+			# tile special cases S,U,xH,xB,xF,O,xM,xD,yR
 			# handle Switch position + / -
 			if ($tile =~ s/([SU]|xD)([+-]?)/$1/) {
 				$detail = $2 || '';
@@ -988,7 +988,12 @@ sub parse_run {
 			} elsif ($tile =~ s/xM([a-f])([a-f])/xM$2/) {
 				$detail = ord(lc $1) - 97;
 				$dir = ord(lc $2) - 97;
-				$self->error("For the mixer orientation %1 the direction %2 of the outgoing ball is not possible", $1, $2) if ! ($dir + $detail) % 2;
+				$self->error("For the mixer with orientation %1 the direction %2 of the outgoing ball is not possible", $1, $2) if ! ($dir + $detail) % 2;
+			# Releaser
+			} elsif ($tile =~ s/yR([a-f])([a-f])/yR$2/) {
+				$detail = ord(lc $1) - 97;
+				$dir = ord(lc $2) - 97;
+				$self->error("For the releaser with orientation %1 the direction %2 of the outgoing ball is not possible", $1, $2) if ($detail - $dir) % 6 > 3;
 			# open basket
 			} elsif ($tile =~ /^O/) {
 				$self->error("Tile 'O' needs no height data") if $z;

@@ -780,8 +780,12 @@ msgid "Even number of elements expected, not %1"
 msgstr "Eine gerade Anzahl von Elementen muss angegeben werden, nicht '%1'"
 
 #: Store.pm:991
-msgid "For the mixer orientation %1 the direction %2 of the outgoing ball is not possible"
-msgstr "Für den Mixer Orientierung %1 ist die Richtung %2 der auslaufenden Kugel nicht möglich"
+msgid "For the mixer with orientation %1 the direction %2 of the outgoing ball is not possible"
+msgstr "Für den Mixer mit Orientierung %1 ist die Richtung %2 der auslaufenden Kugel nicht möglich"
+
+#: Store.pm:993
+msgid "For the releaser with orientation %1 the direction %2 of the outgoing ball is not possible"
+msgstr "Für den Releaser mit Orientierung %1 ist die Richtung %2 der auslaufenden Kugel nicht möglich"
 
 #: Store.pm:994
 msgid "Tile 'O' needs no height data"
