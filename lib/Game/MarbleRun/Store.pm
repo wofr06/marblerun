@@ -960,7 +960,7 @@ sub parse_run {
 			push @$planepos, [$x1, $y1, $z, $level] if ! $tile and $elem !~ /[=^]|x[lms]/;
 			# tile special cases S,U,xH,xB,xF,O,xM,xD,yR
 			# handle Switch position + / -
-			if ($tile =~ s/([SU]|xD)([+-]?)/$1/) {
+			if ($tile =~ s/^([SU]|xD)([+-]?)/$1/) {
 				$detail = $2 || '';
 			# handle number of helix elements
 			} elsif ($tile =~ s/xH(\d*)/xH/) {
@@ -981,7 +981,7 @@ sub parse_run {
 				# default 4 elements and opposite direction
 				$detail = ($1 || 4) . ($detail ? $2 : $dir);
 			# Trampolin with angle tiles
-			} elsif ($tile =~ s/R([a-f]+)/R/) {
+			} elsif ($tile =~ s/^R([a-f]+)/R/) {
 				$detail = '';
 				$detail .= ord(lc $_) - 97 for split '', $1;
 			# Mixer

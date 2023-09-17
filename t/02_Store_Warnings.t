@@ -46,7 +46,7 @@ my $line = [
 	'tunnel pillar' => ['22 xL' => qr/direction missing/i, 'run'], # 926
 	'helix elements' => ['22 xH1a'=> qr/helix/i, 'run'], # 965
 	'bridge elements' => ['41 xB9d' => qr/even number/i, 'run'], # 970
-	'mixer' => ['41 xMaa' => qr/mixer orientation/i, 'run'], # 988
+	'mixer' => ['41 xMaa' => qr/mixer with orientation/i, 'run'], # 988
 	'open basket' => ['22 3Oa' => qr/no height/si, 'run'], # 991
 	'excess tile char' => ['22 Caa' => qr/excess/i, 'run'], # 1004
 	'wrong orientation' => ['22 Cx' => qr/wrong orient/i, 'run'], # 1007
