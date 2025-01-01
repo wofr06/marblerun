@@ -8,10 +8,10 @@ use DBI;
 use Game::MarbleRun::I18N;
 use Locale::Maketext::Simple (Style => 'gettext');
 
-$Game::MarbleRun::VERSION = '1.11';
+$Game::MarbleRun::VERSION = '1.12';
 my $homedir = $ENV{HOME} || $ENV{HOMEPATH} || die "unknown homedir\n";
 $Game::MarbleRun::DB_FILE = "$homedir/.gravi.db";
-$Game::MarbleRun::DB_SCHEMA_VERSION = 13;
+$Game::MarbleRun::DB_SCHEMA_VERSION = 14;
 
 sub new {
 	my ($class, %attr) = @_;
@@ -188,6 +188,9 @@ sub features {
 		['yK',   2,   3,      8,      7,   0],
 		['yK',   3,   3,      7,      7,   0],
 		['yK',   4,   5,      8,      7,   0],
+		['yM',   0,   'detail2',      0,      11,   'o0'. ''],
+		['yM',   0,   'detail2',      0,      11,   '2o0'. ''],
+		['yM',   0,   'detail2',      0,      11,   '3o0'. 'o0'],
 		['yK',   5,   5,      7,      7,   0],
 		['yR',   2,   0,      0,      0,     0],
 		['yR',   3,   0,      0,      0,     0],
@@ -467,7 +470,7 @@ EOF
 	# use arrayrefs to keep the ordering (letters 'cwy' unused)
 	my $elems = [
 		# Basic elements #
-		_=>'Base Plate', '*'=>'Small Base Plate', '^'=>'Transparent Level',
+		_=>'Base Plate', '@'=>'Small Base Plate', '^'=>'Transparent Level',
 		'='=>'Small Transparent Level', o=>'Ball',
 		1=>'Height Tile large', '+'=>'Height Tile small', A=>'Launch Pad',
 		Z=>'Landing', e=>'Finish Line', C=>'Curve', X=>'Junction',
@@ -483,13 +486,14 @@ EOF
 		xF=>'Lifter', f=>'Lift Tube Element', xi=>'Lift in', xj=>'Lift out',
 		xH=>'Spiral', i=>'Spiral in', j=>'Spiral out', h=>'Spiral Curve',
 		L=>'Pillar', xL=>'Tunnel Pillar', B=>'Balcony', E=>'Double Balcony',
-		xM=>'Dispenser', yS=>'Splinter', xD=>'Dipper', xS=>'Spinner',
+		xM=>'Mixer', yS=>'Splitter', xD=>'Dipper', xS=>'Spinner',
 		yH=>'Helix', yT=>'Turntable', xQ=>'Loop Curve', xV=>'Vortex 3 in',
 		xC=>'Curve 3x small', yC=>'Curve 2x large', yK=>'Carousel',
 		xI=>'Straight with 2 Curves', xX=>'Straight 3x', xW=>'2x 2 in 1 left',
 		yW=>'2x 2 in 1 right', xY=>'2 in 1 left with Curve',
 		yY=>'2 in 1 right with Curve', yX=>'3 Curves, 2 crossing',
 		yI=>'Cross Straight and Curve', xP=>'Color Swap', yR=>'Releaser',
+		yM=>'Vertical Cannon',
 		'z+'=>'Light Tile Small', z1=>'Light Tile large', z2=>'Light Tile Base',
 		zA=>'DomeStarter', zE=>'Elevator', zF=>'FinishTrigger', zL=>'Lever',
 		zQ=>'Queue', zS=>'DropDownSwitch', zT=>'Trigger', zZ=>'FinishArena',
@@ -550,8 +554,8 @@ EOF
 		'Jumper', 20, [J=>1, l=>1, m=>2, s=>3],
 		'Tip Tube', 21, [xT=>1, o=>1, l=>1, m=>2, s=>3],
 		'Spiral', 22, [xH=>2, i=>2, j=>2, h=>12],
-		'Splinter', 23, [yS=>1],
-		'Dispenser', 24, [xM=>1],
+		'Splitter', 23, [yS=>1],
+		'Mixer', 24, [xM=>1],
 		'Catapult', 25, [xK=>1, o=>4],
 		# 2021
 		'Dipper', 26, [xD=>1, 1=>4, o=>1],
@@ -560,8 +564,8 @@ EOF
 		'Helix', 29, [yH => 1],
 		'Turntable', 30, [yT => 1],
 		# 2022
-		'Color Swap', 32, [xP=>3],
-		'Carousel', 33, [yK=>1],
+		'Color Swap', 32, [xP => 3],
+		'Carousel', 33, [yK => 1],
 		# Game sets
 		'Game Flow', 34, ['*'=>2, '='=>1, C=>7, V=>1, G=>1, X=>1, A=>1, Z=>1,
 			1=>11, '+'=>1, xt=>2, l=>1, m=>2, s=>3, o=>1],
@@ -569,6 +573,10 @@ EOF
 			m=>2, s=>3, o=>1],
 		'Game Course', 36, ['*'=>4, X=>1, A=>1, S=>1, Z=>1, 1=>6, W=>1, xQ=>1,
 			yI=>1, xW=>1, yW=>1, xY =>1, yY=>1, yX=>1, l=>2, m=>2, s=>3, o=>2],
+		# 2023
+		'Releaser', 37, [yR => 1],
+		# 2024
+		'Vertical Cannon', 38, [yR => 1],
 	];
 	# create tables (only single sql statements allowed)
 	$dbh->do($_) for split /;/, $sql;
@@ -1293,7 +1301,7 @@ sub display_run {
 			say loc("Place %1 %2 with center at %3",
 				lcfirst loc($self->{elem_name}{$tp->[2]}),$l,$pos) if ! $quiet;
 			# SVG #
-			$self->draw_tile($tp_type, @{$tp}[2..6]) if $svg;
+			$self->draw_tile(@{$tp}[2..7]) if $svg;
 			# SVG end #
 		}
 		# tile: id run_id element x y z orient detail level

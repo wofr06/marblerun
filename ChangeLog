@@ -1,4 +1,9 @@
 Revision history for Perl extension Game::MarbleRun
+1.12 Tue Jan 02 2025
+	- added vertical cannon
+	- added releaser
+	- english documentation enhanced
+	- improved drawing and bug fixes 
 1.11 Sun Jul 23 2023
 	- reworked code for position notation with ground planes (relative pos)
 	- documentation updates

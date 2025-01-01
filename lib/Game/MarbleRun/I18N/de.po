@@ -293,11 +293,11 @@ msgstr "Gerade kreuzt Kurve"
 msgid "Carousel"
 msgstr ""
 
-msgid "Releaser"
+msgid "Mixer"
 msgstr ""
 
-msgid "Splinter"
-msgstr "Splitter"
+msgid "Splitter"
+msgstr ""
 
 msgid "Turntable"
 msgstr ""
