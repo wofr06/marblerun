@@ -4,7 +4,7 @@
 #                                                            #
 # A program to register and visualize gravitrax marble runs  #
 #                                                            #
-# © Wolfgang Friebel 2020                                    #
+# © Wolfgang Friebel 2020-2025                               #
 ##############################################################
 use warnings;
 use strict;

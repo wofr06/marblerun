@@ -1,7 +1,7 @@
 # Game::MarbleRun translations
-# Copyright (C) 2020,2021 Wolfgang Friebel
+# Copyright (C) 2020-2025 Wolfgang Friebel
 # This file is distributed under the same license as perl.
-# Wolfgang Friebel <wp.friebel@gmail.com>, 2020,2021.
+# Wolfgang Friebel <wp.friebel@gmail.com>
 #
 msgid ""
 msgstr ""

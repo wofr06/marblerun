@@ -1960,7 +1960,7 @@ Wolfgang Friebel, E<lt>wp.friebel@gmail.comE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2020-2022 by Wolfgang Friebel
+Copyright (C) 2020-2025 by Wolfgang Friebel
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.28.1 or,
