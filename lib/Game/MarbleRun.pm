@@ -188,10 +188,10 @@ sub features {
 		['yK',   2,   3,      8,      7,   0],
 		['yK',   3,   3,      7,      7,   0],
 		['yK',   4,   5,      8,      7,   0],
+		['yK',   5,   5,      7,      7,   0],
 		['yM',   0,   'detail2',      0,      11,   'o0'. ''],
 		['yM',   0,   'detail2',      0,      11,   '2o0'. ''],
 		['yM',   0,   'detail2',      0,      11,   '3o0'. 'o0'],
-		['yK',   5,   5,      7,      7,   0],
 		['yR',   2,   0,      0,      0,     0],
 		['yR',   3,   0,      0,      0,     0],
 		['yR',   4,   0,      0,      0,     0],
@@ -229,6 +229,17 @@ sub features {
 		['yY',   0,   3,      0,      0,   'r'],
 		['yY',   4,   5,      0,      0,   'r'],
 		['yY',   2,   0,      0,      0,     0],
+		['zA',  '',   0,      0,      0,   'r'],
+		['zE',   0,   1,      0,     14,     0],
+		['zF',   0,   3,      0,      0,     0],
+		['zL',   0,   3,      0,      8,     0],
+		['zQ',   0,   3,      0,      0,     0],
+		['zQ',   1,   3,      0,      0,     0],
+		['zQ',   5,   3,      0,      0,     0],
+		['zS',   0,   2,      4,      0,     0,    1],
+		['zS',   0,   4,      4,      0,     1,    0],
+		['zT',   0,   3,      0,      0,     0],
+		['zZ',   0,  '',      0,      0,     0],
 	];
 	# expand symmetric tile rules
 	for my $t (@$tile_r) {
@@ -1009,6 +1020,7 @@ sub export_marble_run {
 			if ($sym eq 'B') {
 				say F $str if length $str > 3;
 				$str = "$pos ";
+				die "this procedure needs an update";
 				my $hole = $detail % 14;
 				$hole = chr(87 + $hole) if $hole > 9;
 				$str .= $hole;
@@ -1035,8 +1047,7 @@ sub export_marble_run {
 			#          0   1        2           3        4           5      6
 			my @rails = grep {$t->[0] == $_->[2]} @$rail;
 			for my $r (@rails) {
-				my $wall = '';
-				$wall = $r->[6] ? $r->[6] % 10 : '';
+				my $wall = $r->[6] ? $r->[6] % 100 : '';
 				# bridge is noted in detail only, not as a rail
 				next if $r->[0] eq 'xb';
 				$str .= " $r->[0]$wall" . chr(97 + $r->[1]);
@@ -1315,6 +1326,7 @@ sub display_run {
 				next if $tile->[$i][8] != $l;
 				my ($id, $sym, $x, $y, $z, $tdir, $detail) =
 					@{$tile->[$i]}[0,2..7];
+				undef $tdir if $sym =~ /^L|^\d/;
 				# transparent planes already handled
 				next if $sym =~ /[=^]/ or ! $sym;
 				# double balcony on height element in 1st pass, other end in 2nd
@@ -1353,7 +1365,7 @@ sub display_run {
 					next if defined $tile->[$i+1] and $tile->[$i+1][2] =~ /\d/
 						and $tile->[$i+1][3] == $x and $tile->[$i+1][4] == $y
 						and $tile->[$i+1][8] == $l;
-					} elsif ($sym =~ /[+L]/) {
+					} elsif ($sym =~ /^[+L]/) {
 						$num++;
 					next if defined $tile->[$i+1] and $tile->[$i+1][2] eq $sym
 						and $tile->[$i+1][3] == $x and $tile->[$i+1][4] == $y
@@ -1366,7 +1378,7 @@ sub display_run {
 				$str .= loc('On ') if $sym eq 'E' and $tile->[$i][7];
 				$str .= loc($elem) if $sym and $elem;
 				# handle details (or defaults) and balconies
-				if ($detail or $sym =~ /x[BHL]|B/) {
+				if ($detail or $sym =~ /^x[BH]|^B/) {
 					$str .= ' ';
 					if ($sym eq 'xB') {
 						$str .= loc("with %1 bridge elements", $detail || 4);
@@ -1386,15 +1398,18 @@ sub display_run {
 						}
 						$str .= $trampolin;
 					} elsif ($sym eq 'E') {
-						$str .= "($detail)" if $detail;
+						$str .= "($detail % 100)" if $detail;
 					} elsif ($sym eq 'B') {
-						my ($w, $h) = ('?', '?');
-						if ($detail) {
-							$w = int($detail/100);
-							$detail = $detail % 100;
-							$h = $detail % 14;
-						}
-						$str .= loc("in wall %1 hole %2", $w, $h);
+						my @res = grep {($_->[6] || -1) == $detail} @$rail;
+						$detail %= 100;
+						warn $#res, " ambiguity for wall $detail\n" if @res != 1;
+						my $tid = $res[0]->[2];
+						@res = grep {$_->[0] == $tid} @$tile;
+						warn "ambiguity for tile $tid\n" if @res != 1;
+						my $z_w = $res[0]->[5];
+						my $hole = ($z - $z_w)/2;
+						#print "### wall $detail tid=$tid, zb=$z, zw=$z_w hole $hole\n";
+						$str .= loc("in wall %1 hole %2", $detail, $hole);
 					}
 				}
 				$str .= ' ' . $self->dir_string($tdir) if defined $tdir;
@@ -1446,9 +1461,8 @@ sub display_run {
 				}
 				my $name = loc($self->{elem_name}{$sym});
 				if ($r->[6]) {
-					my ($wall, $pillar) = (int($r->[6]/10), $r->[6] % 10);
+					my $wall = $r->[6] % 100;
 					$name =~ s/ / $wall /;
-					$pos1 .= ' ' . loc('in pillar %1', $pillar) if $pillar;
 				}
 				# bridge already described in xB tile
 				say loc("From %1 to %2 %3 %4", $pos1, $pos2, $name,

@@ -924,7 +924,7 @@ sub put_Dipper {
 	my ($x4, $x5, $y4, $y5) = ($xc + $dx, $xc - $dx, $yc + $dy, $yc - $dy);
 	$x5 = $x4 + ($x5 - $x4)*$len;
 	$y5 = $y4 + ($y5 - $y4)*$len;
-	my $str = sprintf("M%.1f %.1f L%.1f %.1f A%.1f %.1f 0 0 1 %.1f %.1f A%.1f %.1f 0 0 1 L%.1f %.1f",
+	my $str = sprintf("M%.1f %.1f L%.1f %.1f A%.1f %.1f 0 0 1 %.1f %.1f A%.1f %.1f 0 0 1 L%.1f %.1f L%.1f %.1f",
 			$x1,$y1,$x2,$y2,$r,$r,$x3,$y3,$r,$r,$x5,$y5,$x4,$y4);
 	$svg->path(d => $str, class => 'tile');
 	$self->put_small_lever($x, $y, $orient + 3, $detail);

@@ -95,7 +95,7 @@ sub verify_rail_endpoints {
 		my $pos = $self->num2pos($t->[2], $t->[3]);
 		$self->error("At %1 level %2 (%3) is already a tile %4", $pos, $level,
 			$z, $data->[$t_pos->{$pos}{$z}][1]) if exists $t_pos->{$pos}{$z};
-		$z -= 14 if $t->[1] =~ /L/;
+		$z -= 14 if $t->[1] =~ /^x?L/;
 		$t_pos->{$pos}{$z} = $i;
 	}
 	# check if connections exist with that orientation of tiles and rail
@@ -140,7 +140,7 @@ sub verify_rail_endpoints {
 				# special case for walls
 				if ($r->[2] =~ /x[sml]/) {
 					my $ind = $data->[$i];
-					if ($ind->[1] =~ /L/ and abs($z + 14 - $ind->[4]) <= 1) {
+					if ($ind->[1] =~ /^x?L/ and abs($z + 14 - $ind->[4]) <= 1) {
 						$r->[5] =$ind->[0];
 						$z_to = [[$i, $ind->[4] + 14]];
 					}
@@ -228,7 +228,7 @@ sub rail_connection {
 	my $rail_dir = ($r->[3] + $reverse) % 6;
 	my $tile_dir = $t->[6];
 	# ignore checks for pillars and new/unknown tiles
-	if ($tile =~ /L|\|/) {
+	if ($tile =~ /^x?L|\|/) {
 		$z_from = [0] if $r->[2] =~ /x[sml]/ or $tile =~ /\|/;
 	} else {
 		my $case2;
@@ -801,7 +801,7 @@ sub parse_run {
 			}
 		# tile positions, rails and marbles
 		} else {
-			my ($x1, $y1, $z, $tile_id, $tile_name, $r, $dir, $detail, $f);
+			my ($x1, $y1, $z, $inc, $tile_id, $tile_name, $r, $dir, $detail, $f);
 			my ($pos, $tile, @items) = split;
 			($y1, $x1) = $self->get_pos($pos, $rel_pos);
 			$off_x = $off_xy->[$level][0] || 0;
@@ -909,11 +909,9 @@ sub parse_run {
 						$self->error("Wrong direction %1 for balcony at %2, should be %3", $dir2, $self->num2pos($x1, $y1), $dir) if $dir != $dir2;
 						$dir=$dir2;
 					}
-					my $detail = 20*$num_wall + $hole;
-					$detail = $num_wall;
-					# we need z at the bottom of the wall, i.e. 28 units less
+					my $detail = $num_wall;
 					$z = 2*$hole;
-					$z += $rules->[$num_L][4]-14 if defined $rules->[$num_L][4];
+					$z += $rules->[$num_L][4] if defined $rules->[$num_L][4];
 					push @$rules,
 						[$tid++, $elem, $x1, $y1, $z, $detail, $dir, $level] if $elem;
 				}
@@ -932,29 +930,30 @@ sub parse_run {
 					}
 				}
 				if ($elem =~ /^z?(\d)/) {
-					$z += 2*$1;
+					$inc = 2*$1;
 				} elsif ($elem =~ /^[=^]/) {
 					push @$planepos, [$x1, $y1, $z, $level];
-					$z++;
+					$inc = 1;
 				} elsif ($elem =~ /^z?\+/) {
-					$z++;
+					$inc = 1;
 				} elsif ($elem eq 'E') {
 					$num_E = 0;
 					my ($xE, $yE) = (0, 0);
 					($xE, $yE) = @{$rules->[$pos_E[-1]]}[2,3] if @pos_E;
 					@pos_E = () if $xE != $x1 or $yE != $y1;
 					push @pos_E, scalar @$rules;
-					$z++;
-				} elsif ($elem =~ /x?L/) {
+					$inc = 1;
+				} elsif ($elem =~ /^x?L/) {
 					my ($xL, $yL) = (0, 0);
 					($xL, $yL) = @{$rules->[$pos_L[-1]]}[2,3] if @pos_L;
 					@pos_L = () if $xL != $x1 or $yL != $y1;
 					push @pos_L, scalar @$rules;
-					$z += 14;
+					$inc = 14;
 				}
 				# for all height elements
 				push @$rules,
 					[$tid++, $elem, $x1, $y1, $z, $detail, $dir, $level] if $elem;
+				$z += $inc;
 			}
 			# candidates for transparent plane positions
 			push @$planepos, [$x1, $y1, $z, $level] if ! $tile and $elem !~ /[=^]|x[lms]/;
