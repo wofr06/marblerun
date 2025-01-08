@@ -801,7 +801,7 @@ sub parse_run {
 			}
 		# tile positions, rails and marbles
 		} else {
-			my ($x1, $y1, $z, $inc, $tile_id, $tile_name, $r, $dir, $detail, $f);
+			my ($x1, $y1, $z, $tile_id, $tile_name, $r, $dir, $detail, $f);
 			my ($pos, $tile, @items) = split;
 			($y1, $x1) = $self->get_pos($pos, $rel_pos);
 			$off_x = $off_xy->[$level][0] || 0;
@@ -911,7 +911,7 @@ sub parse_run {
 					}
 					my $detail = $num_wall;
 					$z = 2*$hole;
-					$z += $rules->[$num_L][4] if defined $rules->[$num_L][4];
+					$z += $rules->[$num_L][4]-14 if defined $rules->[$num_L][4];
 					push @$rules,
 						[$tid++, $elem, $x1, $y1, $z, $detail, $dir, $level] if $elem;
 				}
@@ -930,30 +930,29 @@ sub parse_run {
 					}
 				}
 				if ($elem =~ /^z?(\d)/) {
-					$inc = 2*$1;
+					$z += 2*$1;
 				} elsif ($elem =~ /^[=^]/) {
 					push @$planepos, [$x1, $y1, $z, $level];
-					$inc = 1;
+					$z++;
 				} elsif ($elem =~ /^z?\+/) {
-					$inc = 1;
+					$z++;
 				} elsif ($elem eq 'E') {
 					$num_E = 0;
 					my ($xE, $yE) = (0, 0);
 					($xE, $yE) = @{$rules->[$pos_E[-1]]}[2,3] if @pos_E;
 					@pos_E = () if $xE != $x1 or $yE != $y1;
 					push @pos_E, scalar @$rules;
-					$inc = 1;
+					$z++;
 				} elsif ($elem =~ /^x?L/) {
 					my ($xL, $yL) = (0, 0);
 					($xL, $yL) = @{$rules->[$pos_L[-1]]}[2,3] if @pos_L;
 					@pos_L = () if $xL != $x1 or $yL != $y1;
 					push @pos_L, scalar @$rules;
-					$inc = 14;
+					$z += 14;
 				}
 				# for all height elements
 				push @$rules,
 					[$tid++, $elem, $x1, $y1, $z, $detail, $dir, $level] if $elem;
-				$z += $inc;
 			}
 			# candidates for transparent plane positions
 			push @$planepos, [$x1, $y1, $z, $level] if ! $tile and $elem !~ /[=^]|x[lms]/;
