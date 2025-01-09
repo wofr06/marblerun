@@ -638,13 +638,13 @@ sub plane_lines {
 sub level_height {
 	my ($self, $rules, $off_xy, $h) = @_;
 	my @ldone =(0);
-	for my $lev (sort keys %$off_xy) {
+	for my $lev (sort {$a <=> $b} keys %$off_xy) {
 		my ($x0, $y0) = @{$off_xy->{$lev}};
 		if (! defined $x0) {
 			$self->error("Position unknown for level %1", $lev);
 			return;
 		}
-		my $delta = ($off_xy->{$lev}[2]);
+		my $delta = ($off_xy->{$lev}[2]) - 1;
 		my $z = 0;
 		my %height;
 		my $height = 0;
@@ -652,13 +652,18 @@ sub level_height {
 			for (@$h) {
 				my ($x, $y, $z, $l) = @$_;
 				next if ! grep {$l == $_} @ldone;
-				next if abs($x - $x0) > $delta - 1 or abs($y - $y0) > $delta - 1;
-				next if abs($x - $x0) + abs($y - $y0) > $delta;
+				next if abs($x - $x0) > $delta or abs($y - $y0) > $delta;
+				next if abs($x - $x0) + abs($y - $y0) > $delta + 1;
+				next if $x0 % 2 and ($y - $y0) == $delta and abs($x - $x0) > $delta - 1;
+				next if ! ($x0 % 2) and ($y0 - $y) == $delta and abs($x - $x0) > $delta - 1;
 				$height = $z if $z > $height;
 				$height{$z}++;
 			}
-			$z = $height + 1;
+			my $_hmax = (sort {$height{$b} <=> $height{$a}} keys %height)[0];
 			my $h_elems = exists $height{$height} ? $height{$height} : 0;
+			$height = $_hmax if $h_elems < 3;
+			$h_elems = $height{$height};
+			$z = $height + 1;
 			warn loc("Only %1 height elements for plane %2 seen\n", $h_elems, $lev) if $h_elems < 3;
 			# update info in $h
 			for (@$h) {

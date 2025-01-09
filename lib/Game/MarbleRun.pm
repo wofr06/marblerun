@@ -1255,7 +1255,6 @@ sub display_run {
 	my %pos;
 	my $tp_pos = [[0,0]];
 	my ($meta, $tile, $rail, $marble, $excl) = $self->fetch_run_data($run_id);
-	#use Data::Dumper;print Dumper $rail;exit;
 	# meta: id name digest date source person_id size_x size_y layers marble
 	#       0  1    2      3    4      5         6      7      8      9
 	my $bx = int(($meta->[6] + 5)/6);
@@ -1400,7 +1399,7 @@ sub display_run {
 					} elsif ($sym eq 'E') {
 						$str .= "($detail % 100)" if $detail;
 					} elsif ($sym eq 'B') {
-						my @res = grep {($_->[6] || -1) == $detail} @$rail;
+						my @res = grep {$_->[0] =~ /^x[sml]/ and ($_->[6] || -1) == $detail} @$rail;
 						$detail %= 100;
 						warn $#res, " ambiguity for wall $detail\n" if @res != 1;
 						my $tid = $res[0]->[2];

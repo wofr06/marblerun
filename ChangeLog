@@ -1,4 +1,5 @@
 Revision history for Perl extension Game::MarbleRun
+	- improved parsing for rare cases
 1.12 Tue Jan 02 2025
 	- added vertical cannon
 	- added releaser
