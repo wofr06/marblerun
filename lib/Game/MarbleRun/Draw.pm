@@ -12,7 +12,7 @@ use Locale::Maketext::Simple (Style => 'gettext', Class => 'Game::MarbleRun');
 use SVG;
 use List::Util qw(min);
 
-my $dbg = 0;
+my $dbg = 1;
 
 sub new {
 	my ($class, %attr) = @_;
@@ -1438,7 +1438,7 @@ sub next_dir {
 			next if $state ne $rule->[5];
 			$t->[8] = $rule->[6];
 			$self->move_switch($t) if $t->[0] =~ /^[SU]$/;
-				say $t->[8] if $t->[0] eq 'S';
+			#say $t->[8] if $t->[0] eq 'S';
 			say "state $state -> $rule->[6]" if $dbg;
 		}
 		# outgoing direction: middle

@@ -1,3 +1,5 @@
 Checks for wrong B and E notation
 more marble path checks, more animation, better estimation of run time
 better visualization: drawing elements and 3d view (svg3d)
+move switch lever
+correctly draw dipper

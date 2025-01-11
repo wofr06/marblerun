@@ -1278,14 +1278,23 @@ sub display_run {
 	# SVG end #
 
 	# sort tiles and rails based on ground plane numbers first column, then row
+	# then balconies with increasing z
 	if ($self->{relative}) {
-		@$tile = sort {$a->[8] <=>$b->[8] ||
+		@$tile = sort {$a->[8] <=> $b->[8] ||
 			int(($a->[3] + 5)/6) <=> int(($b->[3] + 5)/6) ||
 			int(($a->[4] + 4)/5) <=> int(($b->[4] + 4)/5) ||
-			$a->[3] <=> $b->[3] || $a->[4] <=> $b->[4]} @$tile;
-		@$rail = sort {$a->[3] <=>$b->[2] ||
+			$a->[3] <=> $b->[3] || $a->[4] <=> $b->[4] ||
+			$a->[5] <=> $b->[5]} @$tile;
+		@$rail = sort {$a->[3] <=> $b->[2] ||
 			int(($tile->[$a->[2]][3]+5)/6) <=> int(($tile->[$b->[2]][3]+5)/6) ||
 			int(($tile->[$a->[2]][4]+4)/5) <=> int(($tile->[$b->[2]][4]+4)/5) ||
+			$tile->[$a->[2]][3] <=> $tile->[$b->[2]][3] ||
+			$tile->[$a->[2]][4] <=> $tile->[$b->[2]][4]} @$rail;
+	} else {
+		@$tile = sort {$a->[8] <=> $b->[8] ||
+			$a->[3] <=> $b->[3] || $a->[4] <=> $b->[4] ||
+			$a->[5] <=> $b->[5]} @$tile;
+		@$rail = sort {$a->[3] <=> $b->[2] ||
 			$tile->[$a->[2]][3] <=> $tile->[$b->[2]][3] ||
 			$tile->[$a->[2]][4] <=> $tile->[$b->[2]][4]} @$rail;
 	}
@@ -1325,7 +1334,7 @@ sub display_run {
 				next if $tile->[$i][8] != $l;
 				my ($id, $sym, $x, $y, $z, $tdir, $detail) =
 					@{$tile->[$i]}[0,2..7];
-				undef $tdir if $sym =~ /^L|^\d/;
+				undef $tdir if $sym =~ /^L|^\+\d/;
 				# transparent planes already handled
 				next if $sym =~ /[=^]/ or ! $sym;
 				# double balcony on height element in 1st pass, other end in 2nd
@@ -1397,7 +1406,8 @@ sub display_run {
 						}
 						$str .= $trampolin;
 					} elsif ($sym eq 'E') {
-						$str .= "($detail % 100)" if $detail;
+						my $det = $detail % 100;
+						$str .= "$det)" if $detail;
 					} elsif ($sym eq 'B') {
 						my @res = grep {$_->[0] =~ /^x[sml]/ and ($_->[6] || -1) == $detail} @$rail;
 						$detail %= 100;
@@ -1405,12 +1415,13 @@ sub display_run {
 						my $tid = $res[0]->[2];
 						@res = grep {$_->[0] == $tid} @$tile;
 						warn "ambiguity for tile $tid\n" if @res != 1;
-						my $z_w = $res[0]->[5];
+						my $z_w = $res[0]->[5] - 14;
 						my $hole = ($z - $z_w)/2;
 						#print "### wall $detail tid=$tid, zb=$z, zw=$z_w hole $hole\n";
 						$str .= loc("in wall %1 hole %2", $detail, $hole);
 					}
 				}
+				undef $tdir if $sym eq '+';
 				$str .= ' ' . $self->dir_string($tdir) if defined $tdir;
 				# collect tiles at the same position and print only one line
 				if (! defined $tile->[$i+1] or $tile->[$i+1][3] != $x

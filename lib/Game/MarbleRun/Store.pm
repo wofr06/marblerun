@@ -555,14 +555,14 @@ sub update_meta_data {
 sub get_pos {
 	my ($self, $pos, $relative) = @_;
 	my ($x1, $y1) = (0, 0);
-	if ($relative and $pos =~ /^([0-5])([0-6])$/) {
+	if ($relative and $pos =~ /^([0-5]),?([0-6])$/) {
 		($x1, $y1) = ($1, $2);
+	} elsif (! $relative and $pos =~ /^(\d+),(\d+)$/) {
+		($x1, $y1) = (int $1, int $2);
 	} elsif (! $relative and $pos =~ /^([\da-z])([\da-z])$/i) {
 		($x1, $y1) = ($1, $2);
 		$x1 = ($x1 =~ /[a-z]/i) ? ord(lc $x1) - 87 : int $x1;
 		$y1 = ($y1 =~ /[a-z]/i) ? ord(lc $y1) - 87 : int $y1;
-	} elsif (! $relative and $pos =~ /^(\d+),(\d+)$/i) {
-		($x1, $y1) = (int $1, int $2);
 	} else {
 		$self->error("Wrong tile position '%1'", $pos);
 	}
