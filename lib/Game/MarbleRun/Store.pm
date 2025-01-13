@@ -856,7 +856,7 @@ sub parse_run {
 			my $elem;
 			# wall lines
 			if ($tile =~ s/^(\d?)(x[lms])([a-f])//) {
-				my $detail = $1 || 1;
+				my $detail = $1 || 0;
 				$elem = $2;
 				$dir = ord($3) - 97;
 				$num_wall++;
@@ -864,7 +864,7 @@ sub parse_run {
 				($xw, $yw) = ($x1, $y1);
 				$num_L = $pos_L[$detail - 1] || 0;
 				$num_W = @{$rules->[$num_L]};
-				push @{$rules->[$num_L]}, [$x2, $y2, $elem, $dir, $num_wall, $x1, $y1];
+				push @{$rules->[$num_L]}, [$x2, $y2, $elem, $dir, $num_wall + 100*$detail, $x1, $y1];
 			}
 			# double balcony lines (2nd hole)
 			if ($tile =~ s/^E//) {
@@ -955,6 +955,7 @@ sub parse_run {
 					push @pos_L, scalar @$rules;
 					$z += 14;
 				}
+				undef $dir if $elem =~ /^[+\dL]/;
 				# for all height elements
 				push @$rules,
 					[$tid++, $elem, $x1, $y1, $z, $detail, $dir, $level] if $elem;

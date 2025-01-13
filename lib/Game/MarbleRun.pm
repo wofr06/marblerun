@@ -659,6 +659,11 @@ sub num2pos {
 	return "$loc_plane $by,$bx $loc_pos $posy$posx";
 }
 
+sub is_heightelem {
+	my ($self, $sym) = @_;
+	return $sym =~ /^[+\dEL]$|^xL$/;
+}
+
 sub error {
 	my ($self, $str, @args) = @_;
 	my $line = $self->{line} ? loc(" line %1", $self->{line}) : '';
@@ -956,15 +961,21 @@ sub export_marble_run {
 		*F = *STDOUT;
 	}
 	print F $str;
-	$self->{relative} = 1 if $meta->[6] > 35 or $meta->[7] > 35;
+	my $large =  $meta->[6] > 35 or $meta->[7] > 35 ? 1 : 0;
 	my ($dx, $dy) = (0, 0);
 
-	if ($self->{relative}) {
-		# sort tiles based on ground plane numbers
-		@$tile = sort {$a->[8] <=> $b->[8] ||
-			int(($a->[3] + 5)/6) <=> int(($b->[3] + 5)/6) ||
-			int(($a->[4] + 4)/5) <=> int(($b->[4] + 4)/5) ||
-			$a->[3] <=> $b->[3] || $a->[4] <=> $b->[4]} @$tile;
+	my $bpos = '';
+	my (%bt, %et, %wall, $nt, $detail);
+	for my $t (@$tile) {
+		my ($sym, $posx, $posy, $posz, $tdir) = @{$t}[2..6];
+		if ($sym eq 'B' or $bpos eq "$posx,$posy") {
+			$detail = $t->[7] if $sym eq 'B';
+			$bpos = "$posx,$posy" if $sym eq 'B';
+			push @{$bt{$detail}}, $t if $bpos;
+		} else {
+			$bpos = '';
+			push @$nt, $t;
+		}
 	}
 	for my $l (0 .. $meta->[8]) {
 		# tile: id run_id element posx posy posz orient detail level
@@ -974,13 +985,9 @@ sub export_marble_run {
 			my $tp = (grep {$_->[2] =~ /([=^])/ and $_->[8] == $l} @$tile)[0];
 			my $pos = $self->num2pos($tp->[3], $tp->[4], 1);
 			$pos =~ s/^([^\s]*) //;
+			$pos = "$tp->[4],$tp->[3]" if $large;
 			my $plane_pos = $1;
 			my $mid = $tp->[2] eq '^' ? 3 : 2;
-			if ($self->{relative}) {
-				$dx = $tp->[3] - $mid;
-				$dy = $tp->[4] - $mid;
-				say F "_ $plane_pos";
-			}
 			say F "Level $l";
 			say F "$pos $tp->[2]";
 		}
@@ -988,26 +995,17 @@ sub export_marble_run {
 		my $str = '';
 		my $oldplane = '';
 		my $comment = '';
-		for my $t (@$tile) {
+		for my $t (@$nt) {
 			next if $t->[8] != $l;
 			my ($sym, $posx, $posy, $posz, $tdir, $detail) = @{$t}[2..7];
 			next if $sym =~ /[=^]/ or ! $sym;
 			my $pos = $self->num2pos($posx, $posy, 1);
+			$pos = "$posy,$posx" if $large;
 			if ($pos ne $oldpos) {
 				say F "$str$comment" if $str;
 				$oldpos = $pos;
 				$comment = '' if $str;
-				$pos = ($posy - $dy) . ($posx - $dx)
-					if $l and $self->{relative};
 				$str = "$pos ";
-			}
-			if (! $l and $self->{relative}) {
-				my ($l0str, $l0pos) = $pos =~/(\d+,\d+)\s+(\d+)/;
-				$str =~ s/^$l0str //;
-				if ($l0str ne $oldplane) {
-					$oldplane = $l0str;
-					say F "_ $l0str";
-				}
 			}
 			# strings without \n are inline comments, also in multiline
 			if (exists $comments->{$t->[0]}) {
@@ -1017,40 +1015,31 @@ sub export_marble_run {
 				}
 				print F $comments->{$t->[0]} if $comments->{$t->[0]};
 			}
-			if ($sym eq 'B') {
-				say F $str if length $str > 3;
-				$str = "$pos ";
-				die "this procedure needs an update";
-				my $hole = $detail % 14;
-				$hole = chr(87 + $hole) if $hole > 9;
-				$str .= $hole;
-				# encoded wallnumber only used for printing
-				$detail = $detail % 100;
-				$detail = int($detail/14);
-				$detail = '' if $detail == 1;
-			} elsif ($sym eq 'E' and $detail) {
-				say F $str if length $str > 3;
-				$str = "$pos ";
-			}
-			$detail = '' if $sym eq 'E' and $detail and $detail == 1;
 			$str .= $sym;
 			# details given
 			if ($detail) {
+				$detail = '' if $sym eq 'E' and $detail == 1;
 				# default for bridges
 				$detail = '' if $sym eq 'xB' and $detail == 4;
 				# angled bases for trampolin
 				$detail =~ tr/0-5/a-f/ if $sym eq 'R';
 				$str .= $detail if $detail;
 			}
-			$str .= chr(97 + $tdir) if defined $tdir;
+			$str .= chr(97 + $tdir) if $sym !~ /^[+\dL]/;
 			# rail: rail dir tile1_id tile1_level tile2_id tile2_level detail
 			#          0   1        2           3        4           5      6
 			my @rails = grep {$t->[0] == $_->[2]} @$rail;
 			for my $r (@rails) {
-				my $wall = $r->[6] ? $r->[6] % 100 : '';
+				$sym = $r->[0];
 				# bridge is noted in detail only, not as a rail
-				next if $r->[0] eq 'xb';
-				$str .= " $r->[0]$wall" . chr(97 + $r->[1]);
+				next if $sym eq 'xb';
+				if ($sym =~ /x[sml]/) {
+					my $wall = $r->[6] % 100;
+					$wall{$wall} = "$r->[2]:$pos " . (int($r->[6]/100) || '') . $sym
+						. chr(97 + $r->[1]);
+				} else {
+					$str .= " " . $sym . chr(97 + $r->[1]);
+				}
 			}
 			# marble: tile_id orient color
 			#               0      1     2
@@ -1059,8 +1048,51 @@ sub export_marble_run {
 				$str .= $m->[2] if defined $m->[2];
 				$str .= chr(97 + $m->[1]) if defined $m->[1];
 			}
+			$oldpos = 0 if $sym =~/^[a-w]/;
 		}
 		say F "$str$comment" if $str;
+	}
+	for my $w (sort {$a <=> $b} keys %wall) {
+		my $tid = $1 if $wall{$w} =~ s/^(\d+)://;
+		say F $wall{$w};
+		my $str = '';
+		for my $b ($bt{$w}) {
+			for my $t (@$b) {
+				my ($sym, $posx, $posy, $posz, $tdir, $detail) = @{$t}[2..7];
+				$detail ||= '';
+				if ($sym eq 'B') {
+					say F $str if $str;
+					my $pos = $self->num2pos($posx, $posy, 1);
+					$pos =~ s/^([^\s]*) //;
+					$pos = "$posy,$posx" if $large;
+					my @res = grep {$_->[0] == $tid} @$tile;
+					warn "ambiguity for tile $tid\n" if @res != 1;
+					my $z_wall = $res[0]->[5] - 14;
+					my $hole = ($posz - $z_wall)/2;
+					$hole = chr(87 + $hole) if $hole > 9;
+					$detail = int($detail/100) || '';
+					$str = "$pos ${detail}B$hole";
+				} else {
+					$str .= $sym;
+					if ($detail) {
+						# default for bridges
+						$detail = '' if $sym eq 'xB' and $detail == 4;
+						# angled bases for trampolin
+						$detail =~ tr/0-5/a-f/ if $sym eq 'R';
+						$str .= $detail if $detail;
+					}
+				}
+				$str .= chr(97 + $tdir) if $sym !~ /^[+\dL]/;
+				my @rails = grep {$t->[0] == $_->[2]} @$rail;
+				for my $r (@rails) {
+					$sym = $r->[0];
+					# bridge is noted in detail only, not as a rail
+					next if $sym eq 'xb' or $sym =~ /^x[sml]/;
+					$str .= " " . $sym . chr(97 + $r->[1]);
+				}
+			}
+		}
+		say F $str if $str;
 	}
 }
 
@@ -1406,10 +1438,9 @@ sub display_run {
 						}
 						$str .= $trampolin;
 					} elsif ($sym eq 'E') {
-						my $det = $detail % 100;
-						$str .= "$det)" if $detail;
+						$str .= "($detail)" if $detail;
 					} elsif ($sym eq 'B') {
-						my @res = grep {$_->[0] =~ /^x[sml]/ and ($_->[6] || -1) == $detail} @$rail;
+						my @res = grep {$_->[0] =~ /^x[sml]/ and (($_->[6] % 100) || -1) == $detail} @$rail;
 						$detail %= 100;
 						warn $#res, " ambiguity for wall $detail\n" if @res != 1;
 						my $tid = $res[0]->[2];
@@ -1470,13 +1501,17 @@ sub display_run {
 					}
 				}
 				my $name = loc($self->{elem_name}{$sym});
-				if ($r->[6]) {
+				# bridge already described in xB tile
+				if ($sym =~ /^x[sml]/) {
+					my $pillar = int($r->[6]/100) || 1;
 					my $wall = $r->[6] % 100;
 					$name =~ s/ / $wall /;
-				}
-				# bridge already described in xB tile
-				say loc("From %1 to %2 %3 %4", $pos1, $pos2, $name,
+					say loc("From pillar %1 at %2 to %3 %4", $pillar,$pos1,
+						$pos2, $name, $self->dir_string($dir, 1)) if ! $quiet;
+				} else {
+					say loc("From %1 to %2 %3 %4", $pos1, $pos2, $name,
 					$self->dir_string($dir, 1)) if $sym ne 'xb' and ! $quiet;
+				}
 				# SVG #
 			# for the rail we do need the opposite direction
 				my $dir2 = $r->[6];

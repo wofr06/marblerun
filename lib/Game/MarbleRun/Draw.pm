@@ -1120,7 +1120,7 @@ sub display_balls {
 	for my $p (@$xyz) {
 		$i++;
 		next if ! exists $p->[1];
-		say "marble $i" if $dbg;
+		say "marble $i" if $dbg and $self->{motion};
 		($begin[$i], $dur[$i], $path[$i]) = $self->generate_path($p);
 		my ($sym, $x, $y, $dir) = @{$p->[0]}[0, 1, 2, 4];
 		my $off_mult = $sym eq 'M' ? 2 : 1;
@@ -1138,7 +1138,7 @@ sub display_balls {
 			next if ! $str;
 			my ($m_id, $dir, $color) = ($str =~ /^(\d+)o(.)(.)/);
 			next if defined $xyz->[$m_id][0];
-			say "$sym at $x,$y marble $m_id dir $dir, color $color $str" if $dbg;
+			say "$sym at $x,$y marble $m_id dir $dir, color $color $str" if $dbg and $self->{motion};
 			$mult{$dir}++;
 			my $desc = [$m_id, $dir, $color];
 			$self->put_Balls($x, $y, $mult{$dir}*$self->{offset}{$sym}, $desc);
