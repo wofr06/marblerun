@@ -1018,7 +1018,7 @@ sub export_marble_run {
 			$str .= $sym;
 			# details given
 			if ($detail) {
-				$detail = '' if $sym eq 'E' and $detail == 1;
+				$detail = '' if $sym eq 'E';
 				# default for bridges
 				$detail = '' if $sym eq 'xB' and $detail == 4;
 				# angled bases for trampolin
@@ -1035,7 +1035,9 @@ sub export_marble_run {
 				next if $sym eq 'xb';
 				if ($sym =~ /x[sml]/) {
 					my $wall = $r->[6] % 100;
-					$wall{$wall} = "$r->[2]:$pos " . (int($r->[6]/100) || '') . $sym
+					my $num_pillar = int($r->[6]/100);
+					$num_pillar = '' if $num_pillar == 1;
+					$wall{$wall} = "$r->[2]:$pos $num_pillar$sym"
 						. chr(97 + $r->[1]);
 				} else {
 					$str .= " " . $sym . chr(97 + $r->[1]);
@@ -1049,6 +1051,10 @@ sub export_marble_run {
 				$str .= chr(97 + $m->[1]) if defined $m->[1];
 			}
 			$oldpos = 0 if $sym =~/^[a-w]/;
+			if ($str =~s/^(\S+ )(E[^E]+)E//) {
+				say F "$1$2";
+				$str = "$1E";
+			}
 		}
 		say F "$str$comment" if $str;
 	}
@@ -1071,7 +1077,7 @@ sub export_marble_run {
 					my $hole = ($posz - $z_wall)/2;
 					$hole = chr(87 + $hole) if $hole > 9;
 					$detail = int($detail/100) || '';
-					$str = "$pos ${detail}B$hole";
+					$str = "$pos $detail${hole}B";
 				} else {
 					$str .= $sym;
 					if ($detail) {
@@ -1082,7 +1088,7 @@ sub export_marble_run {
 						$str .= $detail if $detail;
 					}
 				}
-				$str .= chr(97 + $tdir) if $sym !~ /^[+\dL]/;
+				$str .= chr(97 + $tdir) if $sym !~ /^[+\dBL]/;
 				my @rails = grep {$t->[0] == $_->[2]} @$rail;
 				for my $r (@rails) {
 					$sym = $r->[0];

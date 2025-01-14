@@ -856,7 +856,7 @@ sub parse_run {
 			my $elem;
 			# wall lines
 			if ($tile =~ s/^(\d?)(x[lms])([a-f])//) {
-				my $detail = $1 || 0;
+				my $detail = $1 || 1;
 				$elem = $2;
 				$dir = ord($3) - 97;
 				$num_wall++;
