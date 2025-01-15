@@ -1,6 +1,10 @@
 Revision history for Perl extension Game::MarbleRun
+1.13 Wed Jan 15 2025
+	- animation of tracks improved
+	- export of track description works again
 	- improved parsing for rare cases
 	- track description corrected
+	- existing sqlite databases have to be recreated
 1.12 Tue Jan 02 2025
 	- added vertical cannon
 	- added releaser

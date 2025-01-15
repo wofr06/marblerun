@@ -8,10 +8,10 @@ use DBI;
 use Game::MarbleRun::I18N;
 use Locale::Maketext::Simple (Style => 'gettext');
 
-$Game::MarbleRun::VERSION = '1.12';
+$Game::MarbleRun::VERSION = '1.13';
 my $homedir = $ENV{HOME} || $ENV{HOMEPATH} || die "unknown homedir\n";
 $Game::MarbleRun::DB_FILE = "$homedir/.gravi.db";
-$Game::MarbleRun::DB_SCHEMA_VERSION = 14;
+$Game::MarbleRun::DB_SCHEMA_VERSION = 15;
 
 sub new {
 	my ($class, %attr) = @_;
