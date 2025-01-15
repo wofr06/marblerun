@@ -1093,10 +1093,17 @@ sub do_run {
 	for (@$rails) {
 		if ($_->[0] eq 't') {
 			$_->[7] = $_->[1];
-		} elsif ($_->[0] eq 'c') {
-			$_->[7] = ($_->[1] + 2) % 6;
-		} elsif ($_->[0] eq 'd') {
-			$_->[7] = ($_->[1] + 4) % 6;
+		} elsif ($_->[0] eq 'c' or $_->[0] eq 'd') {
+			$_->[7] = ($_->[1] + 2) % 6 if $_->[0] eq 'c';
+			$_->[7] = ($_->[1] + 4) % 6 if $_->[0] eq 'd';
+			# lower end point has to come first
+			my $t1 = $_->[2];
+			my $t2 = $_->[4];
+			if ($self->{tiles}{$t1}[3] > $self->{tiles}{$t2}[3]) {
+				($_->[2], $_->[4]) = ($_->[4], $_->[2]);
+				($_->[1], $_->[7]) = ($_->[7], $_->[1]);
+				$_->[0] = $_->[0] eq 'c' ? 'd' : 'c';
+			}
 		} elsif ($_->[0] eq 'xt') {
 			$_->[7] = ($_->[6] + 3) % 6;
 		} else {
@@ -1297,6 +1304,7 @@ sub tile_rule {
 		for (@{$self->{rules}{$t->{$t_id}[0]}}) {
 			say "   zcheck marble z=$z, next tile_z=$tile_z, dir=$dir rule: $_->[3] -> $_->[4]" if $dbg;
 			if ($dir eq 'M') {
+				next if $_->[1] ne 'M';
 				next if $_->[5] !~ /o/ and abs($_->[5]) > abs($z - $tile_z);
 			} elsif ($_->[4] < 0) {
 				next if $tile_z - $z < $_->[4];
