@@ -1078,7 +1078,9 @@ sub do_run {
 	my ($self, $run_id) = @_;
 	my ($meta, $tiles, $rails, $marbles) = $self->fetch_run_data($run_id);
 	# transform tiles into a hashref
-	$self->{tiles}{$_->[0]} = [@$_[2..$#$_]] for @$tiles;
+	$self->{tiles}{$_->[0]} = [@$_[2..$#$_]] for grep {$_->[2] ne 'e'} @$tiles;
+	# e is both treated as a tile and a rail
+	$self->{tiles}{"e$_->[0]"} = [@$_[2..$#$_]] for grep {$_->[2] eq 'e'} @$tiles;
 	# add marble and state info to marble
 	my ($state, $t_pos);
 	my @colors = map {$_->[2]} @$marbles;
@@ -1298,7 +1300,7 @@ sub tile_rule {
 			my $in = spiral_dir($t->{$t_id}[4], $t->{$t_id}[5]);
 			next if $dir != ($in + 3) % 6;
 		} elsif ($t->{$t_id}[0] eq 'xF') {
-			$self->{rules}{xF}[0]= ['xF', 0, ord($2) - 97, 0, 7*($1 - 1), 'o3'x (3*($1 - 1)), 'o3']
+			$self->{rules}{xF}[0]= ['xF', 0, ord($2) - 97, 0, 7*($1 - 1), 'o0'x (3*($1 - 1)), 'o0']
 				if $t->{$t_id}[5] =~ /(^\d)([a-f])/;
 		}
 		for (@{$self->{rules}{$t->{$t_id}[0]}}) {
@@ -1432,7 +1434,7 @@ sub next_dir {
 	#print "tile", Dumper $t, $marble, $marble->[6],$t->[4] if $t->[0] eq 'S';
 	for my $rule (@{$self->{rules}{$t->[0]}}) {
 		if ($t->[0] eq 'xF') {
-			$rule = ['xF', 0, ord($2) - 97, 0, 7*($1 - 1), 'o3'x (3*($1 - 1)), 'o3']
+			$rule = ['xF', 0, ord($2) - 97, 0, 7*($1 - 1), 'o0'x (3*($1 - 1)), 'o0']
 				if $t->[5] =~ /(^\d)([a-f])/;
 		}
 		say "$marble->[0]: rule $rule->[0] $rule->[1] -> $rule->[2]" if $dbg;

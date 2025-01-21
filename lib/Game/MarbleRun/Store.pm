@@ -59,11 +59,7 @@ sub rail_xy {
 	my ($self, $r, $x1, $y1, $dir, $detail, $level) = @_;
 	return if ! defined $dir or $dir !~ /^[0-5]$/;
 	# length of rails
-	my %len = (
-		a=>2, b=>4, c=>1, d=>1, e=>1, l=>4, m=>3, g=>5, q=>5, s=>2,
-		t=>0, u=>4, v=>4, xa=>4, xb=>5, xl=>4, xm=>3, xs=>2, xt=>1,
-	);
-	my $len = $len{$r} || 0;
+	my $len = $self->{rail}{$r}[1] || 0;
 	# special case for variable bridge length, default 4 elements
 	$len = $detail/2 + 1 if $r eq 'xb';
 	my ($x2, $y2) = $self->to_position($x1, $y1, $dir, $len);
@@ -169,60 +165,66 @@ sub verify_rail_endpoints {
 				$self->error("No connection to a tile from %1 at %2 orientation %3 and rail %4%5", $t->[1], $from, $chr, $r->[2], $to_chr);
 			}
 			# resolve z ambiguities
-			$self->resolve_z($r, $z_from, $z_to, $from, $data);
+			$self->resolve_z($t, $r, $z_from, $z_to, $from, $data);
 		}
 	}
 }
 
 sub resolve_z {
-	my ($self, $r, $from, $to, $t_pos, $data) = @_;
+	my ($self, $t_from, $r, $from, $to, $t_pos, $data) = @_;
 	return if ! $from or ! $to or ! @$from or ! @$to;
+	my $rsym = $r->[2];
 	$r->[5] = $data->[$to->[0][0]][0] if @$to == 1;
 	return if @$from == 1 and @$to == 1;
 	$from = [sort {$a <=> $b} @$from];
 	$to = [sort {$a->[1] <=> $b->[1]} @$to];
 	# resolve ambiguity by sorting according to z difference
-	my %dz0 = (t=>6, a=>5, b=>14, c=>5, d=>5, xT=>2, xM=>7, yH=>7, yS=>7,
-		yT=>7, xt=>6);
-	my %dz1 = (s =>5, m=>7, l=>8, t=>8, a=>7, b=>18, c=>7, d=>7, g=>7,
-		q=>7, xT=>2, xM=>7, yH=>7, yS=>7, yT=>7, xt=>8);
-	my $zlow = exists $dz0{$r->[2]} ? $dz0{$r->[2]} : 0;
-	my $zhigh = exists $dz1{$r->[2]} ? $dz1{$r->[2]} : 10;
+	my $zlow = exists $self->{rail}{$rsym}[2] ? $self->{rail}{$rsym}[2] : 0;
+	my $zhigh = exists $self->{rail}{$rsym}[3] ? $self->{rail}{$rsym}[3] : 10;
 	my $id_min = $to->[0][0];
 	my $id_strict;
-	exit if ! defined $to->[0][1];
 	my $zmin = abs($to->[0][1] - $from->[0]);
 	my $zstrict = 999;
-	for my $zf (@$from) {
+	my $ok = 0;
+	my $str = '';
+	for my $z (@$from) {
+		$str .= " from $t_from->[1]($z)" if @$to > 1 or @$from > 1;
 		for my $t (@$to) {
-			my $zdiff = abs($zf - $t->[1]);
-			if ($zdiff < $zmin) {
+			next if $self->no_rail_connection($data->[$t->[0]][1]);
+			$str .= " to $data->[$t->[0]][1]($t->[1])";
+			my $zdiff = abs($z - $t->[1]);
+			my $zd = $z - $t->[1];
+			if ($zdiff <= $zmin) {
 				$zmin = $zdiff;
 				$id_min = $t->[0];
 			}
-			if ($zdiff < $zstrict and $zdiff >= $zlow and $zdiff <=$zhigh) {
+			if ($zdiff <= $zstrict and $zdiff >= $zlow and $zdiff <=$zhigh) {
 				$zstrict = $zdiff;
 				$id_strict = $t->[0];
+				$str .= " ok($rsym" . chr(97 + $r->[3]) . " dz=$zd)";
+				$ok++;
 			}
 		}
 	}
+	print " ### ambig: $str\n" if $ok > 1;
+	print " ### no solution $str($rsym$zmin)\n" if ! $ok;
 	undef $zstrict if $zstrict == 999;
 	my $zdiff = $zstrict || $zmin;
 	my $id = $id_strict || $id_min;
 	$r->[5] = $data->[$id][0];
-	my ($xf, $yf, $z) = @{$data->[$id]}[2,3,4];
-	say " z=$z taken" if $dbg;
+	my ($xf, $yf, $zf) = @{$data->[$id]}[2,3,4];
+	say " z=$zf taken" if $dbg;
 	warn loc("Warning: height difference %1 from z=%4 at %5 for rail %2 at %3 maybe too small\n",
-		$zdiff/2., $r->[2], $t_pos, $z/2., $self->num2pos($xf, $yf)) if $zdiff < $zlow;
+		$zdiff/2., $rsym, $t_pos, $zf/2.,
+		$self->num2pos($xf, $yf)) if $zdiff < $zlow;
 	warn loc("Warning: height difference %1 from z=%4 at %5 for rail %2 at %3 maybe too large\n",
-		$zdiff/2., $r->[2], $t_pos, $z/2.,
+		$zdiff/2., $rsym, $t_pos, $zf/2.,
 		$self->num2pos($xf, $yf)) if $zdiff > $zhigh;
 }
 
 sub rail_connection {
 	my ($self, $t, $r, $reverse) = @_;
 	my $tile = $t->[1];
-	return [[0]] if $tile =~ /\|/;
 	my $z_from;
 	$reverse ||= 0;
 	my $rail_dir = ($r->[3] + $reverse) % 6;
@@ -504,8 +506,8 @@ sub store_run {
 			$self->{line}= $r->[1];
 			next;
 		}
-		#r: from_id chr x1 y1 z1 detail orient level, x2, y2, rail_id, dir wall
-		#         0   1  2  3  4      5      6     7   8   9       10   11   12
+		#r: from_id chr x1 y1 z1 detail orient level, x2, y2, to_id, dir wall
+		#         0   1  2  3  4      5      6     7   8   9     10   11   12
 		# t: tile_id tile_char, x, y, z, detail, orient level
 		#          0         1  2  3  4       5       6     7
 		# chose correct tile: tile normally placed at same or lower level
@@ -683,11 +685,11 @@ sub header_line {
 	my $loc_source = loc('Source');
 	my $loc_date = loc('Date');
 	my $loc_level = loc('Level');
-	return ('name', $1) if /^\s*(?:name|$loc_name)(?:\s+|:|$)(.*)/i;
-	return ('date', $1) if /^\s*(?:date|$loc_date)(?:\s+|:|$)(.*)/i;
-	return ('author', $1) if /^\s*(?:author|$loc_author)(?:\s+|:|$)(.*)/i;
-	return ('source', $1) if /^\s*(?:source|$loc_source)(?:\s+|:|$)(.*)/i;
-	return ('level', $1) if /^\s*(?:level|$loc_level)(?:\s+|:|$)(.*)/i;
+	return ('name', $1) if /^\s*(?:name|$loc_name)(?:\s+|:\s*|$)(.*)/i;
+	return ('date', $1) if /^\s*(?:date|$loc_date)(?:\s+|:\s*|$)(.*)/i;
+	return ('author', $1) if /^\s*(?:author|$loc_author)(?:\s+|:\s*|$)(.*)/i;
+	return ('source', $1) if /^\s*(?:source|$loc_source)(?:\s+|:\s*|$)(.*)/i;
+	return ('level', $1) if /^\s*(?:level|$loc_level)(?:\s+|:\s*|$)(.*)/i;
 	return undef;
 }
 

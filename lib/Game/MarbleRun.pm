@@ -11,7 +11,7 @@ use Locale::Maketext::Simple (Style => 'gettext');
 $Game::MarbleRun::VERSION = '1.13';
 my $homedir = $ENV{HOME} || $ENV{HOMEPATH} || die "unknown homedir\n";
 $Game::MarbleRun::DB_FILE = "$homedir/.gravi.db";
-$Game::MarbleRun::DB_SCHEMA_VERSION = 15;
+$Game::MarbleRun::DB_SCHEMA_VERSION = 16;
 
 sub new {
 	my ($class, %attr) = @_;
@@ -123,9 +123,9 @@ sub features {
 		['xD', 'F',   5,      8,      0,     0,       0],
 		['xD',   1,   1,      0,      0,     1],
 		['xD',   5,   5,      0,      0,     0],
-		['xF',   0, 'detail2', 0, '7*(detail1-1)', '3*(detail1-1)o3', 'o3'],
+		['xF',  0, 'detail2', 0, '7*(detail1-1)', '3*(detail1-1)o0', 'o0'],
 		['xH', 'detail %6', 0, 'detail', 0,  0],
-		['xH', 'M',   0, 'detail',    0,     0],
+		['xH', 'M',   0, 'detail+2',    0,     0],
 		['xI',   0,   3,      0,      0,   'r'],
 		['xI',   1,   2,      0,      0,   'r'],
 		['xI',   4,   5,      0,      0,   'r'],
@@ -229,7 +229,7 @@ sub features {
 		['yY',   0,   3,      0,      0,   'r'],
 		['yY',   4,   5,      0,      0,   'r'],
 		['yY',   2,   0,      0,      0,     0],
-		['zA',  '',   0,      0,      0,   'r'],
+		['zA',  '',   0,      0,      0,   'o0',   'o0'],
 		['zE',   0,   1,      0,     14,     0],
 		['zF',   0,   3,      0,      0,     0],
 		['zL',   0,   3,      0,      8,     0],
@@ -252,22 +252,25 @@ sub features {
 	# symbol length z_min z_max special
 	#      0      1     2     3       4
 	my $rail = [
-		['a',  2,  5,  7,        0],
-		['b',  4, 14, 18,        0],
-		['c',  2,  5,  7,       -1],
-		['d',  2,  5,  7,        1],
+		['a',  2,  6,  7,        0],
+		['b',  4, 13, 15,        0],
+		['c',  1,  5,  7,       -1],
+		['d',  1,  5,  7,        1],
 		['e',  1,  0,  3,        0],
-		['g',  5,  0,  7,   'fast'], # fast rail
+		['g',  5,  0,  6,   'fast'], # fast rail
 		['l',  4,  0,  8,        0],
 		['m',  3,  0,  7,        0],
-		['q',  5,  0,  7,   'slow'], # slow rail
+		['q',  5,  0,  6,   'slow'], # slow rail
 		['s',  2,  0,  5,        0],
-		['t',  0,  7,  7,        0],
+		['t',  0,  6,  8,        0],
 		['u',  4,  0,  9,   'hole'],
-		['v',  4,  0,  9,   'hole'],
-		['xa', 4,  3, 10,        0],
+		['v',  4,  0,  4,   'hole'],
+		['xa', 4,  3,  7,        0],
 		['xb', 4,  0,  0, 'length'], # detail: length
-		['xt', 2,  6,  7,    'dir'], # detail: direction
+		['xl', 4,  0,  0,        0],
+		['xm', 3,  0,  0,        0],
+		['xs', 2,  0,  0,        0],
+		['xt', 1,  7,  7,    'dir'], # detail: direction
 	];
 	# directions
 	$self->{dirchr} = [qw(↑  ↗  ↘  ↓  ↙  ↖ )];
@@ -295,7 +298,7 @@ sub features {
 		xA => 0.3, xS => 0.375, xZ => -0.3,
 		xB => [[-0.2, -0.3], [0.2, -0.3]], Z => 1.5*$self->{r_ball},
 		xK => [[-0.2, -0.3], [-0.2, 0.3], [0.2, -0.3], [0.2, 0.3]],
-		xT => -2*$self->{r_ball},
+		xT => -2*$self->{r_ball}, zA => 0.25,
 	);
 	push @{$self->{rules}{$_->[0]}}, $_ for @$tile_r;
 	$self->{rail}{$_->[0]} = $_ for @$rail;
@@ -537,6 +540,9 @@ EOF
 			C=>28, X=>4, S=>2, W=>1, V=>1, A=>1, M=>2, l=>3, m=>6, s=>9, e=>1,
 			G=>2, D=>1, P=>1, Z=>2, a=>2, b=>2, c=>2, d=>2, g=>2, q=>2, u=>1,
 			v=>1, xH=>1, F=>1, T=>2, I=>1, U=>1, t=>1, Q=>1, xG=>8],
+		'Action Set Focus', 39, ['@'=>3, '('=>1, ')'=>1, '='=>1, xS=>1, C=>7,
+			W=>1, V=>1, X=>1, M=>1, S=>2, P=>1, G=>2, D=>1, Z=>1, xG=>3, '+'=>6,
+			1=>12, l=>2, m=>4, s=>6, o=>3, e=>1],
 		# Extension Sets
 		'Building Extension', 5, [_=>2, '^'=>1, 1=>8, '+'=>4, S=>2, W=>1, V=>1,
 			e=>1, G=>2, D=>1, P=>1, Z=>1, xG=>5],
@@ -578,12 +584,14 @@ EOF
 		'Color Swap', 32, [xP => 3],
 		'Carousel', 33, [yK => 1],
 		# Game sets
-		'Game Flow', 34, ['*'=>2, '='=>1, C=>7, V=>1, G=>1, X=>1, A=>1, Z=>1,
+		'Game Flow', 34, ['@'=>2, '='=>1, C=>7, V=>1, G=>1, X=>1, A=>1, Z=>1,
 			1=>11, '+'=>1, xt=>2, l=>1, m=>2, s=>3, o=>1],
-		'Game Impact', 35, ['*'=>3, C=>7, X=>1, A=>1, H=>1, Z=>1, 1=>4, l=>2,
+		'Game Impact', 35, ['@'=>3, C=>7, X=>1, A=>1, H=>1, Z=>1, 1=>4, l=>2,
 			m=>2, s=>3, o=>1],
-		'Game Course', 36, ['*'=>4, X=>1, A=>1, S=>1, Z=>1, 1=>6, W=>1, xQ=>1,
+		'Game Course', 36, ['@'=>4, X=>1, A=>1, S=>1, Z=>1, 1=>6, W=>1, xQ=>1,
 			yI=>1, xW=>1, yW=>1, xY =>1, yY=>1, yX=>1, l=>2, m=>2, s=>3, o=>2],
+		'Multiform', 40, ['*'=>14, xS=>1, 1=>10, '+'=>2, C=>6, X=>1, Z=>1, o=>1,
+			K=>1, l=>2, m=>4, s=>4],
 		# 2023
 		'Releaser', 37, [yR => 1],
 		# 2024

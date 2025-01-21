@@ -291,10 +291,10 @@ msgid "Cross Straight and Curve"
 msgstr "Gerade kreuzt Kurve"
 
 msgid "Carousel"
-msgstr ""
+msgstr "Karussell"
 
 msgid "Vertical Cannon"
-msgstr ""
+msgstr "Vertikale Kanone"
 
 msgid "Releaser"
 msgstr ""
@@ -351,6 +351,9 @@ msgid "Cable Car (Zipline)"
 msgstr "Seilbahn"
 
 msgid "Advent 21"
+msgstr ""
+
+msgid "Action Set Focus"
 msgstr ""
 
 msgid "Game Flow"
