@@ -144,7 +144,7 @@ sub verify_rail_endpoints {
 				}
 				my $zs = $self->rail_connection($data->[$i], $r, $reverse);
 				push @$z_to, [$i, $_ + $data->[$i][4]] for @$zs;
-				$r->[5] = $data->[$i][0] if $z_to;
+				#$r->[5] = $data->[$i][0] if $z_to;
 			}
 			if ($dbg) {
 				say "$t->[1] $from -> rail $r->[2]", chr(97 + $r->[3]),
@@ -175,7 +175,7 @@ sub resolve_z {
 	return if ! $from or ! $to or ! @$from or ! @$to;
 	my $rsym = $r->[2];
 	$r->[5] = $data->[$to->[0][0]][0] if @$to == 1;
-	return if @$from == 1 and @$to == 1;
+	return if @$to == 1 or exists $r->[5];
 	$from = [sort {$a <=> $b} @$from];
 	$to = [sort {$a->[1] <=> $b->[1]} @$to];
 	# resolve ambiguity by sorting according to z difference
@@ -211,7 +211,9 @@ sub resolve_z {
 	undef $zstrict if $zstrict == 999;
 	my $zdiff = $zstrict || $zmin;
 	my $id = $id_strict || $id_min;
+	#say "before final", $r->[5] || -1;
 	$r->[5] = $data->[$id][0];
+	#say "final", $r->[5];
 	my ($xf, $yf, $zf) = @{$data->[$id]}[2,3,4];
 	say " z=$zf taken" if $dbg;
 	warn loc("Warning: height difference %1 from z=%4 at %5 for rail %2 at %3 maybe too small\n",
@@ -1124,6 +1126,14 @@ sub parse_run {
 sub check_marbles {
 	my ($self, $tile, $dir, $detail, $items) = @_;
 	my @items = grep {/^\d*o/} @$items;
+	if (@items) {
+		my @items2 = @$items;
+		@$items = ();
+		for (@items2) {
+			my $i = s/(\d+)// ? $1 : 1;
+			push @$items, $_ while $i--;
+		}
+	}
 	# add missing marbles where required (A, M, N, P, xF, xS)
 	my @m1 = grep {$_->[5] =~ /o/} @{$self->{rules}{$tile}};
 	my $colors = 'RGBSA';

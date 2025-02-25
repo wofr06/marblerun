@@ -1,8 +1,6 @@
 package Game::MarbleRun::Draw;
 $Game::MarbleRun::Draw::VERSION = $Game::MarbleRun::VERSION;
 
-use Data::Dumper;
-
 use v5.14;
 use strict;
 use warnings;
@@ -12,7 +10,7 @@ use Locale::Maketext::Simple (Style => 'gettext', Class => 'Game::MarbleRun');
 use SVG;
 use List::Util qw(min);
 
-my $dbg = 1;
+my $dbg = 0;
 
 sub new {
 	my ($class, %attr) = @_;

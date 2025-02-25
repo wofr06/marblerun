@@ -1,4 +1,7 @@
 Revision history for Perl extension Game::MarbleRun
+1.14 Tue Feb 25 2025
+	- windows executable based on working Strawberry perl (5.38)
+	- allow for no marbles in magnetic cannon
 1.13 Wed Jan 15 2025
 	- animation of tracks improved
 	- export of track description works again

@@ -8,7 +8,7 @@ use DBI;
 use Game::MarbleRun::I18N;
 use Locale::Maketext::Simple (Style => 'gettext');
 
-$Game::MarbleRun::VERSION = '1.13';
+$Game::MarbleRun::VERSION = '1.14';
 my $homedir = $ENV{HOME} || $ENV{HOMEPATH} || die "unknown homedir\n";
 $Game::MarbleRun::DB_FILE = "$homedir/.gravi.db";
 $Game::MarbleRun::DB_SCHEMA_VERSION = 16;
@@ -1301,6 +1301,7 @@ sub display_run {
 	my %pos;
 	my $tp_pos = [[0,0]];
 	my ($meta, $tile, $rail, $marble, $excl) = $self->fetch_run_data($run_id);
+
 	# meta: id name digest date source person_id size_x size_y layers marble
 	#       0  1    2      3    4      5         6      7      8      9
 	my $bx = int(($meta->[6] + 5)/6);
