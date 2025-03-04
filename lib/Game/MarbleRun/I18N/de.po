@@ -5,10 +5,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: 1.14\n"
+"Project-Id-Version: 1.15\n"
 "Report-Msgid-Bugs-To: <wp.friebel@gmail.com>\n"
 "POT-Creation-Date: 2020-04-12 20:38+0200\n"
-"PO-Revision-Date: 2025-02-25 13:04+0100\n"
+"PO-Revision-Date: 2025-03-04 22:52+0100\n"
 "Last-Translator: Wolfgang Friebel <wp.friebel@gmail.com>\n"
 "Language-Team: de <wp.friebel@gmail.com>\n"
 "Language: de_DE.UTF8\n"
@@ -592,23 +592,23 @@ msgstr "%4 von Säule %1 auf %2 nach %3"
 msgid "From %1 to %2 %3 %4"
 msgstr "Von %1 nach %2 %3 %4"
 
-#: MarbleRun.pm:1599
+#: MarbleRun.pm:1584
 msgid "Switch state"
 msgstr "Weichenstellung"
 
-#: MarbleRun.pm:1601
+#: MarbleRun.pm:1586
 msgid "prepare for start"
 msgstr "Vorbereiten für Start"
 
-#: MarbleRun.pm:1603
+#: MarbleRun.pm:1588
 msgid "flap in %1"
 msgstr "Klappe in %1"
 
-#: MarbleRun.pm:1606
+#: MarbleRun.pm:1591
 msgid "%1 should leave tile in %2"
 msgstr "%1 soll Stein in %2 verlassen"
 
-#: MarbleRun.pm:1610
+#: MarbleRun.pm:1595
 msgid "Turntable rotor position"
 msgstr "Position des Rotors"
 
@@ -616,11 +616,11 @@ msgstr "Position des Rotors"
 msgid "Unknown board size, run_id or size_x not given"
 msgstr "Unbekannte Größe der Kugelbahn, run_id oder size_x nicht angegeben"
 
-#: Draw.pm:1688
+#: Draw.pm:1708
 msgid "ENTER to exit"
 msgstr "ENTER für Ende"
 
-#: Draw.pm:1702
+#: Draw.pm:1722
 msgid "Created %1"
 msgstr "%1 wurde erstellt"
 
@@ -868,31 +868,35 @@ msgstr "Auf dem Stein %1 sollten keine Kugeln liegen"
 msgid "Illegal%1 char %2 in %3 for marble on tile %4"
 msgstr "Falsches%1 Zeichen %2 in %3 für Kugel auf Stein %4"
 
-#: Store.pm:1185
+#: Store.pm:1191
 msgid "marble %1 on tile %2 will be started later\n"
 msgstr "Kugel %1 auf Stein %2 wird später gestartet\n"
 
-#: Store.pm:1188
-msgid "marble on tile %1 cannot be in position %2"
-msgstr "Kugel auf Stein %1 kann nicht Orientierung %2 haben"
+#: Store.pm:1194
+msgid "marble on tile %1 cannot be in position %2 or too many marbles"
+msgstr "Kugel auf Stein %1 kann nicht Orientierung %2 haben oder zu viele Kugeln"
 
-#: Store.pm:1243
+#: Store.pm:1207
+msgid "too many marbles on tile %1"
+msgstr "Zu viele Kugeln auf Stein %1"
+
+#: Store.pm:1245
 msgid "Owner"
 msgstr "Eigentümer"
 
-#: Store.pm:1254
+#: Store.pm:1256
 msgid "Unknown element %1"
 msgstr "Unbekanntes Element %1"
 
-#: Store.pm:1278
+#: Store.pm:1280
 msgid "Ambig set name '%1': %2"
 msgstr "Mehrdeutiger Bausatzname '%1': %2"
 
-#: Store.pm:1282
+#: Store.pm:1284
 msgid "Unknown set name '%1': "
 msgstr "Unbekannter Bausatzname '%1': "
 
-#: Store.pm:1285
+#: Store.pm:1287
 msgid "Unknown material line '%1'"
 msgstr "Unerwartete Zeile für Material '%1'"
 

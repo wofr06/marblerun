@@ -583,7 +583,7 @@ sub plane_lines {
 	for (@$lines) {
 		my ($what, $value) = $self->header_line($_);
 		next if ! $what or $what ne 'level';
-		$max_level = $value if  $value > $max_level;
+		$max_level = $value if $value > $max_level;
 	}
 	my ($level_pos, $added, $col, $row, $type);
 	for my $str (@$lines) {
@@ -1164,20 +1164,26 @@ sub check_marbles {
 		return;
 	}
 	# check existing marbles and add color and/or orientation
-	for (grep {/o/} @$items) {
-		my ($num, $str) = split /o/, $_;
-		$num ||= '';
-		my $color = $1 if $str and $str =~ s/([$colors])//;
-		my $cdir = $1 if $str and $str =~ s/([a-f])//;
+	for (sort {length $b <=> length $a || $b cmp $a} grep {/o/} @$items) {
+		my ($color, $cdir);
+		(my $str = $_) =~ s/o//;
+		$color = $1 if $str and $str =~ s/([$colors])//;
+		$cdir = $1 if $str and $str =~ s/([a-f])//;
 		if ($str) {
 			my $what = ($color and ! $cdir) ? ' position' :
 			($cdir and ! $color) ? ' color' : '';
 			$self->error("Illegal%1 char %2 in %3 for marble on tile %4",
 				$what, $str, $_, $tile);
+			$_ = '';
 			next;
 		}
-		if ($color and $cdir) {
-			my @chk2 = grep {$_ =~ /$cdir/} @chk;
+		if ($cdir) {
+			my @chk2 = grep {/$cdir/} @chk;
+			if (! $color) {
+				$color = 'S';
+				$color = $1 if $chk2[0] and $chk2[0] =~ /([$colors])/;
+				s/o/o$color/;
+			}
 			my $numdir = ord($cdir) - 97 - $dir;
 			my $out = grep {$numdir eq $_->[2]} @{$self->{rules}{$tile}};
 			if (! @chk2) {
@@ -1185,7 +1191,7 @@ sub check_marbles {
 					print loc("marble %1 on tile %2 will be started later\n",
 					$_, $tile);
 				} else {
-					$self->error("marble on tile %1 cannot be in position %2",
+					$self->error("marble on tile %1 cannot be in position %2 or too many marbles",
 						$tile, $cdir);
 				}
 				next;
@@ -1194,21 +1200,17 @@ sub check_marbles {
 				@chk = grep {$_ ne $found} @chk;
 				push @chk, @chk2 if @chk2; # marbles with same dir and color
 			}
-		} elsif (! $color and ! $cdir) {
-			@$items = (@chk, grep {! /^\d*o/} @$items);
-			return;
-		} elsif (! $color) {
-			($_) = grep {/$cdir/} @chk;
-			next if $_;
-			$self->error("marble on tile %1 cannot be in position %2",
-				$tile, $cdir);
-			@$items = (@chk, grep {defined $_ and ! /^\d*o/} @$items);
-			return;
 		} elsif (! $cdir) {
-			my $m = shift @chk;
-			($_ = $m) =~ s/[$colors]/$color/;
+			$_ = shift @chk;
+			s/[$colors]/$color/ if $color;
+			if (! $_) {
+				$self->error("too many marbles on tile %1");
+				@$items = (@chk, grep {defined $_ and ! /^\d*o/} @$items);
+			}
 		}
 	}
+	@$items = grep {$_} @$items;
+	say "result=@$items";
 }
 
 sub parse_material {

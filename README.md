@@ -1,16 +1,26 @@
-# Perl package Game-MarbleRun (repository marblerun)
+# Store marble runs, generate build instructions and visualize runs
 
-The aim of Game-MarbleRun is to register marble run tracks built with
-GraviTrax® from Ravensburger and to be able to rebuild and visualize them.
-The tracks are coded in a text file that allows for a very compact notation.
-The format is described in a document included in the package. The track
-notations are parsed, checked for errors and stored in a (sqlite) database.
+A program `gravi` has been written to support various tasks around marble run
+tracks built with GraviTrax® from Ravensburger.
+
+With the help of this program marble tracks can be described using a very
+compact notation and saved in a short text file. The format is described
+in a document included in the package. The track notations are parsed,
+checked for errors and stored in a (sqlite) database.
+
 The text files can be freely exchanged with others and do not need a central
-storage on any server. A script `gravi`, that is included in the package does the
-checking and storing of the text files as well as the generation of track
-descriptions in a human friendly format and the output of pictures showing
-the layout of the track. The pictures (plain or animated view) in the svg
-format can best be viewed using web browsers.
+storage on any server.
+
+Using the script `gravi`, building instructions in a human readable form
+can be generated for the tracks stored in the database. Schematic drawings
+can be generated as well to visually check the correctness of the tracks and
+help in rebuilding stored tracks. The generated pictures are in the svg format
+and can best be viewed using web browsers. Optionally the marbles can be
+animated and show the movement of the marbles. 
+
+
+The program `gravi` hs been written in perl and does make use of the package
+Game::MarbleRun, which is contained in this repository.
 
 Depending on the language environment and available localizations the output
 of the program is in english or according to the current locale.
@@ -24,13 +34,16 @@ is working.
 
 ## INSTALLATION
 
-To install this module type the following:
+To install the program `gravi` and the required module type the following:
 ```
    perl Makefile.PL
    make
    make test
    make install
 ```
+For windows users who do not want to install perl a standalone executable is
+provided on the web. For details please consult the documentation.
+
 ## USAGE
 
 The package contains a program `gravi` to manage the marble runs

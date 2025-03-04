@@ -8,7 +8,7 @@ use DBI;
 use Game::MarbleRun::I18N;
 use Locale::Maketext::Simple (Style => 'gettext');
 
-$Game::MarbleRun::VERSION = '1.14';
+$Game::MarbleRun::VERSION = '1.15';
 my $homedir = $ENV{HOME} || $ENV{HOMEPATH} || die "unknown homedir\n";
 $Game::MarbleRun::DB_FILE = "$homedir/.gravi.db";
 $Game::MarbleRun::DB_SCHEMA_VERSION = 16;
@@ -298,7 +298,7 @@ sub features {
 		xA => 0.3, xS => 0.375, xZ => -0.3,
 		xB => [[-0.2, -0.3], [0.2, -0.3]], Z => 1.5*$self->{r_ball},
 		xK => [[-0.2, -0.3], [-0.2, 0.3], [0.2, -0.3], [0.2, 0.3]],
-		xT => -2*$self->{r_ball}, zA => 0.25,
+		xT => -0.6, zA => 0.25,
 	);
 	push @{$self->{rules}{$_->[0]}}, $_ for @$tile_r;
 	$self->{rail}{$_->[0]} = $_ for @$rail;
@@ -969,7 +969,7 @@ sub export_marble_run {
 		*F = *STDOUT;
 	}
 	print F $str;
-	my $large =  $meta->[6] > 35 or $meta->[7] > 35 ? 1 : 0;
+	my $large = $meta->[6] > 35 or $meta->[7] > 35 ? 1 : 0;
 	my ($dx, $dy) = (0, 0);
 
 	my $bpos = '';
@@ -1559,21 +1559,6 @@ sub initial_actions {
 		# bridges can unfold with 2 elements only
 		next if $sym eq 'xB' and $detail != 2;
 		my $elem = $self->{elem_name}{$sym};
-		# silver balls in cannon and on zipline start if no balls given
-		if (! exists $m{$id}) {
-			my $silver = [$dir, 'S'];
-			$m{$id} = [$silver, $silver] if $sym eq 'M';
-			$m{$id} = [$silver] if $sym =~ /x[AZ]/;
-			$m{$id} = [[$dir, 'R'], [$dir+2, 'G'], [$dir+4, 'B']]
-				if $sym =~ /^[AP]$/;
-			$m{$id} = [[$dir+1, 'R'],[$dir+3, 'G'],[$dir+5, 'B']]
-				if $sym eq 'N';
-			if ($sym eq 'xF') {
-				my $tubes_minus1 = substr($detail, 0, 1) - 2;
-				my $balls = 3 + 4*$tubes_minus1;
-				push @{$m{$id}}, [undef, 'S'] for 1 .. 3*$balls;
-			}
-		}
 		my $pos = loc("At %1", $self->num2pos($x, $y));
 		$pos = loc('At %1', loc('Level') . " $l ") . loc('pos') . ' '
 			. ($y - $dxy->[$l][1]) . ($x - $dxy->[$l][0]) if $l and $self->{relative};

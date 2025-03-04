@@ -1,19 +1,22 @@
 Revision history for Perl extension Game::MarbleRun
-1.14 Tue Feb 25 2025
+1.15  Tue Mar 04 2025
+	- fix parsing of marble description
+	- improve tiptube drawing and animation
+1.14  Tue Feb 25 2025
 	- windows executable based on working Strawberry perl (5.38)
 	- allow for no marbles in magnetic cannon
-1.13 Wed Jan 15 2025
+1.13  Wed Jan 15 2025
 	- animation of tracks improved
 	- export of track description works again
 	- improved parsing for rare cases
 	- track description corrected
 	- existing sqlite databases have to be recreated
-1.12 Tue Jan 02 2025
+1.12  Tue Jan 02 2025
 	- added vertical cannon
 	- added releaser
 	- english documentation enhanced
 	- improved drawing and bug fixes 
-1.11 Sun Jul 23 2023
+1.11  Sun Jul 23 2023
 	- reworked code for position notation with ground planes (relative pos)
 	- documentation updates
 	- improved drawing of flex tube
@@ -28,68 +31,68 @@ Revision history for Perl extension Game::MarbleRun
 	- corrected export of marble runs (transparent planes, finish line)
 	- corrected positioning of double balconies and tiles on transparent planes
 1.01  Tue Feb 15 2022
-    - Symbol for splinter changed to yS. Code cleanup, fix option handling
+	- Symbol for splinter changed to yS. Code cleanup, fix option handling
 	- Lift handling corrected. Animation working mostly, timing incorrect.
 	- new option -m to generate SVG with animation, -y to force yes answer
 1.00  Thu Jan 27 2022
-    - new elements can be used in runs and get drawn
-    - non rectangular ground planes can be visualized
+	- new elements can be used in runs and get drawn
+	- non rectangular ground planes can be visualized
 0.991 Thu Jan 20 2022
-    - added new elements from Advent calendar 2021, updated german doc
-    - fixed bug in spiral connection check, Symbol for splinter changed to yV.
+	- added new elements from Advent calendar 2021, updated german doc
+	- fixed bug in spiral connection check, Symbol for splinter changed to yV.
 0.99  Tue Jul 29 2021
-    - added several new elements and starter set "speed"
+	- added several new elements and starter set "speed"
 	. fixed flextube checks, finish line drawing, marble placement and arrivals
 0.98  Wed Mar 24 2021
-    - the symbol for rail extralog changed to o->g, for a ball to 0->o
-    - marbles are visualized, simple tracks get animated
+	- the symbol for rail extralog changed to o->g, for a ball to 0->o
+	- marbles are visualized, simple tracks get animated
 	- The DB can get populated initially with a demo track
 0.97  Fri Feb 19 2021
-    - notation for balconies and walls simplified, walls get numbered
+	- notation for balconies and walls simplified, walls get numbered
 	- marble placement and initial actions
 0.96  Tue Feb 09 2021
-    - improved drawing of switch, start, balconies and walls
-    - more sanity checks for balconies, bug fixes
+	- improved drawing of switch, start, balconies and walls
+	- more sanity checks for balconies, bug fixes
 0.95  Mon Feb 01 2021
-    - new option -q to only output SVG, bug fixes.
+	- new option -q to only output SVG, bug fixes.
 0.94  Sat Jan 30 2021
-    - better description for Installation under Windows and bug fixes
+	- better description for Installation under Windows and bug fixes
 0.93  Fri Jan 29 2021
-    - all currently known extensions including starter set vertical supported
-    - more sanity checks for marble tracks
-    - german documentation finalized (as well as the notation syntax)
-    - partly simplified syntax where possible
+	- all currently known extensions including starter set vertical supported
+	- more sanity checks for marble tracks
+	- german documentation finalized (as well as the notation syntax)
+	- partly simplified syntax where possible
 0.92  Fri Jan 22 2021
-    - both relative notation using _ lines and absolute positions supported
-    - option -r controls display and export of marble runs
+	- both relative notation using _ lines and absolute positions supported
+	- option -r controls display and export of marble runs
 0.91  Wed Jan 20 2021
-    - transparent plane notation changed again
-    - several added sanity checks and bug fixes
+	- transparent plane notation changed again
+	- several added sanity checks and bug fixes
 0.9   Fri Jan 08 2021
 	- script gravi.pl renamed to gravi
 	- notations incompatible with previous versions:
-    - coordinate system changed: horizontal is now 11, 12, 13 etc.
+	- coordinate system changed: horizontal is now 11, 12, 13 etc.
 	- symbol names for some tiles and rails changed (due to many new elements)
-    - some support for starter set vertical added (rails and height elements)
-    - support for new mixer and splitter extension
-    - german manual
+	- some support for starter set vertical added (rails and height elements)
+	- support for new mixer and splitter extension
+	- german manual
 0.6   Fri Jun 05 2020
-    - lift description improved
-    - changes for running under Windows
+	- lift description improved
+	- changes for running under Windows
 0.5   Sun May 03 2020
 	- pdf documents updated (orientation of volcano, notation of bridges)
 	- check for correctness of rail placement
 	- svg files are generated for the final run and for lower planes if any
-    - testsuite started (make test checks the methods in Store.pm now)
+	- testsuite started (make test checks the methods in Store.pm now)
 0.4   Sun Apr 26 2020
 	- pdf document both in english and german
-    - notation of rails changed
-    - db schema extended to also support the spiral
-    - more flexible selection of runs to be displayed, exported etc.
+	- notation of rails changed
+	- db schema extended to also support the spiral
+	- more flexible selection of runs to be displayed, exported etc.
 0.3   Sat Apr 18 2020
-    - german localization complete, french template provided as an example
-    - all tested input files now get correctly displayed
-    - wrong input is now recognized in all (tested :-) cases
+	- german localization complete, french template provided as an example
+	- all tested input files now get correctly displayed
+	- wrong input is now recognized in all (tested :-) cases
 0.2   Wed Apr 15 2020
 	- Localized gravi.pl (except for Store.pm) for language 'de'
 0.1   Sat Apr 11 2020
@@ -107,8 +110,8 @@ Revision history for Perl extension Game::MarbleRun
 	- state of switch can be mentioned
 0.05  Sun Mar 29 2020
 	- first object oriented version Game::MarbleRun
-    - much more input checks
-    - changed db format and added an unfolding bridge element (u)
+	- much more input checks
+	- changed db format and added an unfolding bridge element (u)
 0.04  Tue Mar 24 2020
 	- added basic visualization
 0.03  Sat Mar 21 2020
