@@ -8,7 +8,7 @@ use DBI;
 use Game::MarbleRun::I18N;
 use Locale::Maketext::Simple (Style => 'gettext');
 
-$Game::MarbleRun::VERSION = '1.15';
+$Game::MarbleRun::VERSION = '1.16';
 my $homedir = $ENV{HOME} || $ENV{HOMEPATH} || die "unknown homedir\n";
 $Game::MarbleRun::DB_FILE = "$homedir/.gravi.db";
 $Game::MarbleRun::DB_SCHEMA_VERSION = 16;
@@ -249,8 +249,8 @@ sub features {
 		}
 	}
 	# Rails
-	# symbol length z_min z_max special
-	#      0      1     2     3       4
+	# symbol integer length z_min z_max special
+	#      0              1     2     3       4
 	my $rail = [
 		['a',  2,  6,  7,        0],
 		['b',  4, 13, 15,        0],
@@ -1320,7 +1320,7 @@ sub display_run {
 			loc("ENTER to continue without SVG output"), 1)
 			if ! $self->{outputfile};
 			$self->{outputfile} = undef if ! $self->{outputfile};
-		$self->board($by, $bx, $run_id, $self->{fill}, $excl);
+		$self->board($by, $bx, $run_id, $self->{fill}, $excl, $meta->[1]);
 	}
 	# SVG end #
 
@@ -1534,8 +1534,11 @@ sub display_run {
 				# SVG end #
 			}
 		}
-		# show intermediate steps
-		$self->emit_svg($file, $l) if $svg and $l != $meta->[8];
+		# show intermediate steps and display marbles if not animated
+		if ($svg and $l != $meta->[8]) {
+			$self->display_init_balls($marbles, $l) if ! $self->{motion};
+			$self->emit_svg($file, $l);
+		}
 	}
 	# do not display marbles that cannot start
 	$self->display_balls($marbles);

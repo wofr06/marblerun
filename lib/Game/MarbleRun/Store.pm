@@ -1210,7 +1210,6 @@ sub check_marbles {
 		}
 	}
 	@$items = grep {$_} @$items;
-	say "result=@$items";
 }
 
 sub parse_material {

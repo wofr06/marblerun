@@ -1,4 +1,7 @@
-Revision history for Perl extension Game::MarbleRun
+Revision history for Program gravi and Perl extension Game::MarbleRun
+	- added run title to picture
+	- display marbles also on intermediate pictures (only without option -m)
+	- correct for length of rails
 1.15  Tue Mar 04 2025
 	- fix parsing of marble description
 	- improve tiptube drawing and animation

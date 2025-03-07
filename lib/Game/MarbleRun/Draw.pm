@@ -143,7 +143,7 @@ sub orientations {
 }
 
 sub board {
-	my ($self, $board_y, $board_x, $run_id, $fill_coord, $excl) = @_;
+	my ($self, $board_y, $board_x, $run_id, $fill_coord, $excl, $text) = @_;
 	return if ! $self->{svg};
 	my $svg = $self->{svg};
 	if (! $board_x) {
@@ -161,7 +161,7 @@ sub board {
 	}
 	my $screen_x = $self->{screen_x};
 	my $screen_y = $self->{screen_y};
-	my $size = int min($screen_x/(6*$board_x + 1), $screen_y/(5*$board_y + 2));
+	my $size = int min($screen_x/(6*$board_x + 1), $screen_y/(5*$board_y + 3));
 	$self->set_size($size);
 	# board attributes
 	my $scale = [1., 14./15., 0.5];
@@ -195,6 +195,7 @@ sub board {
 			$self->put_text(6*$board_x+1, $y, $chr, '', $tg);
 		}
 	}
+	$self->put_text(3*$board_x, 5*$board_y + 0.5, $text, '', $tg) if $text;
 	# draw the board
 	for my $lay (0, 1, 2) {
 		for my $x (1..6*$board_x) {
@@ -225,6 +226,7 @@ sub board {
 		($x1, $y1) = ($x1 + $self->{width3}, $y1);
 		$x0 += 0.1*$size if $xy_excl->[0] > 1;
 		$x1 -= 0.1*$size if $xy_excl->[0] < $board_x;
+		$_ = sprintf("%.1f", $_) for ($x0, $y0, $x1, $y1);
 		my $points = $svg->get_path(x => [$x0, $x0, $x1, $x1],
 			y => [$y0, $y1, $y1, $y0], -closed => 1, -type => 'polygon');
 		$svg->polygon(%$points, style => {fill => 'white', stroke =>'none'},
@@ -405,6 +407,7 @@ sub draw_rail {
 		my ($xm, $ym) = $self->center_pos($xc, $yc);
 		my $dx2 = $self->{middle_x}[$dir];
 		my $dy2 = $self->{middle_y}[$dir];
+		$_ = sprintf("%.1f", $_) for ($xm, $ym);
 		$svg->line(x1 => int($xm + $dx1), y1 => int($ym + $dy1), x2 => int $xm,
 			y2 => int $ym, class => $class);
 		$svg->line(x1 => int $xm, y1 => int $ym, x2 => int($xm - $dx2),
@@ -423,6 +426,7 @@ sub draw_rail {
 		$x1 = $x1 + 2.5*$dx;
 		$y1 = $y1 + 2.5*$dy;
 	}
+	$_ = sprintf("%.1f", $_) for ($x1, $y1, $x2, $y2);
 	$svg->line(x1 => int($x1 - $dx), y1 => int($y1 - $dy), x2 => int($x2 + $dx),
 		y2 => int($y2 + $dy), class => $class);
 }
@@ -476,6 +480,7 @@ sub put_hexagon {
 		$hex .= " M$mx $my l$dx 0 l$dx2 $dy l-$dx2 $dy l-$dx 0 l-$dx2 -$dy Z"
 			if $shape == 2;
 		$angle = 60*(($orient + 5) % 6) if $shape == 1;
+		$_ = sprintf("%.1f", $_) for ($x, $y);
 		%rot = (transform => "rotate($angle, $x, $y)");
 	}
 	$hex =~ s/(\.\d)\d+([, ])/$1$2/g;
@@ -543,7 +548,8 @@ sub put_through_line {
 		$x2 = $x1 + ($x2 - $x1)*$fraction;
 		$y2 = $y1 + ($y2 - $y1)*$fraction;
 	}
-	$svg->line(x1=>int $x1, y1=>int $y1, x2=>int $x2, y2=>int $y2, class=>'tile');
+	$_ = sprintf("%.1f", $_) for ($x1, $y1, $x2, $y2);
+	$svg->line(x1=>$x1, y1=>$y1, x2=>$x2, y2=>$y2, class=>'tile');
 	return ($x2, $y2);
 }
 
@@ -785,39 +791,20 @@ sub put_Balls {
 	my ($self, $xm, $ym, $offset, $marble, $begin, $dur, $path) = @_;
 	# balls are displayed in its initial state for 1s then the animation starts
 	$path->[0] ||= 'M 0 0';
-	my $svg = $self->{svg};
-	my $r = $self->{r_ball}*$self->{size};
-	my ($x, $y) = $self->center_pos($xm, $ym);
-	#print Dumper $xm,$ym,$marble;
 	my $id = $marble->[0];
 	my $dir = $marble->[1] || 0;
-	my $color = $self->{srgb}{$marble->[2] || 'S'};
-	if ($offset) {
-		my ($x1, $y1) = $self->center_pos($self->to_position($xm, $ym, $dir,1));
-		($x, $y) = ($x + $offset*($x1 - $x), $y + $offset*($y1 - $y));
-	}
-	my $g = $svg->group(id => "marble$id");
-	$_ = sprintf("%.1f", $_) for ($x, $y, $r);
-	$g->circle(cx=>$x, cy=>$y, r=>$r, style=>{fill=>$color});
-	my $tag = $g->gradient(-type => 'radial', id => "radial$id",
-		gradientUnits => 'userSpaceOnUse', cx => $x, cy => $y, r => $r,
-		fy => $y - 0.4*$r, fx => $x - 0.4*$r);
-	$tag->stop(style=>{"stop-color"=>"#fff"});
-	$tag->stop(style=>{"stop-color"=>"#fff"},"stop-opacity"=>0,offset=>.25);
-	$tag->stop(style=>{"stop-color"=>"#000"},"stop-opacity"=>0,offset=>.25);
-	$tag->stop(style=>{"stop-color"=>"#000"},"stop-opacity"=>0.7,offset=>1);
-	$g->circle(cx=>$x,cy=>$y,r=>$r, style=>{fill=>"url(#radial$id)"});
+	my $color = $marble->[2] || 'S';
+	my $g = $self->put_Marble($xm, $ym, 0, $offset, $dir, $color, '', $id);
 	for (my $i = 0; $i < @$path; $i++) {
 		$g->animate('-method' => 'Motion', path => $path->[$i],
 			dur => $dur->[$i] || 1, begin => $begin->[$i] || 0, fill=>'freeze');
 	}
 }
 
-{
-	my $m_id='marble000';
 sub put_Marble {
-	my ($self, $xm, $ym, $off_x, $off_y, $dir, $color, $r) = @_;
+	my ($self, $xm, $ym, $off_x, $off_y, $dir, $color, $r, $id) = @_;
 	my $svg = $self->{svg};
+	my $m_id = defined $id ? "radial$id" : $self->{marble_id} || 'marble000';
 	$dir ||= 0;
 	$color ||= 'S';
 	$color = $self->{srgb}{$color};
@@ -830,17 +817,18 @@ sub put_Marble {
 		($x, $y) = ($x + $off_y*$dx - $off_x*$dy, $y + $off_y*$dy + $off_x*$dx);
 	}
 	$_ = sprintf("%.1f", $_) for ($x, $y, $r);
-	$svg->circle(cx=>$x, cy=>$y, r=>$r, style=>{fill=>$color});
-	my $tag = $svg->gradient(-type => 'radial', id => $m_id,
+	my $g = defined $id ? $svg->group(id => "marble$id") : $svg;
+	$g->circle(cx=>$x, cy=>$y, r=>$r, style=>{fill=>$color});
+	my $tag = $g->gradient(-type => 'radial', id => $m_id,
 		gradientUnits => 'userSpaceOnUse', cx => $x, cy => $y, r => $r,
 		fy => $y - 0.4*$r, fx => $x - 0.4*$r);
 	$tag->stop(style=>{"stop-color"=>"#fff"});
 	$tag->stop(style=>{"stop-color"=>"#fff"},"stop-opacity"=>0,offset=>.25);
 	$tag->stop(style=>{"stop-color"=>"#000"},"stop-opacity"=>0,offset=>.25);
 	$tag->stop(style=>{"stop-color"=>"#000"},"stop-opacity"=>0.7,offset=>1);
-	$svg->circle(cx=>$x,cy=>$y,r=>$r, style=>{fill=>"url(#$m_id)"});
-	$m_id++;
-}
+	$g->circle(cx=>$x,cy=>$y,r=>$r, style=>{fill=>"url(#$m_id)"});
+	$self->{marble_id} = ++$m_id if ! defined $id;
+	return $g;
 }
 
 sub put_FinishLine {
@@ -1133,6 +1121,22 @@ sub do_run {
 	return ($marbles, $no_marbles);
 }
 
+sub display_init_balls {
+	my ($self, $marbles, $level) = @_;
+	my %mult;
+	for my $marble (@$marbles) {
+		my $t_id = $marble->[0];
+		next if $self->{tiles}{$t_id}[6] != $level;
+		my ($sym, $x, $y) = @{$self->{tiles}{$t_id}}[0,1,2];
+		my $dir = $marble->[1] || 0;
+		$mult{"$sym:$dir"}++;
+		my $color = $marble->[2] || 'S';
+		my $off_mult = $mult{"$sym:$dir"} || 1;
+		my $offset = $off_mult*($self->{offset}{$sym} || 0);
+		$self->put_Marble($x, $y, 0, $offset, $dir, $color);
+	}
+}
+
 sub display_balls {
 	my ($self, $marbles) = @_;
 	#print Dumper $marbles;
@@ -1193,7 +1197,8 @@ sub get_moving_marbles {
 			# check if conditionis fulfilled
 			while ($cond =~ s/(\d?)o(.)//) {
 				my $num = $1 || 1;
-				$match = 0 if ! exists $dirs{$2} or $dirs{$2} < $num;
+				$match = 0 if ! exists $dirs{$2} or ($dirs{$2} < $num
+					or ($t->[0] eq 'M' and $dirs{$2} != $num));
 			}
 			if ($match) {
 				my $inc = 1;
@@ -1207,9 +1212,8 @@ sub get_moving_marbles {
 				# now no marble at orientation $dir
 				while ($t->[7] =~ s/:(\d+)o$dir(.)//) {
 					if ($t->[0] eq 'xT') {
-						my $balls = ($t->[7] =~ tr/:/:/);
-						$inc += $xT_delay*$balls;
-						$self->{ticks} += $xT_delay*$balls;
+						$inc += $xT_delay;
+						$self->{ticks} += $xT_delay;
 					}
 					my ($num, $color) = ($1, $2);
 					$marbles = [grep {$_->[0] != $num} @$marbles];
@@ -1344,7 +1348,7 @@ sub update_marble {
 	my $m_id = $marble->[0];
 	my $t = $self->{tiles}{$marble->[1]};
 	say "$m_id: ticks=$self->{ticks} from $t->[0] xyz=@$t[1,2,3] dir $marble->[7]" if $dbg;
-	if (! exists $self->{xyz}[$m_id] ) {
+	if (! exists $self->{xyz}[$m_id] or ($self->{xyz}[$m_id][-1][4] ne 'M' and $self->{xyz}[$m_id][-1][4] < 0)) {
 		say "$m_id: start marble at $self->{ticks}" if $dbg;
 		push @{$self->{xyz}[$m_id]}, [@$t[0 .. 3], $marble->[7], $t->[5],
 			$self->{ticks}];
@@ -1353,7 +1357,7 @@ sub update_marble {
 	say "$m_id: to $t->[0] xyz=@$t[1,2,3] dir $marble->[7]" if $dbg;
 	if ($rail) {
 		$marble->[2] = $rail->[0];
-		my $len = $self->{rail}{$rail->[0]}[1] || 1;
+		my $len = min($self->{rail}{$rail->[0]}[1] - 1, 1);
 		if ($rail->[0] =~ /^[uv]$/) {
 			$len /=2;
 			($t->[1], $t->[2]) = $self->to_position($t->[1], $t->[2], $dir, 2);
@@ -1361,7 +1365,7 @@ sub update_marble {
 		}
 		#my $special = $self->{rail}{$rail->[0]}[4];
 		#$len = $special eq 'fast' ? $len/2 : $special eq 'slow' ? $len*2 : $len;
-		$marble->[8] += 10*($self->{rail}{$rail->[0]}[1] || 1);
+		$marble->[8] += 10*$len;
 		$self->{ticks} = $marble->[8];
 		$marble->[7] = ($marble->[7] + 3) % 6 if $rail->[0] eq 't';
 		push @{$self->{xyz}[$m_id]}, [$rail->[0], @$t[1,2,3], $marble->[7],
@@ -1399,7 +1403,6 @@ sub update_marble {
 		}
 		push @{$self->{xyz}[$m_id]}, [@{$self->{tiles}{$tile_id}}[0..3],
 			-1 - $balls, $self->{tiles}{$tile_id}[5], $self->{ticks}];
-		print "$self->{tiles}{$tile_id}[0]:@{$self->{tiles}{$tile_id}}[1,2,3,7] balls=$balls\n" if $dbg;
 	}
 	my $len = $self->path_length($tile_id, $dir, $marble->[7]);
 	$marble->[8] += 10*$len;
@@ -1425,7 +1428,7 @@ sub path_length {
 	my $diff = abs($in - $out);
 	return 1 if $diff == 3;
 	return $pi_by_sqrt3/2. if $diff == 2 or $diff == 4;
-	return $pi_by_sqrt3/6. if $diff == 1 or $diff == 5;
+	return $pi_by_sqrt3/3. if $diff == 1 or $diff == 5;
 
 }
 
@@ -1493,7 +1496,6 @@ sub next_dir {
 
 sub generate_path {
 	my ($self, $xyz) = @_;
-	#print Dumper $xyz;
 	my ($x0, $y0) = $self->center_pos($xyz->[0][1], $xyz->[0][2]);
 	# start tile needs an offset in marble direction
 	#print Dumper $xyz;

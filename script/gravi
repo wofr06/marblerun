@@ -8,7 +8,6 @@
 ##############################################################
 use warnings;
 use strict;
-use lib qw(/home/friebel/mygravi/marblerun/lib);
 use DBI;
 use Getopt::Long;
 use Game::MarbleRun;
