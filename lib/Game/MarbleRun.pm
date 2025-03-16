@@ -1456,11 +1456,12 @@ sub display_run {
 						$str .= "($detail)" if $detail;
 					} elsif ($sym eq 'B') {
 						my @res = grep {$_->[0] =~ /^x[sml]/ and (($_->[6] % 100) || -1) == $detail} @$rail;
+						$self->error("### Spurious bug in 'display run',exiting. Please rerun program") if ! @res;
 						$detail %= 100;
-						warn $#res, " ambiguity for wall $detail\n" if @res != 1;
+						warn $#res, " ambiguity for wall $detail\n" if @res > 1;
 						my $tid = $res[0]->[2];
 						@res = grep {$_->[0] == $tid} @$tile;
-						warn "ambiguity for tile $tid\n" if @res != 1;
+						warn "ambiguity for tile $tid\n" if @res > 1;
 						my $z_w = $res[0]->[5] - 14;
 						my $hole = ($z - $z_w)/2;
 						#print "### wall $detail tid=$tid, zb=$z, zw=$z_w hole $hole\n";

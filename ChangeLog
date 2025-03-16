@@ -1,4 +1,5 @@
 Revision history for Program gravi and Perl extension Game::MarbleRun
+	- animate also incomplete tracks with stopping marbles
 	- added run title to picture
 	- display marbles also on intermediate pictures (only without option -m)
 	- correct for length of rails

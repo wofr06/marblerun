@@ -1298,8 +1298,9 @@ sub move_marbles {
 					$m = $self->update_marble($m, $next, $new_dir);
 				} else {
 					say "$m0: no connection xyz=$x $y $z dir $m_dir" if $dbg;
-					push @$no_marbles, $m0 if ! defined $self->{xyz}[$m0];
-					$marbles = [grep {$_->[0] != $m0} @$marbles];
+					warn loc("Marble %1 color %2 stopped on tile %3 position %4 %5\n", $m0, $m->[10], $t_name, $y, $x);
+		push @{$self->{xyz}[$m0]}, [@{$self->{tiles}{$t_id}}[0 .. 3], $m_dir, $self->{tiles}{$t_id}[5], $self->{ticks}];
+					undef $m->[7];
 				}
 			}
 		}
@@ -1496,6 +1497,9 @@ sub next_dir {
 
 sub generate_path {
 	my ($self, $xyz) = @_;
+	if ($xyz->[-1][4] >= 0) {
+		push @$xyz, $xyz->[-1];
+	}
 	my ($x0, $y0) = $self->center_pos($xyz->[0][1], $xyz->[0][2]);
 	# start tile needs an offset in marble direction
 	#print Dumper $xyz;
@@ -1541,7 +1545,7 @@ sub generate_path {
 			$dir = $xyz->[$i - 2][4] if $dir eq 'M';
 			$dir = ($dir + 3) % 6;
 			say "finish: at $sym xyz=$xc $yc $z dir=$dir" if $dbg;
-			my $frac = 3*$self->{r_ball};
+			my $frac = 1;
 			$frac = -3*$self->{r_ball} if $sym eq 'xA';
 			$frac = 3*$self->{r_ball} if $sym eq 'xZ';
 			# end of path finish line and tiptube (e, xT)
@@ -1556,6 +1560,7 @@ sub generate_path {
 			} elsif ($sym eq 'Z') {
 			# end of path landing (Z)
 				$dir = (2*$balls + int($balls/3)) % 6;
+				$frac = 3*$self->{r_ball};
 			}
 			my ($dx, $dy) = ($self->{middle_x}[$dir], $self->{middle_y}[$dir]);
 			my ($xto, $yto) = ($x - $x0 + $frac*$dx, $y - $y0+ $frac*$dy);
@@ -1617,7 +1622,7 @@ sub generate_path {
 	if (! $paths) {
 		push @$paths, $path;
 		push @$starts, ($start)/$self->{speed};
-		push @$lengths, (($xyz->[-1][6] || 0) - $start)/$self->{speed};
+		push @$lengths, (($xyz->[-1][6] || $xyz->[-2][6] || 0) - $start)/$self->{speed};
 	}
 	return ($starts, $lengths, $paths);
 }

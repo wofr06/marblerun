@@ -174,6 +174,7 @@ sub resolve_z {
 	my ($self, $t_from, $r, $from, $to, $t_pos, $data) = @_;
 	return if ! $from or ! $to or ! @$from or ! @$to;
 	my $rsym = $r->[2];
+	my $rdir = chr(97 + $r->[3]);
 	$r->[5] = $data->[$to->[0][0]][0] if @$to == 1;
 	return if @$to == 1 or exists $r->[5];
 	$from = [sort {$a <=> $b} @$from];
@@ -188,10 +189,12 @@ sub resolve_z {
 	my $ok = 0;
 	my $str = '';
 	for my $z (@$from) {
-		$str .= " from $t_from->[1]($z)" if @$to > 1 or @$from > 1;
+		$str .= loc("rail %1 from %2(z=%3)", "$rsym$rdir", $t_from->[1], $z) if @$to > 1 or @$from > 1;
 		for my $t (@$to) {
 			next if $self->no_rail_connection($data->[$t->[0]][1]);
-			$str .= " to $data->[$t->[0]][1]($t->[1])";
+			my $xyz = join(',', @{$data->[$t->[0]]}[3,2,4]);
+			$xyz =~ s/,([^,]*)$/,z=$1/;
+			$str .= loc(" to %1(%2)", $data->[$t->[0]][1],$xyz);
 			my $zdiff = abs($z - $t->[1]);
 			my $zd = $z - $t->[1];
 			if ($zdiff <= $zmin) {
@@ -201,13 +204,14 @@ sub resolve_z {
 			if ($zdiff <= $zstrict and $zdiff >= $zlow and $zdiff <=$zhigh) {
 				$zstrict = $zdiff;
 				$id_strict = $t->[0];
-				$str .= " ok($rsym" . chr(97 + $r->[3]) . " dz=$zd)";
+				$str .= " ok,";
 				$ok++;
 			}
 		}
 	}
-	print " ### ambig: $str\n" if $ok > 1;
-	print " ### no solution $str($rsym$zmin)\n" if ! $ok;
+	$str =~ s/,$//;
+	warn loc(" ### ambig: %1\n", $str) if $ok > 1;
+	warn loc(" ### no connection found: %1\n", $str) if ! $ok;
 	undef $zstrict if $zstrict == 999;
 	my $zdiff = $zstrict || $zmin;
 	my $id = $id_strict || $id_min;
@@ -215,7 +219,7 @@ sub resolve_z {
 	$r->[5] = $data->[$id][0];
 	#say "final", $r->[5];
 	my ($xf, $yf, $zf) = @{$data->[$id]}[2,3,4];
-	say " z=$zf taken" if $dbg;
+	warn loc(" ### %1(z=%2) taken\n", $data->[$id][1], $zf) if $ok > 1;
 	warn loc("Warning: height difference %1 from z=%4 at %5 for rail %2 at %3 maybe too small\n",
 		$zdiff/2., $rsym, $t_pos, $zf/2.,
 		$self->num2pos($xf, $yf)) if $zdiff < $zlow;
