@@ -1,5 +1,7 @@
 Revision history for Program gravi and Perl extension Game::MarbleRun
+1.17  Sun Mar 16 2025
 	- animate also incomplete tracks with stopping marbles
+1.16  Wed Mar 07 2025
 	- added run title to picture
 	- display marbles also on intermediate pictures (only without option -m)
 	- correct for length of rails
