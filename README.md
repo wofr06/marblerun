@@ -42,7 +42,7 @@ To install the program `gravi` and the required module type the following:
    make install
 ```
 For windows users who do not want to install perl a standalone executable is
-provided on the web. For details please consult the documentation.
+provided on https://www.zeuthen.desy.de/~friebel/gravitemp/. For details please consult the documentation.
 
 ## USAGE
 
