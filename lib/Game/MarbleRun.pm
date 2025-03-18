@@ -1190,7 +1190,7 @@ sub list_marble_runs {
 		printf STDERR "%3d %2s%2dx%1dx%1d %s\n",
 			$id, $ok, $by, $bx, $layers, $name;
 		if ($self->{verbose}) {
-			$self->print_elements($elems);
+			$self->print_items($elems, 'elem_name');
 			print "\t", loc("missing"), ": $absent->{$_} x ",
 				loc($elem_name->{$_}), "\n" for keys %$absent;
 		}
@@ -1202,22 +1202,33 @@ sub inventory {
 	my ($self, $id) = @_;
 	return if ! $id;
 	my $set = $self->query_table('set_id,count', 'person_set', "person_id=$id");
-	say "$set->{$_} x " . loc($self->{set_name}{$_})
-		for sort {$a <=> $b} keys %$set;
-	$self->print_elements($self->get_owned_elements($id));
+	$self->print_items($set, 'set_name');
+	$self->print_items($self->get_owned_elements($id), 'elem_name');
 }
 
-sub print_elements {
-	my ($self, $num) = @_;
-	my $elems = join ',', map {loc($self->{elem_name}{$_}) . ":$num->{$_}"}
-		sort {$num->{$b} <=> $num->{$a}} keys %$num;
-	# print long string, add line break where comma is at or before col 80
-	my $padding = 8;
-	while (length $elems >= 80 - $padding) {
-		my $pos = rindex($elems, ',', 79 - $padding);
-		say ' 'x$padding, substr($elems, 0, $pos+1, '');
+sub print_items {
+	my ($self, $num, $what) = @_;
+	print loc("Number of owned sets\n") if $what eq 'set_name';
+	print loc("Number of owned elements\n") if $what eq 'elem_name';
+	my @id = $self->{verbose} ? sort {$num->{$b}<=>$num->{$a}} keys %$num : sort keys %$num;
+	# multi column output depending on width of names to be printed
+	my @width = (0, 0, 0);
+	my $i = 0;
+	for (@id) {
+		my $len = length loc($self->{$what}{$_});
+		$width[$i] = $len if $len > $width[$i];
+		$i = ++$i % 3;
 	}
-	say ' 'x$padding, "$elems";
+	my $cols = $width[0] + $width[1] + $width[2] +21 > 80 ? 2 : 3;
+	my $fmt = "%3s %2s %$width[0]s%s";
+	$i = 0;
+	my @sep = ('', '', "\n");
+	for (@id) {
+		printf("%3s %2s %$width[$i]s%s", $num->{$_}, $what eq 'set_name' ? '' : $_,
+			adjust(loc($self->{$what}{$_}), $width[$i]), $sep[$i]);
+		$i = ++$i % 3;
+	}
+	print "\n" if ($i - 1) % $cols;
 }
 
 sub translate {
@@ -2053,11 +2064,11 @@ output $str on STDOUT if not empty to ask for a file name. If name or ext
 is given, only the missing piece needs to be entered. Checks for existing
 files and requires confirmation to overwrite files.
 
-=head2 print_elements
+=head2 print_items
 
-$g->print_elements($num);
+$g->print_items($num, $what);
 
-helper method to print a long string of element names and its count contained
+helper method to print a long string of element or set names and its count contained
 in the $num hashref
 
 =head2 find_balcony_dir

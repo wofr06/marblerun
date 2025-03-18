@@ -5,10 +5,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: 1.16\n"
+"Project-Id-Version: 1.17\n"
 "Report-Msgid-Bugs-To: <wp.friebel@gmail.com>\n"
 "POT-Creation-Date: 2020-04-12 20:38+0200\n"
-"PO-Revision-Date: 2025-03-16 18:10+0100\n"
+"PO-Revision-Date: 2025-03-18 12:27+0100\n"
 "Last-Translator: Wolfgang Friebel <wp.friebel@gmail.com>\n"
 "Language-Team: de <wp.friebel@gmail.com>\n"
 "Language: de_DE.UTF8\n"
@@ -524,91 +524,103 @@ msgstr "Liste der in der Datenbank registrierten Kugelbahnen"
 msgid "missing"
 msgstr "Es fehlt"
 
-#: MarbleRun.pm:1258
+#: MarbleRun.pm:1211
+msgid "Number of owned sets\n"
+msgstr "Zahl der Sets in Besitz\n"
+
+#: MarbleRun.pm:1212
+msgid "Number of owned elements\n"
+msgstr "Zahl der Elemente in Besitz\n"
+
+#: MarbleRun.pm:1269
 msgid "Field (%1, %2) is not adjacent to (%3, %4)"
 msgstr "Feld (%1, 2) ist kein Nachbar von (%3, %4)"
 
-#: MarbleRun.pm:1290
+#: MarbleRun.pm:1301
 msgid "Direction"
 msgstr "Richtung"
 
-#: MarbleRun.pm:1309
+#: MarbleRun.pm:1320
 msgid "Unknown board size, exiting"
 msgstr "Unbekannte Zahl an Bodenplatten, Stop"
 
-#: MarbleRun.pm:1313
+#: MarbleRun.pm:1324
 msgid "Instructions for %1, board size %2"
 msgstr "Anleitung für %1 mit %2 Bodenplatten"
 
-#: MarbleRun.pm:1320
+#: MarbleRun.pm:1331
 msgid "ENTER to continue without SVG output"
 msgstr "oder ENTER ohne SVG"
 
-#: MarbleRun.pm:1355
+#: MarbleRun.pm:1366
 msgid "Incomplete data for level %1, skipping it"
 msgstr "Fehlende Daten für Ebene %1, wird ignoriert"
 
-#: MarbleRun.pm:1367
+#: MarbleRun.pm:1378
 msgid "Place %1 %2 with center at %3"
 msgstr "Lege die %1 %2 mit dem Mittelpunkt auf %3"
 
-#: MarbleRun.pm:1391
+#: MarbleRun.pm:1402
 msgid "At %1"
 msgstr "Auf %1"
 
-#: MarbleRun.pm:1433
+#: MarbleRun.pm:1444
 msgid "On "
 msgstr "Auf "
 
-#: MarbleRun.pm:1439
+#: MarbleRun.pm:1450
 msgid "with %1 bridge elements"
 msgstr "mit %1 Brückenelementen"
 
-#: MarbleRun.pm:1441
+#: MarbleRun.pm:1452
 msgid "with %1 green parts"
 msgstr "mit %1 grünen Teilen"
 
-#: MarbleRun.pm:1445
+#: MarbleRun.pm:1456
 msgid "with %1 transparent parts"
 msgstr "mit %1 Glasteilen"
 
-#: MarbleRun.pm:1446
+#: MarbleRun.pm:1457
 msgid "outlet in %1"
 msgstr "Auslass in %1"
 
-#: MarbleRun.pm:1467
+#: MarbleRun.pm:1470
+msgid "### Spurious bug in 'display run',exiting. Please rerun program"
+msgstr ""
+
+#: MarbleRun.pm:1479
 msgid "in wall %1 hole %2"
 msgstr "in Wand %1 Loch %2"
 
-#: MarbleRun.pm:1510
+#: MarbleRun.pm:1522
 msgid "Level"
 msgstr "Ebene"
 
-#: MarbleRun.pm:1524
+#: MarbleRun.pm:1536
 msgid "From pillar %1 at %2 to %3 %4"
 msgstr "%4 von Säule %1 auf %2 nach %3"
 
-#: MarbleRun.pm:1527
+#: MarbleRun.pm:1539
 msgid "From %1 to %2 %3 %4"
 msgstr "Von %1 nach %2 %3 %4"
 
-#: MarbleRun.pm:1587
+#: MarbleRun.pm:1599
 msgid "Switch state"
 msgstr "Weichenstellung"
 
-#: MarbleRun.pm:1589
+#: MarbleRun.pm:1601
 msgid "prepare for start"
 msgstr "Vorbereiten für Start"
 
-#: MarbleRun.pm:1591
+#: MarbleRun.pm:1603
 msgid "flap in %1"
 msgstr "Klappe in %1"
 
-#: MarbleRun.pm:1594
+#: MarbleRun.pm:1606
 msgid "%1 should leave tile in %2"
 msgstr "%1 soll Stein in %2 verlassen"
 
-#: MarbleRun.pm:1598
+#: MarbleRun.pm:1610
 msgid "Turntable rotor position"
 msgstr "Position des Rotors"
 
@@ -965,7 +977,7 @@ msgid ""
 "    -d      delete a single run\n"
 "    -e      print a list of existing elements and its one char name\n"
 "    -f      fill all empty positions on ground plane with coordinate values (svg)\n"
-"    -i      print inventory for a person (chosen by -u or for the main user)\n"
+"    -i      print inventory for a person (chosen by -u or for the main user) sorted by id\n"
 "    -l lang language name for output (e.g en_US, de_de, de_DE.UTF8)\n"
 "    -m      generate svg with moving marbles (visible e.g in web browser)\n"
 "    -n      do not generate an svg image, with -a do not store run, check only\n"
@@ -974,7 +986,7 @@ msgid ""
 "    -r      coordinates are relative to ground planes (default for large runs)\n"
 "    -s      print a list of existing construction sets and its contents\n"
 "    -u [id] chose a person to determine the available material\n"
-"    -v      verbose output\n"
+"    -v      verbose output (with -i sort by number of elements)\n"
 "    -x      export a single run to a file or to STDOUT\n"
 "    -y      answer always 'Y' to yes/no questions\n"
 msgstr ""
@@ -991,7 +1003,7 @@ msgstr ""
 "    -d      Lösche eine einzelne Kugelbahn\n"
 "    -e      Drucke eine Liste bekannter Elemente und das dazugehörende Symbol\n"
 "    -f      Fülle im Bild freie Felder auf der Grundplatte mit den Positionen\n"
-"    -i      Zeige das Material für eine Person (mit -u) oder den Hauptnutzer\n"
+"    -i      Zeige das Material für eine Person (-u) oder den Hauptnutzer sortiert nach id\n"
 "    -l lang Language name für den Output (z.B en_US, de_de, de_DE.UTF8)\n"
 "    -m      erzeuge svg mit bewegten Kugeln (visible z.B im Web Browser)\n"
 "    -n      Erzeuge kein SVG Bild. Mit -a nur Test ohne Speichern von Bahnen\n"
@@ -1000,6 +1012,7 @@ msgstr ""
 "    -r      Koordinaten sind auf Platte bezogen (Standard für große Bahnen)\n"
 "    -s      Drucke eine Liste bekannter Baukästen und ihrer Inhalte\n"
 "    -u [id] Wähle eine Person aus, um das vorhandene Material zu ermitteln\n"
-"    -v      Drucke mehr Details\n"
+"    -v      Drucke mehr Details, bei Option -i sortiere nach Anzahl der Elemente\n"
 "    -x      Schreibe eine Kugelbahn Notation in eine Datei oder nach STDOUT\n"
 "    -y      Antworte immer 'J' auf ja/nein Fragen\n"
+

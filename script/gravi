@@ -19,7 +19,7 @@ use vars qw(%opt);
 
 Getopt::Long::Configure ("bundling");
 my $ok = GetOptions(a => \$opt{a}, 'd' => \$opt{d}, e => \$opt{e},
-	f => \$opt{f}, h => \$opt{h}, 'i:s' => \$opt{i}, 'l=s' => \$opt{l},
+	f => \$opt{f}, h => \$opt{h}, 'i' => \$opt{i}, 'l=s' => \$opt{l},
 	m => \$opt{m}, n => \$opt{n}, 'o=s' => \$opt{o}, q => \$opt{q},
 	r => \$opt{r}, s => \$opt{s}, v => \$opt{v}, 'u:s' => \$opt{u},
 	x => \$opt{x}, y => \$opt{y},);
@@ -88,7 +88,7 @@ if ($opt{a}) {
 } elsif ($opt{s}) {
 	$g->list_sets(@ARGV);
 } elsif (defined $opt{i}) {
-	my $id = $g->owner_of_set_id($opt{i} || $opt{u});
+	my $id = $g->owner_of_set_id($opt{u} || 1);
 	$g->inventory($id);
 } else {
     $g = Game::MarbleRun::Draw->new(%attr);
@@ -137,7 +137,7 @@ sub usage {
     -d      delete a single run
     -e      print a list of existing elements and its one char name
     -f      fill all empty positions on ground plane with coordinate values (svg)
-    -i      print inventory for a person (chosen by -u or for the main user)
+    -i      print inventory for a person (chosen by -u or for the main user) sorted by id
     -l lang language name for output (e.g en_US, de_de, de_DE.UTF8)
     -m      generate svg with moving marbles (visible e.g in web browser)
     -n      do not generate an svg image, with -a do not store run, check only
@@ -146,7 +146,7 @@ sub usage {
     -r      coordinates are relative to ground planes (default for large runs)
     -s      print a list of existing construction sets and its contents
     -u [id] chose a person to determine the available material
-    -v      verbose output
+    -v      verbose output (with -i sort by number of elements)
     -x      export a single run to a file or to STDOUT
     -y      answer always 'Y' to yes/no questions
 EOF
