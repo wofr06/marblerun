@@ -60,6 +60,7 @@ if (! -r $Game::MarbleRun::DB_FILE and ! $opt{n}) {
 	$input->store_run($input->parse_run($demo)) if $yn =~ /^[y$Y]/i;
 }
 my $g = Game::MarbleRun::Draw->new(%attr);
+my $person_id = $g->owner_of_set_id($opt{u});
 if ($opt{a}) {
 	if (@ARGV) {
 		for (@ARGV) {
@@ -75,7 +76,7 @@ if ($opt{a}) {
 					$g->{dbh} = $input->{dbh};
 					$g->{quiet} = 1;
 					$g->{relative} = $opt{r};
-					$g->display_run(1);
+					$g->display_run(1, $person_id);
 				}
 			}
 		}
@@ -92,7 +93,6 @@ if ($opt{a}) {
 	$g->inventory($id);
 } else {
     $g = Game::MarbleRun::Draw->new(%attr);
-	my $person_id = $g->owner_of_set_id($opt{u});
 	my @ids = $g->list_marble_runs($person_id, @ARGV);
 	exit if ! @ids;
 	if (defined $opt{x}) {
@@ -108,7 +108,7 @@ if ($opt{a}) {
 		} else {
 			$id = $g->get_id('Display instructions for a marble run', @ids);
 		}
-		$g->display_run($id) if $id;
+		$g->display_run($id, $person_id) if $id;
 	}
 }
 $g->finish();

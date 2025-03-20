@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: 1.17\n"
 "Report-Msgid-Bugs-To: <wp.friebel@gmail.com>\n"
 "POT-Creation-Date: 2020-04-12 20:38+0200\n"
-"PO-Revision-Date: 2025-03-18 12:27+0100\n"
+"PO-Revision-Date: 2025-03-20 11:34+0100\n"
 "Last-Translator: Wolfgang Friebel <wp.friebel@gmail.com>\n"
 "Language-Team: de <wp.friebel@gmail.com>\n"
 "Language: de_DE.UTF8\n"
@@ -520,107 +520,109 @@ msgstr " Nr OK x*y*z Name (Quelle)"
 msgid "List of registered marble runs"
 msgstr "Liste der in der Datenbank registrierten Kugelbahnen"
 
-#: MarbleRun.pm:1194
-msgid "missing"
-msgstr "Es fehlt"
-
-#: MarbleRun.pm:1211
-msgid "Number of owned sets\n"
-msgstr "Zahl der Sets in Besitz\n"
-
-#: MarbleRun.pm:1212
+#: MarbleRun.pm:1200
 msgid "Number of owned elements\n"
 msgstr "Zahl der Elemente in Besitz\n"
 
-#: MarbleRun.pm:1269
+#: MarbleRun.pm:1207
+msgid "Number of owned sets\n"
+msgstr "Zahl der Sets in Besitz\n"
+
+#: MarbleRun.pm:1264
 msgid "Field (%1, %2) is not adjacent to (%3, %4)"
 msgstr "Feld (%1, 2) ist kein Nachbar von (%3, %4)"
 
-#: MarbleRun.pm:1301
+#: MarbleRun.pm:1296
 msgid "Direction"
 msgstr "Richtung"
 
-#: MarbleRun.pm:1320
+#: MarbleRun.pm:1315
 msgid "Unknown board size, exiting"
 msgstr "Unbekannte Zahl an Bodenplatten, Stop"
 
+#: MarbleRun.pm:1322
+msgid "Number of elements required\n"
+msgstr "Zahl der benötigten Elemente\n"
+
 #: MarbleRun.pm:1324
+msgid "missing"
+msgstr "Es fehlt"
+
+#: MarbleRun.pm:1327
 msgid "Instructions for %1, board size %2"
 msgstr "Anleitung für %1 mit %2 Bodenplatten"
 
-#: MarbleRun.pm:1331
+#: MarbleRun.pm:1334
 msgid "ENTER to continue without SVG output"
 msgstr "oder ENTER ohne SVG"
 
-#: MarbleRun.pm:1366
+#: MarbleRun.pm:1361
 msgid "Incomplete data for level %1, skipping it"
 msgstr "Fehlende Daten für Ebene %1, wird ignoriert"
 
-#: MarbleRun.pm:1378
-msgid "Place %1 %2 with center at %3"
-msgstr "Lege die %1 %2 mit dem Mittelpunkt auf %3"
+#: MarbleRun.pm:1373
+msgid "\nPlace %1 %2 with center at %3"
+msgstr ""
+"\n"
+"Lege die %1 %2 mit dem Mittelpunkt auf %3"
 
-#: MarbleRun.pm:1402
+#: MarbleRun.pm:1397
 msgid "At %1"
 msgstr "Auf %1"
 
-#: MarbleRun.pm:1444
+#: MarbleRun.pm:1439
 msgid "On "
 msgstr "Auf "
 
-#: MarbleRun.pm:1450
+#: MarbleRun.pm:1445
 msgid "with %1 bridge elements"
 msgstr "mit %1 Brückenelementen"
 
-#: MarbleRun.pm:1452
+#: MarbleRun.pm:1447
 msgid "with %1 green parts"
 msgstr "mit %1 grünen Teilen"
 
-#: MarbleRun.pm:1456
+#: MarbleRun.pm:1451
 msgid "with %1 transparent parts"
 msgstr "mit %1 Glasteilen"
 
-#: MarbleRun.pm:1457
+#: MarbleRun.pm:1452
 msgid "outlet in %1"
 msgstr "Auslass in %1"
 
-#: MarbleRun.pm:1470
-msgid "### Spurious bug in 'display run',exiting. Please rerun program"
-msgstr ""
-
-#: MarbleRun.pm:1479
+#: MarbleRun.pm:1478
 msgid "in wall %1 hole %2"
 msgstr "in Wand %1 Loch %2"
 
-#: MarbleRun.pm:1522
+#: MarbleRun.pm:1537
 msgid "Level"
 msgstr "Ebene"
 
-#: MarbleRun.pm:1536
+#: MarbleRun.pm:1551
 msgid "From pillar %1 at %2 to %3 %4"
 msgstr "%4 von Säule %1 auf %2 nach %3"
 
-#: MarbleRun.pm:1539
+#: MarbleRun.pm:1554
 msgid "From %1 to %2 %3 %4"
 msgstr "Von %1 nach %2 %3 %4"
 
-#: MarbleRun.pm:1599
+#: MarbleRun.pm:1615
 msgid "Switch state"
 msgstr "Weichenstellung"
 
-#: MarbleRun.pm:1601
+#: MarbleRun.pm:1617
 msgid "prepare for start"
 msgstr "Vorbereiten für Start"
 
-#: MarbleRun.pm:1603
+#: MarbleRun.pm:1619
 msgid "flap in %1"
 msgstr "Klappe in %1"
 
-#: MarbleRun.pm:1606
+#: MarbleRun.pm:1622
 msgid "%1 should leave tile in %2"
 msgstr "%1 soll Stein in %2 verlassen"
 
-#: MarbleRun.pm:1610
+#: MarbleRun.pm:1626
 msgid "Turntable rotor position"
 msgstr "Position des Rotors"
 
@@ -1015,4 +1017,3 @@ msgstr ""
 "    -v      Drucke mehr Details, bei Option -i sortiere nach Anzahl der Elemente\n"
 "    -x      Schreibe eine Kugelbahn Notation in eine Datei oder nach STDOUT\n"
 "    -y      Antworte immer 'J' auf ja/nein Fragen\n"
-

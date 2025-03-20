@@ -1,4 +1,5 @@
 Revision history for Program gravi and Perl extension Game::MarbleRun
+	- improve output of building instructions
 	. improve display of inventory (sets and elements)
 1.17  Sun Mar 16 2025
 	- animate also incomplete tracks with stopping marbles

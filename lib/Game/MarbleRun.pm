@@ -1189,11 +1189,6 @@ sub list_marble_runs {
 		push @ids, $id;
 		printf STDERR "%3d %2s%2dx%1dx%1d %s\n",
 			$id, $ok, $by, $bx, $layers, $name;
-		if ($self->{verbose}) {
-			$self->print_items($elems, 'elem_name');
-			print "\t", loc("missing"), ": $absent->{$_} x ",
-				loc($elem_name->{$_}), "\n" for keys %$absent;
-		}
 	}
 	return @ids;
 }
@@ -1202,6 +1197,7 @@ sub inventory {
 	my ($self, $id) = @_;
 	return if ! $id;
 	my $set = $self->query_table('set_id,count', 'person_set', "person_id=$id");
+	print loc("Number of owned elements\n");
 	$self->print_items($set, 'set_name');
 	$self->print_items($self->get_owned_elements($id), 'elem_name');
 }
@@ -1209,7 +1205,6 @@ sub inventory {
 sub print_items {
 	my ($self, $num, $what) = @_;
 	print loc("Number of owned sets\n") if $what eq 'set_name';
-	print loc("Number of owned elements\n") if $what eq 'elem_name';
 	my @id = $self->{verbose} ? sort {$num->{$b}<=>$num->{$a}} keys %$num : sort keys %$num;
 	# multi column output depending on width of names to be printed
 	my @width = (0, 0, 0);
@@ -1306,7 +1301,7 @@ sub dir_string {
 }
 
 sub display_run {
-	my ($self, $run_id, $file) = @_;
+	my ($self, $run_id, $person_id) = @_;
 	my $quiet = $self->{quiet};
 	my $svg = $self->{svg};
 	my %pos;
@@ -1320,7 +1315,15 @@ sub display_run {
 	$self->error("Unknown board size, exiting") if ! $bx or ! $by;
 	$self->{relative} = 1 if $meta->[6] > 35 or $meta->[7] > 35;
 	my ($dx, $dy) = (0, 0);
-
+	if ($self->{verbose}) {
+		my $owned = $self->get_owned_elements($person_id);
+		my $elems = $self->get_run_elements($run_id);
+		my $absent = $self->check_num_elements($elems, $owned);
+		print loc("Number of elements required\n");
+		$self->print_items($elems, 'elem_name');
+			print "\t", loc("missing"), ": $absent->{$_} x ",
+				loc($self->{elem_name}{$_}), "\n" for keys %$absent;
+	}
 	say loc("Instructions for %1, board size %2",
 		$self->translate($meta->[1]), "${by}x$bx") if ! $quiet;
 
@@ -1343,18 +1346,10 @@ sub display_run {
 			int(($a->[4] + 4)/5) <=> int(($b->[4] + 4)/5) ||
 			$a->[3] <=> $b->[3] || $a->[4] <=> $b->[4] ||
 			$a->[5] <=> $b->[5]} @$tile;
-		@$rail = sort {$a->[3] <=> $b->[2] ||
-			int(($tile->[$a->[2]][3]+5)/6) <=> int(($tile->[$b->[2]][3]+5)/6) ||
-			int(($tile->[$a->[2]][4]+4)/5) <=> int(($tile->[$b->[2]][4]+4)/5) ||
-			$tile->[$a->[2]][3] <=> $tile->[$b->[2]][3] ||
-			$tile->[$a->[2]][4] <=> $tile->[$b->[2]][4]} @$rail;
 	} else {
 		@$tile = sort {$a->[8] <=> $b->[8] ||
 			$a->[3] <=> $b->[3] || $a->[4] <=> $b->[4] ||
 			$a->[5] <=> $b->[5]} @$tile;
-		@$rail = sort {$a->[3] <=> $b->[2] ||
-			$tile->[$a->[2]][3] <=> $tile->[$b->[2]][3] ||
-			$tile->[$a->[2]][4] <=> $tile->[$b->[2]][4]} @$rail;
 	}
 	# calculate marble path
 	my ($marbles, $no_marbles) = $self->do_run($run_id);
@@ -1375,7 +1370,7 @@ sub display_run {
 				$dy = $tp_y - $mid;
 				$tp_pos->[$l] = [$dx, $dy];
 			}
-			say loc("Place %1 %2 with center at %3",
+			say loc("\nPlace %1 %2 with center at %3",
 				lcfirst loc($self->{elem_name}{$tp->[2]}),$l,$pos) if ! $quiet;
 			# SVG #
 			$self->draw_tile(@{$tp}[2..7]) if $svg;
@@ -1389,16 +1384,16 @@ sub display_run {
 			my $num = 0;
 			my $balcony_pos = 0;
 			for (my $i =0; $i < @$tile; $i++) {
-				next if $tile->[$i][8] != $l;
 				my ($id, $sym, $x, $y, $z, $tdir, $detail) =
 					@{$tile->[$i]}[0,2..7];
+				$pos{$id} = $tile->[$i];
+				next if $tile->[$i][8] != $l;
 				undef $tdir if $sym =~ /^L|^\+\d/;
 				# transparent planes already handled
 				next if $sym =~ /[=^]/ or ! $sym;
 				# double balcony on height element in 1st pass, other end in 2nd
 				next if $sym eq 'E' and ! $detail and $pass == 2;
 				# remember tile_id
-				$pos{$id} = $tile->[$i];
 				my $pos = loc("At %1", $self->num2pos($x, $y));
 				$pos = loc('At %1', loc('Level') . " $l ") . loc('pos') . ' '
 					. ($y - $dy) . ($x - $dx) if $l and $self->{relative};
@@ -1466,12 +1461,16 @@ sub display_run {
 					} elsif ($sym eq 'E') {
 						$str .= "($detail)" if $detail;
 					} elsif ($sym eq 'B') {
-						my @res = grep {$_->[0] =~ /^x[sml]/ and (($_->[6] % 100) || -1) == $detail} @$rail;
-						$self->error("### Spurious bug in 'display run',exiting. Please rerun program") if ! @res;
+						my @res = grep {$_->[0] =~ /^x[sml]/ and (($_->[6] % 100) || -1) == $detail} grep {$_->[6]} @$rail;
+						### Spurious bug in 'display run', $rail sometimes empty
 						$detail %= 100;
 						warn $#res, " ambiguity for wall $detail\n" if @res > 1;
 						my $tid = $res[0]->[2];
-						@res = grep {$_->[0] == $tid} @$tile;
+						if (! $tid) {
+							@res = ();
+						} else {
+							@res = grep {$_->[0] == $tid} @$tile;
+						}
 						warn "ambiguity for tile $tid\n" if @res > 1;
 						my $z_w = $res[0]->[5] - 14;
 						my $hole = ($z - $z_w)/2;
@@ -1502,12 +1501,28 @@ sub display_run {
 			}
 			# rail placement: rail direction t1_id t1_level t2_id t2_level
 			#                    0         1     2        3     4        5
+			if ($self->{relative}) {
+				@$rail = sort {$a->[3] <=> $b->[3] ||
+					int(($pos{$a->[2]}[3]+5)/6) <=> int(($pos{$b->[2]}[3]+5)/6) ||
+					int(($pos{$a->[2]}[4]+4)/5) <=> int(($pos{$b->[2]}[4]+4)/5) ||
+					$pos{$a->[2]}[3] <=> $pos{$b->[2]}[3] ||
+					$pos{$a->[2]}[4] <=> $pos{$b->[2]}[4]} @$rail;
+			} else {
+				@$rail = sort { $pos{$a->[2]}[3] <=> $pos{$b->[2]}[3] ||
+					$pos{$a->[2]}[4] <=> $pos{$b->[2]}[4]} @$rail;
+			}
 			for my $r (@$rail) {
 				my $sym = $r->[0];
-				next if $sym =~ /x[sml]/ and $pass == 2;
-				next if $sym !~ /x[sml]/ and $pass == 1;
-				next if $r->[3] > $l or $r->[5] > $l;
-				next if $r->[3] < $l and $r->[5] < $l;
+				if ($sym =~ /x[sml]/) {
+					# print and draw walls early on
+					next if $pass == 2;
+					next if $r->[3] > $l and $r->[5] > $l;
+					next if $r->[3] < $l or $r->[5] < $l;
+				} else {
+					next if $pass == 1;
+					next if $r->[3] > $l or $r->[5] > $l;
+					next if $r->[3] < $l and $r->[5] < $l;
+				}
 				my $dir = $r->[1];
 				my ($x1, $y1) = @{$pos{$r->[2]}}[3,4];
 				my ($x2, $y2) = @{$pos{$r->[4]}}[3,4];
@@ -1549,12 +1564,12 @@ sub display_run {
 		# show intermediate steps and display marbles if not animated
 		if ($svg and $l != $meta->[8]) {
 			$self->display_init_balls($marbles, $l) if ! $self->{motion};
-			$self->emit_svg($file, $l);
+			$self->emit_svg(undef, $l);
 		}
 	}
 	# do not display marbles that cannot start
 	$self->display_balls($marbles);
-	$self->emit_svg($file, '');
+	$self->emit_svg(undef, '');
 	#$marble->[$_] = undef for @$no_marbles;
 	$self->initial_actions($tile, $marbles, $tp_pos);
 }
@@ -1565,6 +1580,7 @@ sub initial_actions {
 	my %m;
 	push @{$m{$_->[0]}}, [$_->[1], $_->[2]] for grep {$_} @$marble;
 	my $ball = loc($self->{elem_name}{'o'});
+	say '';
 	for my $t (@$tile) {
 		# tiles with initial states: start, (tunnel)switch, cannon, flip,
 		# hammer, jumper, cascade,vvolcan, splash, lift, catapult, bridge,
@@ -1988,11 +2004,12 @@ by a given person.
 
 =head2 display_run
 
-$g->display_run($run_id, $file_prefix);
+$g->display_run($run_id, $person_id);
 
 display human readable instructions to set up a marble run given by its id.
-The file prefix is only used if called from Game::MarbleRun::Draw to output
-a file_prefix.svg file.
+In verbose mode the number of required elements and the number of missing elements if any.
+If a person_id is given, the number of missing elements is calculated for that person,
+otherwise one starter set is assumed to be available.
 
 =head1 HELPER METHODS
 

@@ -898,7 +898,7 @@ sub parse_run {
 						[$tid++, $elem, $x1, $y1, $z, $num_E, $dir, $level] if $elem;
 				}
 			# balcony lines
-			} elsif ($tile =~ s/^([^xyz]+)B//) {
+			} elsif ($tile =~ s/^([^xyz]+)B// or $tile =~ s/^B([\da-d])//) {
 				$elem = 'B';
 				my $hole = $1;
 				if ($hole and $hole =~/^(\d)$|^([a-d])$/) {
