@@ -512,13 +512,13 @@ sub store_run {
 			$self->{line}= $r->[1];
 			next;
 		}
-		#r: from_id chr x1 y1 z1 detail orient level, x2, y2, to_id, dir wall
-		#         0   1  2  3  4      5      6     7   8   9     10   11   12
+		#r: from_id chr x1 y1 z1 detail orient level, x2, y2, to_chr, dir wall
+		#         0   1  2  3  4      5      6     7   8   9     10   11   12  13 14
 		# t: tile_id tile_char, x, y, z, detail, orient level
 		#          0         1  2  3  4       5       6     7
 		# chose correct tile: tile normally placed at same or lower level
 		my $id = $r->[13];
-		undef $id if defined $id and $id == $r->[0];
+		#undef $id if defined $id and $id == $r->[0];
 		# finish lines have no end tile
 		if ($id or $r->[10] eq 'e') {
 			$sth_sel_rr->execute($id, $r->[0], $run_id);
@@ -530,13 +530,6 @@ sub store_run {
 				say "store $r->[0], $id, @{$r}[10, 11]" if $dbg;
 				$sth_i_rr->execute($run_id, $r->[0], $id, @{$r}[10, 11, 12]);
 			}
-		# error already reported
-		#} else {
-		#	$self->error("No end point for %1 from %2 to %3",
-		#		$r->[10],
-		#		#loc($self->{elem_name}{$r->[10]}),
-		#		$self->num2pos($r->[2], $r->[3]),
-		#		$self->num2pos($r->[8], $r->[9]));
 		}
 	}
 	if (! $run_id) {

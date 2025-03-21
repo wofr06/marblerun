@@ -11,7 +11,7 @@ use Locale::Maketext::Simple (Style => 'gettext');
 $Game::MarbleRun::VERSION = '1.17';
 my $homedir = $ENV{HOME} || $ENV{HOMEPATH} || die "unknown homedir\n";
 $Game::MarbleRun::DB_FILE = "$homedir/.gravi.db";
-$Game::MarbleRun::DB_SCHEMA_VERSION = 16;
+$Game::MarbleRun::DB_SCHEMA_VERSION = 17;
 
 sub new {
 	my ($class, %attr) = @_;
@@ -484,8 +484,9 @@ EOF
 	# use arrayrefs to keep the ordering (letters 'cwy' unused)
 	my $elems = [
 		# Basic elements #
-		_=>'Base Plate', '@'=>'Small Base Plate', '^'=>'Transparent Level',
-		'='=>'Small Transparent Level', o=>'Ball',
+		_=>'Base Plate', '@'=>'Small Base Plate', '*'=>'Tiny Base Plate',
+		'('=>'Left Half Moon Base Plate', ')'=>'Right Half Moon Base Plate',
+		'^'=>'Transparent Level', '='=>'Small Transparent Level', o=>'Ball',
 		1=>'Height Tile large', '+'=>'Height Tile small', A=>'Launch Pad',
 		Z=>'Landing', e=>'Finish Line', C=>'Curve', X=>'Junction',
 		W=>'3 in 1', Y=>'2 in 1', S=>'Switch', M=>'Magnetic Cannon',
@@ -564,7 +565,7 @@ EOF
 		'Volcano', 13, [N=>1, l=>1, m=>2, s=>3],
 		'Transfer', 14, [xR=>3, l=>1, m=>2, s=>3],
 		'Flipper', 15, [F=>1, l=>1, m=>2, s=>3],
-		'Scoop', 16, [K=>1, o=>2, l=>1, m=>2, s=>3],
+		'Scoop', 16, [K=>1, l=>1, m=>2, s=>3],
 		'Cable Car (Zipline)', 17,[xA=>1, xZ=>1, o=>1, l=>1, m=>2, s=>3, xa=>1],
 		'Trampoline', 18, [R=>2, r=>2],
 		'Magnetic Cannon', 19, [M=>1, o=>3],
@@ -594,6 +595,11 @@ EOF
 			K=>1, l=>2, m=>4, s=>4],
 		# 2023
 		'Releaser', 37, [yR => 1],
+		'Jumper v2', 41, [J=>1, 1=>4],
+		'Looping v2', 42, [Q=>1, 1=>4],
+		'Scoop v2', 43, [K=>1, 1=>4],
+		'Transfer v2', 44, [xR=>3],
+		'Zipline v2', 45,[xA=>1, xZ=>1, o=>1, 1=>4, xa=>1],
 		# 2024
 		'Vertical Cannon', 38, [yR => 1],
 	];
@@ -1223,7 +1229,7 @@ sub print_items {
 			adjust(loc($self->{$what}{$_}), $width[$i]), $sep[$i]);
 		$i = ++$i % 3;
 	}
-	print "\n" if ($i - 1) % $cols;
+	print "\n" if $i % $cols;
 }
 
 sub translate {
@@ -1386,36 +1392,29 @@ sub display_run {
 			for (my $i =0; $i < @$tile; $i++) {
 				my ($id, $sym, $x, $y, $z, $tdir, $detail) =
 					@{$tile->[$i]}[0,2..7];
+				# remember tile_id
 				$pos{$id} = $tile->[$i];
 				next if $tile->[$i][8] != $l;
 				undef $tdir if $sym =~ /^L|^\+\d/;
 				# transparent planes already handled
 				next if $sym =~ /[=^]/ or ! $sym;
-				# double balcony on height element in 1st pass, other end in 2nd
-				next if $sym eq 'E' and ! $detail and $pass == 2;
-				# remember tile_id
 				my $pos = loc("At %1", $self->num2pos($x, $y));
 				$pos = loc('At %1', loc('Level') . " $l ") . loc('pos') . ' '
 					. ($y - $dy) . ($x - $dx) if $l and $self->{relative};
+				# treat balconies in 2nd pass
+				if ($balcony_pos or $sym eq 'B') {
+					$balcony_pos = ($sym eq 'B' or $pos eq $balcony_pos) ? $pos : 0;
+					next if $balcony_pos and $pass == 1;
+				} elsif (! $balcony_pos and $pass == 2) {
+					$str = '';
+					next;
+				}
+				# treat 2nd location of double balcony in 2nd pass
+				next if $sym eq 'E' and $detail and $pass == 1;
 				if ($str) {
 					$str .= ', ' if ! $num;
 				} else {
 					$str = "$pos ";
-				}
-				if ($sym eq 'B' or ($sym eq 'E' and $tile->[$i][7])) {
-					$balcony_pos = $pos;
-					$str = '';
-					$str = "$pos " if $pass == 2;
-					next if $pass == 1;
-				} else {
-					# elements on balconies get treated in 2nd pass
-					if ($pass == 1 and $pos eq $balcony_pos) {
-						$str = '', $balcony_pos = 0 if $sym !~ /\d+|^[+BEOR]/;
-						next;
-					} elsif ($pass == 2 and $pos ne $balcony_pos) {
-						$str = '', $balcony_pos = 0 if $sym !~ /\d+|^[+BEOR]/;
-						next;
-					}
 				}
 				# accumulate height elements
 				if ($sym =~ /^[+L\d]/) {
@@ -1462,7 +1461,6 @@ sub display_run {
 						$str .= "($detail)" if $detail;
 					} elsif ($sym eq 'B') {
 						my @res = grep {$_->[0] =~ /^x[sml]/ and (($_->[6] % 100) || -1) == $detail} grep {$_->[6]} @$rail;
-						### Spurious bug in 'display run', $rail sometimes empty
 						$detail %= 100;
 						warn $#res, " ambiguity for wall $detail\n" if @res > 1;
 						my $tid = $res[0]->[2];
@@ -1476,6 +1474,7 @@ sub display_run {
 						my $hole = ($z - $z_w)/2;
 						#print "### wall $detail tid=$tid, zb=$z, zw=$z_w hole $hole\n";
 						$str .= loc("in wall %1 hole %2", $detail, $hole);
+						$detail = '';
 					}
 				}
 				undef $tdir if $sym eq '+';
