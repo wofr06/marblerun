@@ -5,10 +5,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: 1.17\n"
+"Project-Id-Version: 1.18\n"
 "Report-Msgid-Bugs-To: <wp.friebel@gmail.com>\n"
 "POT-Creation-Date: 2020-04-12 20:38+0200\n"
-"PO-Revision-Date: 2025-03-21 23:05+0100\n"
+"PO-Revision-Date: 2025-03-23 15:09+0100\n"
 "Last-Translator: Wolfgang Friebel <wp.friebel@gmail.com>\n"
 "Language-Team: de <wp.friebel@gmail.com>\n"
 "Language: de_DE.UTF8\n"
@@ -594,59 +594,59 @@ msgstr ""
 msgid "At %1"
 msgstr "Auf %1"
 
-#: MarbleRun.pm:1438
+#: MarbleRun.pm:1439
 msgid "On "
 msgstr "Auf "
 
-#: MarbleRun.pm:1444
+#: MarbleRun.pm:1445
 msgid "with %1 bridge elements"
 msgstr "mit %1 Brückenelementen"
 
-#: MarbleRun.pm:1446
+#: MarbleRun.pm:1447
 msgid "with %1 green parts"
 msgstr "mit %1 grünen Teilen"
 
-#: MarbleRun.pm:1450
+#: MarbleRun.pm:1451
 msgid "with %1 transparent parts"
 msgstr "mit %1 Glasteilen"
 
-#: MarbleRun.pm:1451
+#: MarbleRun.pm:1452
 msgid "outlet in %1"
 msgstr "Auslass in %1"
 
-#: MarbleRun.pm:1476
+#: MarbleRun.pm:1477
 msgid "in wall %1 hole %2"
 msgstr "in Wand %1 Loch %2"
 
-#: MarbleRun.pm:1536
+#: MarbleRun.pm:1540
 msgid "Level"
 msgstr "Ebene"
 
-#: MarbleRun.pm:1550
+#: MarbleRun.pm:1554
 msgid "From pillar %1 at %2 to %3 %4"
 msgstr "%4 von Säule %1 auf %2 nach %3"
 
-#: MarbleRun.pm:1553
+#: MarbleRun.pm:1557
 msgid "From %1 to %2 %3 %4"
 msgstr "Von %1 nach %2 %3 %4"
 
-#: MarbleRun.pm:1614
+#: MarbleRun.pm:1618
 msgid "Switch state"
 msgstr "Weichenstellung"
 
-#: MarbleRun.pm:1616
+#: MarbleRun.pm:1620
 msgid "prepare for start"
 msgstr "Vorbereiten für Start"
 
-#: MarbleRun.pm:1618
+#: MarbleRun.pm:1622
 msgid "flap in %1"
 msgstr "Klappe in %1"
 
-#: MarbleRun.pm:1621
+#: MarbleRun.pm:1625
 msgid "%1 should leave tile in %2"
 msgstr "%1 soll Stein in %2 verlassen"
 
-#: MarbleRun.pm:1625
+#: MarbleRun.pm:1629
 msgid "Turntable rotor position"
 msgstr "Position des Rotors"
 
@@ -654,15 +654,15 @@ msgstr "Position des Rotors"
 msgid "Unknown board size, run_id or size_x not given"
 msgstr "Unbekannte Größe der Kugelbahn, run_id oder size_x nicht angegeben"
 
-#: Draw.pm:1301
+#: Draw.pm:1302
 msgid "Marble %1 color %2 stopped on tile %3 position %4 %5\n"
 msgstr " Kugel %1 mit Farbe %2 stoppt auf Stein %3 Position (%4, %5)\n"
 
-#: Draw.pm:1715
+#: Draw.pm:1721
 msgid "ENTER to exit"
 msgstr "ENTER für Ende"
 
-#: Draw.pm:1729
+#: Draw.pm:1735
 msgid "Created %1"
 msgstr "%1 wurde erstellt"
 

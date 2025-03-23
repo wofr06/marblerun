@@ -1108,7 +1108,7 @@ sub parse_run {
 				$nmax += @{$self->{conn1}{$tile}{$key0}};
 			}
 			$self->error("%1 rail data seen, %2 is maximum for tile %3",
-				$n, $nmax, $tile) if $n > $nmax and $tile !~ /^\|/;
+				$n, $nmax, $tile || $elem) if $n > $nmax and $tile !~ /^\|/;
 			push @$rules, $f;
 		}
 	}

@@ -8,7 +8,7 @@ use DBI;
 use Game::MarbleRun::I18N;
 use Locale::Maketext::Simple (Style => 'gettext');
 
-$Game::MarbleRun::VERSION = '1.17';
+$Game::MarbleRun::VERSION = '1.18';
 my $homedir = $ENV{HOME} || $ENV{HOMEPATH} || die "unknown homedir\n";
 $Game::MarbleRun::DB_FILE = "$homedir/.gravi.db";
 $Game::MarbleRun::DB_SCHEMA_VERSION = 17;
@@ -67,7 +67,7 @@ sub features {
 		[ 'C',   0,   4,      0,      0,   'r'],
 		[ 'C',   1,   2,      0,      0,   'r'],
 		[ 'D',   0, 'M',      0,      0,    -4],
-		[ 'F',   0, 'F',      0,      7,     0,       1],
+		[ 'F',   0,   3,      0,      7,     0,       1],
 		[ 'G', 'M',   0,      0,      0,     4],
 		[ 'G',   0,   0,      0,      0,     0],
 		[ 'H',   3,   0,      0,      0,     0,       1],
@@ -75,7 +75,7 @@ sub features {
 		[ 'J',   3,   0,      0,      7,      0,      1],
 		[ 'J',   3,   0,      0,      0,      1,      1],
 		[ 'J',   3,   0,      9,      7,      1,      1],
-		[ 'K',   3, 'F',      0,      9,      0,      1],
+		[ 'K',   3,   0,      0,   '7-9',      0,      1],
 		[ 'M',   3,  '',      0,      0, '2o0o3',  'o0'],
 		[ 'N',   0,  '',      0,      0, 'o1o0',   'o1'],
 		[ 'N',   0,  '',      0,      0, 'o3o0',   'o3'],
@@ -1418,6 +1418,7 @@ sub display_run {
 				}
 				# accumulate height elements
 				if ($sym =~ /^[+L\d]/) {
+					next if $pass == 2 and ! $balcony_pos;
 					if ($sym =~ /^[\d]/) {
 						$num += $sym;
 						$sym = 1;
@@ -1476,6 +1477,9 @@ sub display_run {
 						$str .= loc("in wall %1 hole %2", $detail, $hole);
 						$detail = '';
 					}
+				} elsif ($sym =~ /^[US]$|^xD/) {
+					# random orientation of lever is (tunnel)switch and dipper
+					$detail = int rand(2) ? '+' : '-';
 				}
 				undef $tdir if $sym eq '+';
 				$str .= ' ' . $self->dir_string($tdir) if defined $tdir;

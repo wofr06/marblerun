@@ -1155,7 +1155,6 @@ sub display_balls {
 			[$i, $dir, $marbles->[$i][2]], $begin[$i], $dur[$i], $path[$i]);
 	}
 	# display the balls which have not moved
-	#print Dumper $self->{tiles};
 	for my $t_id (grep {$self->{tiles}{$_}[7] and $self->{tiles}{$_}[7] =~ /o/}
 		keys %{$self->{tiles}}) {
 		my ($sym, $x, $y) = @{$self->{tiles}{$t_id}}[0,1,2];
@@ -1179,7 +1178,7 @@ sub get_moving_marbles {
 	my $same_pos_delay = 90;
 	for my $id (grep {$self->{tiles}{$_}[7]} keys %{$self->{tiles}}) {
 		my $t = $self->{tiles}{$id};
-		next if ($t->[8] || 0) > $self->{ticks}; ###
+		next if ($t->[8] || 0) > $self->{ticks};
 		my $t_dir = $t->[4];
 		for my $rule (@{$self->{rules}{$t->[0]}}) {
 			# a rule with an outgoing marbe exists
@@ -1261,6 +1260,8 @@ sub move_marbles {
 		my $t_name = $self->{tiles}{$t_id}[0];
 		# find outgoing connecting rail
 		my @out = grep {$t_id == $_->[2] and $m_dir eq $_->[1]} @$rails;
+		# connecting outgoing rail for Jumper only if z_marble == z_tile
+		@out = () if $m->[5] != $self->{tiles}{$t_id}[3];
 		@out = () if $self->{rules}{$t_name}[0][2] eq 'F';
 		#say "$m0: search for rail in direction $m_dir connected to tile $t_id";
 		if (defined $out[0]) {
@@ -1330,6 +1331,8 @@ sub tile_rule {
 			if ($dir eq 'M') {
 				next if $_->[1] ne 'M';
 				next if $_->[5] !~ /o/ and abs($_->[5]) > abs($z - $tile_z);
+			} elsif ($_->[4] =~ /(\d+)-(\d+)/) {
+				my ($zmin, $zmax) = ($1, $2);
 			} elsif ($_->[4] < 0) {
 				next if $tile_z - $z < $_->[4];
 			} else {
@@ -1471,8 +1474,7 @@ sub next_dir {
 			next if $state ne $rule->[5];
 			$t->[8] = $rule->[6];
 			$self->move_switch($t) if $t->[0] =~ /^[SU]$/;
-			#say $t->[8] if $t->[0] eq 'S';
-			say "state $state -> $rule->[6]" if $dbg;
+			say "   $t->[0] state $state -> $rule->[6]" if $dbg;
 		}
 		# outgoing direction: middle
 		if ($rule->[2] eq 'M') {
@@ -1488,7 +1490,11 @@ sub next_dir {
 		} elsif ($marble->[6] =~ /\d/ and ($rule->[1] eq 'F' or ($rule->[1] =~ /^[0-5]$/
 			and $rule->[1] == ($marble->[6] - $t->[4]) % 6))) {
 			# update z if required
-			$marble->[5] += $rule->[4] if $rule->[4] > 0;
+			if ($rule->[4] =~ /\d+\-(\d+)/) {
+				$marble->[5] += $1;
+			} elsif ($rule->[4] > 0) {
+				$marble->[5] += $rule->[4];
+			}
 			return ($rule->[2] + $t->[4]) % 6 if $rule->[2] =~ /^[0-5]$/;
 		}
 	}
