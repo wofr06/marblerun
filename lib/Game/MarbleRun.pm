@@ -980,7 +980,7 @@ sub export_marble_run {
 
 	my $bpos = '';
 	my (%bt, %et, %wall, $nt, $detail);
-	for my $t (@$tile) {
+	for my $t (sort {$a->[0] <=> $b->[0]} @$tile) {
 		my ($sym, $posx, $posy, $posz, $tdir) = @{$t}[2..6];
 		if ($sym eq 'B' or $bpos eq "$posx,$posy") {
 			$detail = $t->[7] if $sym eq 'B';
@@ -991,6 +991,7 @@ sub export_marble_run {
 			push @$nt, $t;
 		}
 	}
+	print F $comments->{0} if exists $comments->{0};
 	for my $l (0 .. $meta->[8]) {
 		# tile: id run_id element posx posy posz orient detail level
 		#        0      1       2    3    4    5      6      7     8
@@ -1009,7 +1010,7 @@ sub export_marble_run {
 		my $str = '';
 		my $oldplane = '';
 		my $comment = '';
-		for my $t (@$nt) {
+		for my $t (sort {$a->[0] <=> $b->[0]} @$nt) {
 			next if $t->[8] != $l;
 			my ($sym, $posx, $posy, $posz, $tdir, $detail) = @{$t}[2..7];
 			next if $sym =~ /[=^]/ or ! $sym;
@@ -1023,11 +1024,11 @@ sub export_marble_run {
 			}
 			# strings without \n are inline comments, also in multiline
 			if (exists $comments->{$t->[0]}) {
-				if ($comments->{$t->[0]} !~ /\n$/) {
-					$comments->{$t->[0]} =~ s/(.*)$//;
-					$comment = $1;
+				if ($comments->{$t->[0]} =~ /\n$/) {
+					print F $comments->{$t->[0]};
+				} else {
+					$comment = " $comments->{$t->[0]}";
 				}
-				print F $comments->{$t->[0]} if $comments->{$t->[0]};
 			}
 			$str .= $sym;
 			# details given
@@ -1051,8 +1052,9 @@ sub export_marble_run {
 					my $wall = $r->[6] % 100;
 					my $num_pillar = int($r->[6]/100);
 					$num_pillar = '' if $num_pillar == 1;
-					$wall{$wall} = "$r->[2]:$pos $num_pillar$sym"
+					my $wallstr = "$r->[2]:$pos $num_pillar$sym"
 						. chr(97 + $r->[1]);
+					$self->put_balconies($wallstr, $bt{$wall}, $tile, $rail, $comments, $large);
 				} else {
 					$str .= " " . $sym . chr(97 + $r->[1]);
 				}
@@ -1072,48 +1074,58 @@ sub export_marble_run {
 		}
 		say F "$str$comment" if $str;
 	}
-	for my $w (sort {$a <=> $b} keys %wall) {
-		my $tid = $1 if $wall{$w} =~ s/^(\d+)://;
-		say F $wall{$w};
-		my $str = '';
-		for my $b ($bt{$w}) {
-			for my $t (@$b) {
-				my ($sym, $posx, $posy, $posz, $tdir, $detail) = @{$t}[2..7];
-				$detail ||= '';
-				if ($sym eq 'B') {
-					say F $str if $str;
-					my $pos = $self->num2pos($posx, $posy, 1);
-					$pos =~ s/^([^\s]*) //;
-					$pos = "$posy,$posx" if $large;
-					my @res = grep {$_->[0] == $tid} @$tile;
-					warn "ambiguity for tile $tid\n" if @res != 1;
-					my $z_wall = $res[0]->[5] - 14;
-					my $hole = ($posz - $z_wall)/2;
-					$hole = chr(87 + $hole) if $hole > 9;
-					$detail = int($detail/100) || '';
-					$str = "$pos $detail${hole}B";
+}
+
+sub put_balconies {
+	my ($self, $wallstr, $balconies, $tile, $rail, $comments, $large) = @_;
+	my $tid = $1 if $wallstr =~ s/^(\d+)://;
+	say F $wallstr;
+	my $str = '';
+	my $comment = '';
+	for my $t (@$balconies) {
+		my ($sym, $posx, $posy, $posz, $tdir, $detail) = @{$t}[2..7];
+		$detail ||= '';
+		if ($sym eq 'B') {
+			say F "$str$comment" if $str;
+			$comment = '' if $str;
+			my $pos = $self->num2pos($posx, $posy, 1);
+			$pos =~ s/^([^\s]*) //;
+			$pos = "$posy,$posx" if $large;
+			my @res = grep {$_->[0] == $tid} @$tile;
+			warn "ambiguity for tile $tid\n" if @res != 1;
+			my $z_wall = $res[0]->[5] - 14;
+			my $hole = ($posz - $z_wall)/2;
+			$hole = chr(87 + $hole) if $hole > 9;
+			$detail = int($detail/100) || '';
+			my $cdir = chr(97+$tdir);
+			$str = "$pos $detail${hole}B$cdir";
+			if (exists $comments->{$t->[0]}) {
+				if ($comments->{$t->[0]} =~ /\n$/) {
+					print F $comments->{$t->[0]};
 				} else {
-					$str .= $sym;
-					if ($detail) {
-						# default for bridges
-						$detail = '' if $sym eq 'xB' and $detail == 4;
-						# angled bases for trampolin
-						$detail =~ tr/0-5/a-f/ if $sym eq 'R';
-						$str .= $detail if $detail;
-					}
-				}
-				$str .= chr(97 + $tdir) if $sym !~ /^[+\dBL]/;
-				my @rails = grep {$t->[0] == $_->[2]} @$rail;
-				for my $r (@rails) {
-					$sym = $r->[0];
-					# bridge is noted in detail only, not as a rail
-					next if $sym eq 'xb' or $sym =~ /^x[sml]/;
-					$str .= " " . $sym . chr(97 + $r->[1]);
+					$comment = " $comments->{$t->[0]}";
 				}
 			}
+		} else {
+			$str .= $sym;
+			if ($detail) {
+				# default for bridges
+				$detail = '' if $sym eq 'xB' and $detail == 4;
+				# angled bases for trampolin
+				$detail =~ tr/0-5/a-f/ if $sym eq 'R';
+				$str .= $detail if $detail;
+			}
 		}
-		say F $str if $str;
+		$str .= chr(97 + $tdir) if $sym !~ /^[+\dBL]/;
+		my @rails = grep {$t->[0] == $_->[2]} @$rail;
+		for my $r (@rails) {
+			$sym = $r->[0];
+			# bridge is noted in detail only, not as a rail
+			next if $sym eq 'xb' or $sym =~ /^x[sml]/;
+			$str .= " " . $sym . chr(97 + $r->[1]);
+		}
 	}
+	say F "$str$comment" if $str;
 }
 
 sub delete_run {
@@ -1315,6 +1327,8 @@ sub display_run {
 	my %pos;
 	my $tp_pos = [[0,0]];
 	my ($meta, $tile, $rail, $marble, $excl) = $self->fetch_run_data($run_id);
+	my $comm = $self->query_table('tile_id,comment', 'run_comment',
+		"run_id=$run_id");
 
 	# meta: id name digest date source person_id size_x size_y layers marble
 	#       0  1    2      3    4      5         6      7      8      9
@@ -1334,7 +1348,6 @@ sub display_run {
 	}
 	say loc("Instructions for %1, board size %2",
 		$self->translate($meta->[1]), "${by}x$bx") if ! $quiet;
-
 	# SVG #
 	if ($svg) {
 		# ask for SVG output
@@ -1346,6 +1359,7 @@ sub display_run {
 	}
 	# SVG end #
 
+	say $comm->{0} if exists $comm->{0};
 	# sort tiles and rails based on ground plane numbers first column, then row
 	# then balconies with increasing z
 	if ($self->{relative}) {
@@ -1418,6 +1432,7 @@ sub display_run {
 				} else {
 					$str = "$pos ";
 				}
+				say $comm->{$id} if $self->{verbose} and exists $comm->{$id};
 				# accumulate height elements
 				if ($sym =~ /^[+L\d]/) {
 					next if $pass == 2 and ! $balcony_pos;
@@ -2066,7 +2081,7 @@ entering an id. Returns undef if the id is not purely integer.
 
 =head2 fetch_run_data
 
-($meta, $tile, $rail, $marble) = $g->fetch_run_data($run_id);
+($meta, $tile, $rail, $marble, $excl) = $g->fetch_run_data($run_id);
 
 returns data structures containing information for a track identified by its id.
 The following data are stored:
@@ -2077,6 +2092,8 @@ The following data are stored:
         0      1       2    3    4    5      6      7     8
  rail: rail direction, tile1_id tile1_level tile2_id tile2_level
           0         1         2           3        4           5
+ excl: board_x board_y (places to be excluded)
+             0       1
 
 =head2 get_file_name
 

@@ -425,6 +425,7 @@ sub store_run {
 	$sql = 'INSERT INTO run_no_elements (run_id,board_x,board_y) VALUES(?,?,?)';
 	my $sth_i_no = $dbh->prepare($sql);
 	my $run_seen = 0;
+	my $id = 0;
 	for my $d (@$data) {
 		if ($d->[1] eq 'line') {
 			$self->{line}= $d->[2];
@@ -439,7 +440,7 @@ sub store_run {
 			$seen = undef;
 			next;
 		} elsif ($d->[1] =~ /^comment/) {
-			$comment = $d->[2];
+			($comment = $d->[2]) =~ s/^\s*//;
 			next;
 		}
 		# store header data
@@ -485,9 +486,11 @@ sub store_run {
 		say "store $val[0], $run_id", map {defined $_ ? " $_" : ' ?'} @val[1 .. 7] if $dbg;
 		$sth_i_rt->execute($val[0], $run_id, @val[1 .. 7]) if $val[1];
 		next if $self->no_rail_connection($val[1]) and ! $comment;
-		my $id = $val[0];
+		# store first comment block with id=0
+		$id = $val[0] if $id;
 		$dbh->do("INSERT OR IGNORE INTO run_comment (run_id,tile_id,comment)
 			VALUES('$run_id', '$id', '$comment')") if $comment and $run_id;
+		$id = $val[0];
 		$comment = undef;
 		next if $self->no_rail_connection($val[1]);
 		# exclude height tiles and transparent plane from being rail end points
@@ -532,6 +535,8 @@ sub store_run {
 			}
 		}
 	}
+	$dbh->do("INSERT OR IGNORE INTO run_comment (run_id,tile_id,comment)
+		VALUES('$run_id', '$id', '$comment')") if $comment and $run_id;
 	if (! $run_id) {
 			$self->error("No valid data found");
 			return undef;
@@ -1016,8 +1021,10 @@ sub parse_run {
 				$dir = ord($1) - 97;
 				$self->error("%quant(%1,Excessive char) '%2'",
 					length $_, $_) if $_;
+			} elsif ($_) {
+				$self->error("Wrong orientation char '%1'", $_);
 			} else {
-				$self->error("Wrong orientation char '%1'", $_) if $_;
+				undef $dir;
 			}
 			# check for tile errors (height tiles have tile = '')
 			if (exists $self->{elem_name}{$tile}) {
@@ -1112,6 +1119,7 @@ sub parse_run {
 			push @$rules, $f;
 		}
 	}
+	push @$rules, [0, 'comment', $comment] if $comment;
 	unshift @$rules, [0, 'name', $run_name];
 	# add the height of transparent planes to the level line and the tiles
 	$self->level_height($rules, $planenum, $planepos);

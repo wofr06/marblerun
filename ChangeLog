@@ -1,4 +1,6 @@
 Revision history for Program gravi and Perl extension Game::MarbleRun
+	- storing, displaying and retrieving comments improved
+	- export of descriptions from database improved
 1.18  Sun Mar 23 2025
 	- minor adjustments for animation
 	- add new versions of sets with heigt elements instead of rails
