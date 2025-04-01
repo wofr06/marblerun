@@ -1178,6 +1178,11 @@ sub get_moving_marbles {
 	my $same_pos_delay = 90;
 	for my $id (grep {$self->{tiles}{$_}[7]} keys %{$self->{tiles}}) {
 		my $t = $self->{tiles}{$id};
+		if ($t->[0] eq 'xF') {
+			$self->{rules}{xF}[0]= ['xF', 0, ord($2) - 97, 0, 7*($1 - 1), 'o0'x (3*($1 - 1)), 'o0']
+				if $t->[5] =~ /(^\d)([a-f])/;
+				say "### @{$self->{rules}{xF}[0]}" if $dbg;
+		}
 		next if ($t->[8] || 0) > $self->{ticks};
 		my $t_dir = $t->[4];
 		for my $rule (@{$self->{rules}{$t->[0]}}) {

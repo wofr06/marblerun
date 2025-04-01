@@ -18,10 +18,10 @@ msgstr ""
 
 # gravitrax elements
 msgid "Left Half Moon Base Plate"
-msgstr "Linke halbmondförmige Bodenplatte"
+msgstr "Halbmondförmige Bodenplatte L"
 
 msgid "Right Half Moon Base Plate"
-msgstr "Rechte halbmondförmige Bodenplatte"
+msgstr "Halbmondförmige Bodenplatte R"
 
 msgid "Tiny Base Plate"
 msgstr "Winzige Bodenplatte"

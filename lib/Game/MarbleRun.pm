@@ -1203,33 +1203,35 @@ sub inventory {
 	my ($self, $id) = @_;
 	return if ! $id;
 	my $set = $self->query_table('set_id,count', 'person_set', "person_id=$id");
-	print loc("Number of owned elements\n");
+	print loc("Number of owned sets\n");
 	$self->print_items($set, 'set_name');
+	print loc("Number of owned elements\n");
 	$self->print_items($self->get_owned_elements($id), 'elem_name');
 }
 
 sub print_items {
 	my ($self, $num, $what) = @_;
-	print loc("Number of owned sets\n") if $what eq 'set_name';
 	my @id = $self->{verbose} ? sort {$num->{$b}<=>$num->{$a}} keys %$num : sort keys %$num;
 	# multi column output depending on width of names to be printed
 	my @width = (0, 0, 0);
+	my @width2 = (0, 0);
 	my $i = 0;
 	for (@id) {
 		my $len = length loc($self->{$what}{$_});
-		$width[$i] = $len if $len > $width[$i];
-		$i = ++$i % 3;
+		$width[$i % 3] = $len if $len > $width[$i % 3];
+		$width2[$i % 2] = $len if $len > $width2[$i % 2];
+		$i++;
 	}
-	my $cols = $width[0] + $width[1] + $width[2] +21 > 80 ? 2 : 3;
-	my $fmt = "%3s %2s %$width[0]s%s";
+	my $cols = $width[0] + $width[1] + $width[2] + 21 > 80 ? 2 : 3;
+	($width[0], $width[1]) = ($width2[0], $width2[1]) if $cols == 2;
 	$i = 0;
-	my @sep = ('', '', "\n");
 	for (@id) {
-		printf("%3s %2s %$width[$i]s%s", $num->{$_}, $what eq 'set_name' ? '' : $_,
-			adjust(loc($self->{$what}{$_}), $width[$i]), $sep[$i]);
-		$i = ++$i % 3;
+		printf("%3s%3s %$width[$i]s", $num->{$_}, $what eq 'set_name' ? '' : $_,
+			adjust(loc($self->{$what}{$_}), $width[$i]));
+		$i = ++$i % $cols;
+		print "\n" if ! $i;
 	}
-	print "\n" if $i % $cols;
+	print "\n" if $i;
 }
 
 sub translate {
