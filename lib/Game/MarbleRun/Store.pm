@@ -286,8 +286,12 @@ sub store_material {
 	my ($self, $data) = @_;
 	my ($item, $item_id, $material, $sthi, $sthu, $sthuc, $sthd);
 	my $err = $self->{warn};
-	# do not store material if errors exist
-	$self->error("%quant(%1,Error) found in input!", $err) if $err;
+	# do not store material if errors exist, avoid 'quant' from L::M::Lexicon
+	if ($err == 1) {
+		$self->error("1 Error) found in input!");
+	} elsif ($err > 1) {
+		$self->error("%1 Errors found in input!", $err);
+	}
 	return 0 if $err;
 	my $dbh = $self->{dbh};
 	my $comment;
@@ -400,7 +404,11 @@ sub store_run {
 	$self->{line} = 0;
 	# do not store run if errors exist
 	if ($self->{warn}) {
-		$self->error("%quant(%1,Error) found in input!", $self->{warn});
+		if ($self->{warn} == 1) {
+			$self->error("1 Error) found in input!");
+		} elsif ($self->{warn} > 1) {
+			$self->error("%1 Errors found in input!", $self->{warn});
+		}
 		$self->{warn}--; #do not count line above as additional error
 		return 0 if ! exists $self->{db} or $self->{db} ne ':memory:';
 	}
@@ -1019,8 +1027,11 @@ sub parse_run {
 			}
 			if (s/^([a-f])//) {
 				$dir = ord($1) - 97;
-				$self->error("%quant(%1,Excessive char) '%2'",
-					length $_, $_) if $_;
+				if (length $_ == 1) {
+					$self->error("1 Excessive char '%1'", $_);
+				} elsif (length $_ > 1) {
+					$self->error("%1 Excessive chars '%2'", length $_, $_);
+				}
 			} elsif ($_) {
 				$self->error("Wrong orientation char '%1'", $_);
 			} else {
@@ -1100,8 +1111,11 @@ sub parse_run {
 						$self->error("Missing rail direction for '%1'", $r);
 					}
 					if ($_) {
-						$self->error("%quant(%1,Excessive char) '%2'",
-							length($_), $_);
+						if (length $_ == 1) {
+							$self->error("1 Excessive char '%1'", $_);
+						} elsif (length $_ > 1) {
+							$self->error("%1 Excessive chars '%2'", length $_, $_);
+						}
 					}
 				} else {
 					$self->error("Wrong rail data '%1'", $_);

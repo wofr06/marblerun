@@ -12,7 +12,6 @@ lib/Game/MarbleRun/I18N.pm
 lib/Game/MarbleRun/I18N/de.po
 lib/Game/MarbleRun/I18N/fr.po
 script/gravi
-script/svg_to_png
 script/make_gravi_po_file
 t/data/basic_a
 t/data/basic_b

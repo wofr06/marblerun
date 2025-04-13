@@ -74,10 +74,6 @@ my $scriptpath = (grep {-r "$_/gravi"}  split /:/,$ENV{"PATH"})[0];
 		my $in = $1 || $2 || $3;
 		next if exists $seen{$in};
 		my $str = loc2($in);
-		if ($str !~ /\\n$/) {
-			$str =~ s/\\n/\\n"\n"/;
-			$str = "\"\n\"$str" if $str =~ /\n/;
-		}
 		say "#: $f:$.\nmsgid \"$in\"\nmsgstr \"$str\"\n";
 		$seen{$in} = 1;
 	}
@@ -86,20 +82,9 @@ my $scriptpath = (grep {-r "$_/gravi"}  split /:/,$ENV{"PATH"})[0];
 
 sub loc2 {
 	my ($in) = @_;
-	my %quant = (
-		"%quant(%1,Error) found in input!" => "%quant(%1,Fehler,Fehler) im Input gefunden!",
-		"%quant(%1,Excessive char) '%2'" => "%quant(%1,zusätzliches Zeichen,zusätzliche Zeichen) '%2'",
-	);
 	my $out;
 	$in =~ s/\\n/\n/g;
-	if ($in =~ /%quant/) {
-		if ($lang =~ /de/) {
-			$out = $quant{$in};
-		} else {
-			($out = $in) =~ s/,[^,]+(?=,)/,../ig;
-			$out =~ s/,[^,]+\)/,..)/;
-		}
-	} elsif ($in =~ /%5/) {
+	if ($in =~ /%5/) {
 		$out = loc($in, '%1', '%2', '%3', '%4', '%5');
 	} elsif ($in =~ /%4/) {
 		$out = loc($in, '%1', '%2', '%3', '%4');
