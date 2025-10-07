@@ -354,7 +354,7 @@ msgid "Bridges Extension"
 msgstr "Brücken"
 
 msgid "Extension Vertical"
-msgstr "Erweiterung vertikal"
+msgstr "Erweiterung Vertikal"
 
 msgid "Cable Car (Zipline)"
 msgstr "Seilbahn"
@@ -492,10 +492,6 @@ msgstr "Platte"
 msgid " line %1"
 msgstr " Zeile %1"
 
-#: MarbleRun.pm:687
-msgid "exit"
-msgstr "stop"
-
 #: MarbleRun.pm:888
 msgid "%1Please enter an id from the list above\n"
 msgstr "%1Bitte wähle eine Nummer aus obiger Liste\n"
@@ -557,7 +553,7 @@ msgid "Field (%1, %2) is not adjacent to (%3, %4)"
 msgstr "Feld (%1, 2) ist kein Nachbar von (%3, %4)"
 
 #: MarbleRun.pm:1316
-msgid "Direction"
+msgid "direction"
 msgstr "Richtung"
 
 #: MarbleRun.pm:1337

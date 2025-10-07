@@ -719,6 +719,7 @@ sub parse_run {
 	# split content into lines with line numbers prepended
 	my $i = 0;
 	my $old_level = -1;
+	# split content and prepend line numbers: "a;b\nc" -> "1 a", "1 b", "2 c"
 	my @lines = map {$i++; map {"$i $_"} split /;/, $_} split /\r?\n/, $content;
 	$off_xy = $self->plane_lines(\@lines);
 	# unique tile number
@@ -904,7 +905,7 @@ sub parse_run {
 						[$tid++, $elem, $x1, $y1, $z, $num_E, $dir, $level] if $elem;
 				}
 			# balcony lines
-			} elsif ($tile =~ s/^([^xyz]+)B// or $tile =~ s/^B([\da-d])//) {
+			} elsif ($tile =~ s/^([^wxyz]+)B// or $tile =~ s/^B([\da-d])//) {
 				$elem = 'B';
 				my $hole = $1;
 				if ($hole and $hole =~/^(\d)$|^([a-d])$/) {
@@ -935,8 +936,8 @@ sub parse_run {
 						[$tid++, $elem, $x1, $y1, $z, $detail, $dir, $level] if $elem;
 				}
 			}
-			# other height elements 1..9,+,E,L,xL
-			while ($tile =~ s/^([+\dEL]|xL|z[12+])//) {
+			# other height elements 1..9,+,E,L,xL,w+,w2,z+,z1,z2
+			while ($tile =~ s/^([+\dEL]|xL|z[12+]|w[2+])//) {
 				$elem = $1;
 				# direction for balconies and pillars (for pillar optional)
 				if ($elem =~ /^[EL]|xL/) {
@@ -948,12 +949,9 @@ sub parse_run {
 						$dir = 0;
 					}
 				}
-				if ($elem =~ /^z?(\d)/) {
+				if ($elem =~ /^[wz]?(\d)/) {
 					$z += 2*$1;
-				} elsif ($elem =~ /^[=^]/) {
-					push @$planepos, [$x1, $y1, $z, $level];
-					$z++;
-				} elsif ($elem =~ /^z?\+/) {
+				} elsif ($elem =~ /^[wz]?\+/) {
 					$z++;
 				} elsif ($elem eq 'E') {
 					$num_E = 0;
@@ -1023,7 +1021,7 @@ sub parse_run {
 				my @elem = grep {$self->{elem_name}{$_} eq $tile or loc($self->{elem_name}{$_}) eq $tile} keys %{$self->{elem_name}};
 				$tile = $elem[0] ? $elem[0] : "|$tile|";
 			} else {
-				$tile = $1 if s/^([xyz]?[=^A-Za-z])//;
+				$tile = $1 if s/^([wxyz]?[=^A-Za-z])//;
 			}
 			if (s/^([a-f])//) {
 				$dir = ord($1) - 97;
@@ -1041,7 +1039,7 @@ sub parse_run {
 			if (exists $self->{elem_name}{$tile}) {
 				$tile_name = loc($self->{elem_name}{$tile});
 				$self->error("%1 '%2' is not a tile", $tile_name, $tile)
-					if $tile =~ /[a-df-w]/ and $tile !~ /x[lms]/;
+					if $tile =~ /[a-df-v]/ and $tile !~ /x[lms]/;
 				$self->error("Missing tile orientation for '%1'", $tile)
 					if ! defined $dir and $tile !~ /[OR^=]/;
 				$self->error("Tile '%1' needs no orientation", $tile)
@@ -1069,13 +1067,14 @@ sub parse_run {
 			}
 			# rails
 			my $rails;
+			print "### items= @items\n";
 			for (@items) {
 				next if /^\d*o/; # marbles already handled
-				if (s/^(x?[A-Za-w])//) {
+				if (s/^([wx]?[A-Za-w])//) {
 				# all known rails (exists and range of small letters)
 					$r = $1;
 					my $w_detail;
-					if ($r !~ /^(x?[a-egl-nqs-v])/
+					if ($r !~ /^([wx]?[a-egk-nqs-v])/
 							or ! exists $self->{elem_name}{$r}) {
 						$self->error("Wrong rail char '%1'", $r);
 					} elsif (s/^([a-f])//i) {

@@ -8,10 +8,10 @@ use DBI;
 use Game::MarbleRun::I18N;
 use Locale::Maketext::Simple (Style => 'gettext');
 
-$Game::MarbleRun::VERSION = '1.18';
+$Game::MarbleRun::VERSION = '1.19';
 my $homedir = $ENV{HOME} || $ENV{HOMEPATH} || die "unknown homedir\n";
 $Game::MarbleRun::DB_FILE = "$homedir/.gravi.db";
-$Game::MarbleRun::DB_SCHEMA_VERSION = 17;
+$Game::MarbleRun::DB_SCHEMA_VERSION = 18;
 
 sub new {
 	my ($class, %attr) = @_;
@@ -110,6 +110,115 @@ sub features {
 		[ 'Z',   2,  '',      0,      0,     0],
 		[ 'Z',   4,  '',      0,      0,     0],
 		[ 'e',   3,  '',      0,      0,     0],
+		['wA',  '',   0,      0,      0,   'o0',   'o0'],
+		['wA',  '',   2,      0,      0,   'o2',   'o2'],
+		['wA',  '',   4,      0,      0,   'o4',   'o4'],
+		['wA',  '', 'B',      0,      0,   'o1',   'oB'],
+		['wA',  '', 'D',      0,      0,   'o3',   'oD'],
+		['wA',  '', 'F',      0,      0,   'o5',   'oF'],
+		['wC',   0,   4,      0,      0,   'r'],
+		['wC', 'D', 'D',      0,      0,     0],
+		['wD',   0, 'M',      0,      0,     0],
+		['wD',   2, 'M',      0,      0,     0],
+		['wD',   4, 'M',      0,      0,     0],
+		['wG', 'A',   0,      0,      0,     0],
+		['wG', 'C',   0,      0,      0,     0],
+		['wG', 'E',   0,      0,      0,     0],
+		['wH', 'A',   0,      0,      0,     0],
+		['wH', 'C',   0,      0,      0,     0],
+		['wH', 'F', 'F',      0,      0,     0],
+		['wH',   3,   4,      0,      0,   'r'],
+		['wI', 'A',   0,      0,      0,     0],
+		['wI', 'D',   0,      0,      0,     0],
+		['wI',   1,   2,      0,      0,   'r'],
+		['wI',   4,   5,      0,      0,   'r'],
+		['wJ', 'A',   0,      0,      0,     0],
+		['wJ', 'E',   0,      0,      0,     0],
+		['wJ', 'F', 'F',      0,      0,     0],
+		['wJ',   2,   3,      0,      0,   'r'],
+		['wK',   0, 'B',      0,      0,     0],
+		['wK', 'A', 'B',      0,      0,     0],
+		['wK', 'B', 'B',      0,      0,     0],
+		['wK', 'C', 'B',      0,      0,     0],
+		['wK', 'D', 'B',      0,      0,     0],
+		['wK', 'E', 'B',      0,      0,     0],
+		['wK', 'F', 'B',      0,      0,     0],
+		['wL',   0, 'F',      0,      0,     0],
+		['wL', 'A', 'F',      0,      0,     0],
+		['wL', 'B', 'F',      0,      0,     0],
+		['wL', 'C', 'F',      0,      0,     0],
+		['wL', 'D', 'F',      0,      0,     0],
+		['wL', 'E', 'F',      0,      0,     0],
+		['wL', 'F', 'F',      0,      0,     0],
+		['wM',   0, 'C',      0,      0,     0],
+		['wM', 'A', 'C',      0,      0,     0],
+		['wM', 'B',   2,      0,      0,     0],
+		['wM', 'C', 'C',      0,      0,     0],
+		['wM', 'D', 'C',      0,      0,     0],
+		['wM', 'E', 'C',      0,      0,     0],
+		['wM', 'F', 'C',      0,      0,     0],
+		['wN',   0, 'E',      0,      0,     0],
+		['wN', 'A', 'E',      0,      0,     0],
+		['wN', 'B', 'E',      0,      0,     0],
+		['wN', 'C', 'E',      0,      0,     0],
+		['wN', 'D', 'E',      0,      0,     0],
+		['wN', 'E', 'E',      0,      0,     0],
+		['wN', 'F',   5,      0,      0,     0],
+		['wP', 'A',   0,      0,      0,     0],
+		['wP', 'C',   2,      0,      0,     0],
+		['wP', 'E',   4,      0,      0,     0],
+		['wP', 'B',  'B',     0,      0,     0],
+		['wP', 'D',  'D',     0,      0,     0],
+		['wP', 'F',  'F',     0,      0,     0],
+		['wQ',   0, 'D',      0,      0,     0],
+		['wQ', 'A', 'D',      0,      0,     0],
+		['wQ', 'B', 'B',      0,      0,     0],
+		['wQ', 'C',   2,      0,      0,     0],
+		['wQ', 'D', 'D',      0,      0,     0],
+		['wQ', 'E', 'D',      0,      0,     0],
+		['wQ', 'F', 'D',      0,      0,     0],
+		['wR',   0, 'D',      0,      0,     0],
+		['wR', 'A', 'D',      0,      0,     0],
+		['wR', 'B', 'D',      0,      0,     0],
+		['wR', 'C', 'D',      0,      0,     0],
+		['wR', 'D', 'D',      0,      0,     0],
+		['wR', 'E',   4,      0,      0,     0],
+		['wR', 'F', 'F',      0,      0,     0],
+		['wS',   0, 'E',      0,      0,     0],
+		['wS', 'A', 'E',      0,      0,     0],
+		['wS', 'B',   1,      0,      0,     0],
+		['wS', 'C', 'C',      0,      0,     0],
+		['wS', 'D',   3,      0,      0,     0],
+		['wS', 'E', 'E',      0,      0,     0],
+		['wS', 'F', 'E',      0,      0,     0],
+		['wT',   0, 'C',      0,      0,     0],
+		['wT', 'A', 'C',      0,      0,     0],
+		['wT', 'B', 'C',      0,      0,     0],
+		['wT', 'C', 'C',      0,      0,     0],
+		['wT', 'D',   3,      0,      0,     0],
+		['wT', 'E', 'E',      0,      0,     0],
+		['wT', 'F',   5,      0,      0,     0],
+		['wU',   0,   3,      0,      0,   'r'],
+		['wU',   1,   2,      0,      0,   'r'],
+		['wU',   4,   0,      0,      0,     0],
+		['wV',   0,   3,      0,      0,   'r'],
+		['wV',   4,   5,      0,      0,   'r'],
+		['wV',   2,   0,      0,      0,     0],
+		['wW',   2,   0,      0,      0,     0],
+		['wW',   3,   0,      0,      0,     0],
+		['wW',   4,   0,      0,      0,     0],
+		['wW',   0,   3,      0,      0,     0],
+		['wX',   0,   3,      0,      0,   'r'],
+		['wX',   1,   4,      0,      0,   'r'],
+		['wX', 'F', 'F',      0,      0,     0],
+		['wY',   0,   4,      0,      0,   'r'],
+		['wY', 'D',   3,      0,      0,     0],
+		['wZ',   0,  '',      0,      0,     0],
+		['wZ',   1,  '',      0,      0,     0],
+		['wZ',   2,  '',      0,      0,     0],
+		['wZ',   3,  '',      0,      0,     0],
+		['wZ',   4,  '',      0,      0,     0],
+		['wZ',   5,  '',      0,      0,     0],
 		['xA',   3,  '',      0,      0, 'o0o3',   'o0'],
 		['xB',   3,   0,      0,      0,      0,      1],
 		['xB',   3,   0,      0,      0,      1,      1],
@@ -123,8 +232,8 @@ sub features {
 		['xD', 'F',   5,      8,      0,     0,       0],
 		['xD',   1,   1,      0,      0,     1],
 		['xD',   5,   5,      0,      0,     0],
-		['xF',  0, 'detail2', 0, '7*(detail1-1)', '3*(detail1-1)o0', 'o0'],
-		['xH', 'detail %6', 0, 'detail', 0,  0],
+		['xF',  0, 'detail2', 0, '4*detail1+7', '3*(detail1-1)o0', 'o0'],
+		['xH', '(2*detail-1)%6', 0, 'detail', 0,  0],
 		['xH', 'M',   0, 'detail+2',    0,     0],
 		['xI',   0,   3,      0,      0,   'r'],
 		['xI',   1,   2,      0,      0,   'r'],
@@ -169,12 +278,12 @@ sub features {
 		['xZ',   3,  '',      0,      0, 'o0o3',   'o0'],
 		['yC',   0,   4,      0,      0,   'r'],
 		['yC',   1,   3,      0,      0,   'r'],
-		['yH',   0,   3,      7,      0,   'r'],
-		['yH',   1,   4,      7,      0,   'r'],
-		['yH',   2,   5,      7,      0,   'r'],
-		['yH',   3,   0,      7,      0,   'r'],
-		['yH',   4,   1,      7,      0,   'r'],
-		['yH',   5,   2,      7,      0,   'r'],
+		['yH',   0,   3,      7,      0,     0],
+		['yH',   1,   4,      7,      0,     0],
+		['yH',   2,   5,      7,      0,     0],
+		['yH',   3,   0,      7,      0,     0],
+		['yH',   4,   1,      7,      0,     0],
+		['yH',   5,   2,      7,      0,     0],
 		['yI',   0,   3,      0,      0,   'r'],
 		['yI',   1,   5,      0,      0,   'r'],
 		['yK',   0,   0,      0,      0,   0],
@@ -189,9 +298,9 @@ sub features {
 		['yK',   3,   3,      7,      7,   0],
 		['yK',   4,   5,      8,      7,   0],
 		['yK',   5,   5,      7,      7,   0],
-		['yM',   0,   'detail2',      0,      11,   'o0'. ''],
-		['yM',   0,   'detail2',      0,      11,   '2o0'. ''],
-		['yM',   0,   'detail2',      0,      11,   '3o0'. 'o0'],
+		['yM',   0,   'detail',      0,      11,   'o0'. ''],
+		['yM',   0,   'detail',      0,      11,   '2o0'. ''],
+		['yM',   0,   'detail',      0,      11,   '3o0'. 'o0'],
 		['yR',   2,   0,      0,      0,     0],
 		['yR',   3,   0,      0,      0,     0],
 		['yR',   4,   0,      0,      0,     0],
@@ -265,6 +374,12 @@ sub features {
 		['t',  0,  6,  8,        0],
 		['u',  4,  0,  9,   'hole'],
 		['v',  4,  0,  4,   'hole'],
+		['wk', 0,  4,  4,       -1],
+		['wl', 0,  4,  4,        1],
+		['wm', 0,  4,  4,       -1],
+		['wn', 0,  4,  4,        1],
+		['ws', 0,  4,  4,       -1],
+		['wt', 0,  4,  4,        1],
 		['xa', 4,  3,  7,        0],
 		['xb', 4,  0,  0, 'length'], # detail: length
 		['xl', 4,  0,  0,        0],
@@ -295,7 +410,7 @@ sub features {
 	#Position of marbles on tiles
 	my %offset = (A => 0.25, 'xF' => 0, M => 2*$self->{r_ball},
 		N => 1./24.+$self->{r_ball}, P => 1./12.+$self->{r_ball},
-		xA => 0.3, xS => 0.375, xZ => -0.3,
+		wA => 0.3, xA => 0.3, xS => 0.375, xZ => -0.3,
 		xB => [[-0.2, -0.3], [0.2, -0.3]], Z => 1.5*$self->{r_ball},
 		xK => [[-0.2, -0.3], [-0.2, 0.3], [0.2, -0.3], [0.2, 0.3]],
 		xT => -0.6, zA => 0.25,
@@ -509,6 +624,17 @@ EOF
 		yY=>'2 in 1 right with Curve', yX=>'3 Curves, 2 crossing',
 		yI=>'Cross Straight and Curve', xP=>'Color Swap', yR=>'Releaser',
 		yM=>'Vertical Cannon',
+		'w+'=>'Sky Height Tile Small', 'w2'=>'Sky Height Tile Large',
+		wA=>'Sky Launcher', wZ=>'Sky Landing', wC=>'Sky Curve',
+		wY=>'Sky Kurve2', wX=>'Sky Junction', wD=>'Sky Drop',
+		wG=>'Sky Catcher curved', wI=>'Sky Catcher Straight', wW=>'Sky 3 in 1',
+		wH=>'Sky Catcher minus', wJ=>'Sky Catcher plus',
+		wK=>'Sky Curve long minus', wL=>'Sky Curve long plus',
+		wM=>'Sky Curve medium minus', wN=>'Sky Curve medium plus',
+		wQ=>'Sky Curve short minus', wR=>'Sky Curve short plus',
+		wS=>'Sky Curve very short minus', wT=>'Sky Curve very short plus',
+		wP=>'Sky Drop and Catcher',
+		wU=>'Sky 2 in 1 left with Curve', wV=>'Sky 2 in 1 right with Curve',
 		'z+'=>'Light Tile Small', z1=>'Light Tile large', z2=>'Light Tile Base',
 		zA=>'DomeStarter', zE=>'Elevator', zF=>'FinishTrigger', zL=>'Lever',
 		zQ=>'Queue', zS=>'DropDownSwitch', zT=>'Trigger', zZ=>'FinishArena',
@@ -519,6 +645,10 @@ EOF
 		xs=>'Wall Small', xm=>'Wall Medium', xl=>'Wall Long',
 		a=>'Rail Bernoulli short', c=>'Rail counter clockwise',
 		d=>'Rail clockwise', xt=> 'Flextube',
+		wk=>'Sky Rail long minus', wl=>'Sky Rail long plus',
+		wm=>'Sky Rail medium minus', wn=>'Sky Rail medium plus',
+		ws=>'Sky Rail short minus', wt=>'Sky Rail short plus',
+		wv=>'Sky connection',
 		# Self made elements
 		2=>'Height tile 2 units', 3=>'Height tile 3 units',
 		4=>'Height tile 4 units', 5=>'Height tile 5 units',
@@ -544,6 +674,11 @@ EOF
 		'Action Set Focus', 39, ['@'=>3, '('=>1, ')'=>1, '='=>1, xS=>1, C=>7,
 			W=>1, V=>1, X=>1, M=>1, S=>2, P=>1, G=>2, D=>1, Z=>1, xG=>3, '+'=>6,
 			1=>12, l=>2, m=>4, s=>6, o=>3, e=>1],
+		'Starter Set Skytrax', 46, ['_'=>4, o=>3, 1=>8, C=>7, X=>1, H=>1, K=>1,
+			l=>3, m=>6, s=>9, 'w+'=>8, w2=>8, wv=>24, wk=>1, wl=>1, wm=>1,
+			wn=>1, ws=>1, wt=>1, wA=>1, wC=>3, wY=>3, wX=>2, wP=>2, wD=>1,
+			wH=>1, wJ=>1, wK=>1, wL=>1, wW=>1, wZ=>1, wM=>1, wN=>1, wQ=>2,
+			wR=>2, wS=>2, wT=>2, wU=>1, wV=>1, wG=>1, wI=>1],
 		# Extension Sets
 		'Building Extension', 5, [_=>2, '^'=>1, 1=>8, '+'=>4, S=>2, W=>1, V=>1,
 			e=>1, G=>2, D=>1, P=>1, Z=>1, xG=>5],
@@ -1185,7 +1320,7 @@ sub list_marble_runs {
 					$ok = 0 if $x != $bx or $y != $by
 							or (defined $z and $z != $layers);
 				# element used in the run
-				} elsif ($and_arg =~ /^[xyz]?.$/) {
+				} elsif ($and_arg =~ /^[wxyz]?.$/) {
 					$ok = 0 if ! exists $elems->{$and_arg};
 				# string (at least 3 chars) contained
 				} elsif (length $and_arg > 2 and $name =~ /$and_arg/i) {
@@ -1290,16 +1425,6 @@ sub to_position {
 	my ($x2, $y2) = ($x1, $y1);
 	return ($x2, $y2) if ! defined $dir or $dir eq 'M' or ! $len;
 	$dir = $dir % 6;
-	# bent rails
-	if ($len =~ /[+-]/) {
-		my $dx = [1, 2, 1, -1, -2, -1];
-		my $dy = [-1, 0, 2, 2, 0, -1];
-		$dir = ($dir + 5) % 6 if $len eq '2-';
-		$x2 += $dx->[$dir];
-		$y2 += $dy->[$dir];
-		$y2 -- if ($x1 % 2) and $dy->[$dir];
-		return ($x2, $y2);
-	}
 	my $sign_y = (($dir + 1) % 6) < 3 ? -1 : 1;
 	if ( ($dir % 3) == 0) {
 		$y2 += $sign_y*$len;
@@ -1313,7 +1438,7 @@ sub to_position {
 
 sub dir_string {
 	my ($self, $dir, $alternate_string) = @_;
-	my $str = $alternate_string ? loc('Direction') : loc('Orientation');
+	my $str = $alternate_string ? loc('direction') : loc('orientation');
 	return '' if ! defined $dir;
 	$dir %= 6;
 	# "\x{2191}","\x{2197}","\x{2198}","\x{2193}","\x{2199}","\x{2196}"
