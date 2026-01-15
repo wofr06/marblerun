@@ -5,6 +5,7 @@ use strict;
 use warnings;
 
 use DBI;
+use List::Util qw(min max);
 use Game::MarbleRun::I18N;
 use Locale::Maketext::Simple (Style => 'gettext');
 
@@ -75,7 +76,7 @@ sub features {
 		[ 'J',   3,   0,      0,      7,      0,      1],
 		[ 'J',   3,   0,      0,      0,      1,      1],
 		[ 'J',   3,   0,      9,      7,      1,      1],
-		[ 'K',   3,   0,      0,   '7-9',      0,      1],
+		[ 'K',   3,   0,      0,      9,      0,      1],
 		[ 'M',   3,  '',      0,      0, '2o0o3',  'o0'],
 		[ 'N',   0,  '',      0,      0, 'o1o0',   'o1'],
 		[ 'N',   0,  '',      0,      0, 'o3o0',   'o3'],
@@ -976,7 +977,36 @@ sub check_num_elements {
 		delete $needed->{$_};
 	}
 	# 2 unused small height tiles can be replaced for a large one
-	$owned->{1} += int(($owned->{'+'} - ($needed->{'+'} || 0))/2);
+	my $miss = $needed->{1} - $owned->{1};
+	if ($miss > 0) {
+		my $free = int(($owned->{'+'} - ($needed->{'+'} || 0))/2);
+		my $added =  min($miss, $free);
+		$needed->{'+'} += 2*$added;
+		$owned->{1} += $added;
+	}
+	# an unused tunnel pillar can be used as an ordinary pillar
+	$miss = $needed->{L} - $owned->{L};
+	if ($miss > 0) {
+		my $free = $owned->{xL} - ($needed->{xL} || 0);
+		my $added =  min($miss, $free);
+		$needed->{xL} +=  $added;
+		$owned->{L} += $added;
+	}
+	# if no walls needed, a pillar can be replaced by height elements
+	$miss = $needed->{L} - $owned->{L};
+	if ($miss > 0) {
+		my $walls = 0;
+		$walls += $needed->{$_} || 0 for qw(xl xm xs);
+		if (! $walls) {
+			my $free_1 = $owned->{1} - $needed->{1};
+			my $free_plus = $owned->{'+'} - $needed->{'+'};
+			my $added =  min($miss, int((2*$free_1 + $free_plus)/14));
+			$needed->{1} +=  min(7*$added, $free_1);
+			$added -= min(7*$added, $free_1);
+			$needed->{'+'} += min(14*$added, $free_plus) if $added > 0;
+			$owned->{L} += $added;
+		}
+	}
 	# self made larger height tiles can be used
 	$owned->{1} += ($_ - 2)* $owned->{$_} for grep {$owned->{$_}} 2 .. 9;
 	# switch and 2in1 are the same element

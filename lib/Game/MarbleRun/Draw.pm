@@ -14,10 +14,18 @@ my $dbg = 0;
 
 sub new {
 	my ($class, %attr) = @_;
+	# get the terminal size
+	my ($sc_x, $sc_y);
+	if ($^O !~ /Win/) {
+		my $str = `xdpyinfo 2>/dev/null | grep dimensions`;
+		($sc_x, $sc_y) = $str =~ /(\d+)x(\d+)/;
+
+	}
+
 	my $self = {
 		speed => 20,
-		screen_x => $attr{screen_x} || 800,
-		screen_y => $attr{screen_y} || 600,
+		screen_x => $attr{screen_x} || 0.8*($sc_x||0) || 800,
+		screen_y => $attr{screen_y} || 0.8*($sc_y||0) || 600,
 	};
 	bless $self => $class;
 	# set viewport workaround for: style => {'viewport-fill' => 'white'}

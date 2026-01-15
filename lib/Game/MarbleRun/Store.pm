@@ -172,6 +172,7 @@ sub verify_rail_endpoints {
 
 sub resolve_z {
 	my ($self, $t_from, $r, $from, $to, $t_pos, $data) = @_;
+	push @$from, $t_from->[4] + $t_from->[5] if $t_from->[1] eq 'xH';
 	return if ! $from or ! $to or ! @$from or ! @$to;
 	my $rsym = $r->[2];
 	my $rdir = chr(97 + $r->[3]);
@@ -666,10 +667,8 @@ sub level_height {
 			for (@$h) {
 				my ($x, $y, $z, $l) = @$_;
 				next if ! grep {$l == $_} @ldone;
-				next if abs($x - $x0) > $delta or abs($y - $y0) > $delta;
-				next if abs($x - $x0) + abs($y - $y0) > $delta + 1;
-				next if $x0 % 2 and ($y - $y0) == $delta and abs($x - $x0) > $delta - 1;
-				next if ! ($x0 % 2) and ($y0 - $y) == $delta and abs($x - $x0) > $delta - 1;
+				my $dx = abs $x - $x0;
+				next if abs($y - $y0) > 1 + $delta - $dx or $dx > $delta;
 				$height = $z if $z > $height;
 				$height{$z}++;
 			}
@@ -1067,7 +1066,6 @@ sub parse_run {
 			}
 			# rails
 			my $rails;
-			print "### items= @items\n";
 			for (@items) {
 				next if /^\d*o/; # marbles already handled
 				if (s/^([wx]?[A-Za-w])//) {

@@ -1,4 +1,5 @@
 Revision history for Program gravi and Perl extension Game::MarbleRun
+	- fix transparant planes height, rails to lift connection
 	- storing, displaying and retrieving comments improved
 	- export of descriptions from database improved
 1.18  Sun Mar 23 2025
