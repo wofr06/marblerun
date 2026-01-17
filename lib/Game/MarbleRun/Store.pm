@@ -668,7 +668,10 @@ sub level_height {
 				my ($x, $y, $z, $l) = @$_;
 				next if ! grep {$l == $_} @ldone;
 				my $dx = abs $x - $x0;
-				next if abs($y - $y0) > 1 + $delta - $dx or $dx > $delta;
+				my $dy = abs $y - $y0;
+				my $sign = 2* ($x0 % 2) - 1;
+				next if $dy > $delta + 1 - $dx or $dx > $delta or $dy > $delta;
+				next if $sign*($y - $y0) == $delta and $dx % 2;
 				$height = $z if $z > $height;
 				$height{$z}++;
 			}
