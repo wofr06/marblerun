@@ -6,7 +6,6 @@ use strict;
 use warnings;
 use parent 'Game::MarbleRun';
 use Game::MarbleRun::Draw;
-use Game::MarbleRun::I18N;
 use Locale::Maketext::Simple (Style => 'gettext', Class => 'Game::MarbleRun');
 use Digest::MD5 qw(md5_base64);
 
@@ -1078,8 +1077,10 @@ sub parse_run {
 					if ($r !~ /^([wx]?[a-egk-nqs-v])/
 							or ! exists $self->{elem_name}{$r}) {
 						$self->error("Wrong rail char '%1'", $r);
-					} elsif (s/^([a-f])//i) {
-						$dir = $1;
+					} elsif (s/^(\d*)([a-f])//i) {
+						my $h_rail = $1 || '';
+						#print "### rail height = $h_rail\n" if $h_rail;
+						$dir = $2;
 						if ($r eq 'xt') {
 							if (! s/^([a-f])//i) {
 								$self->error("Flextube needs two directions");
