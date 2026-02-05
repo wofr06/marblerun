@@ -9,7 +9,7 @@ use List::Util qw(min max);
 use Game::MarbleRun::I18N;
 use Locale::Maketext::Simple (Style => 'gettext');
 
-$Game::MarbleRun::VERSION = '1.19';
+$Game::MarbleRun::VERSION = '1.20';
 my $homedir = $ENV{HOME} || $ENV{HOMEPATH} || die "unknown homedir\n";
 $Game::MarbleRun::DB_FILE = "$homedir/.gravi.db";
 $Game::MarbleRun::DB_SCHEMA_VERSION = 18;
@@ -455,6 +455,7 @@ sub connect_db {
 		my $Y = loc('Y');
 		create_tables($dbh) if $yn =~ /^[y$Y]/i;
 		upgrade_run_tile($dbh) if $yn =~ /^[y$Y]/i and $vers < 11;
+		upgrade_run_rail($dbh) if $yn =~ /^[y$Y]/i and $vers < 18;
 	}
 	return $dbh;
 }
@@ -482,6 +483,32 @@ SELECT id,run_id,element,posx,posy,posz,orient,detail,level
 FROM run_tile;
 DROP TABLE run_tile;
 ALTER TABLE run_tile2 RENAME TO run_tile;
+COMMIT;
+PRAGMA foreign_keys=on;
+EOF
+	$dbh->do($_) for split /;/, $sql;
+}
+
+sub upgrade_run_rail {
+	my ($dbh) = @_;
+	my $sql = <<EOF;
+PRAGMA foreign_keys=off;
+BEGIN TRANSACTION;
+CREATE TABLE IF NOT EXISTS `run_rail2` (
+	id INTEGER NOT NULL,
+	run_id INTEGER NOT NULL,
+	element TEXT,
+	direction INTEGER,
+	tile1_id INTEGER,
+	tile2_id INTEGER,
+	detail INTEGER,
+	FOREIGN KEY (run_id) REFERENCES run (id)
+		ON DELETE CASCADE ON UPDATE NO ACTION
+);
+INSERT INTO run_rail22(id,run_id,element,direction,tile1_id,tile2_id,detail)
+SELECT id,run_id,element,direction,tile1_id,tile2_id,detail FROM run_rail;
+DROP TABLE run_rail;
+ALTER TABLE run_rail2 RENAME TO run_rail;
 COMMIT;
 PRAGMA foreign_keys=on;
 EOF
@@ -977,7 +1004,7 @@ sub check_num_elements {
 		delete $needed->{$_};
 	}
 	# 2 unused small height tiles can be replaced for a large one
-	my $miss = $needed->{1} - $owned->{1};
+	my $miss = $needed->{1} || 0 - $owned->{1};
 	if ($miss > 0) {
 		my $free = int(($owned->{'+'} - ($needed->{'+'} || 0))/2);
 		my $added =  min($miss, $free);
@@ -985,15 +1012,15 @@ sub check_num_elements {
 		$owned->{1} += $added;
 	}
 	# an unused tunnel pillar can be used as an ordinary pillar
-	$miss = $needed->{L} - $owned->{L};
+	$miss = $needed->{L} || 0 - $owned->{L} || 0;
 	if ($miss > 0) {
-		my $free = $owned->{xL} - ($needed->{xL} || 0);
+		my $free = $owned->{xL} || 0 - ($needed->{xL} || 0);
 		my $added =  min($miss, $free);
 		$needed->{xL} +=  $added;
 		$owned->{L} += $added;
 	}
 	# if no walls needed, a pillar can be replaced by height elements
-	$miss = $needed->{L} - $owned->{L};
+	$miss = $needed->{L} || 0 - $owned->{L} || 0;
 	if ($miss > 0) {
 		my $walls = 0;
 		$walls += $needed->{$_} || 0 for qw(xl xm xs);
