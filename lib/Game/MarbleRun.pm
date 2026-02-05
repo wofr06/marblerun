@@ -9,7 +9,7 @@ use List::Util qw(min max);
 use Game::MarbleRun::I18N;
 use Locale::Maketext::Simple (Style => 'gettext');
 
-$Game::MarbleRun::VERSION = '1.20';
+$Game::MarbleRun::VERSION = '1.21';
 my $homedir = $ENV{HOME} || $ENV{HOMEPATH} || die "unknown homedir\n";
 $Game::MarbleRun::DB_FILE = "$homedir/.gravi.db";
 $Game::MarbleRun::DB_SCHEMA_VERSION = 18;
@@ -505,7 +505,7 @@ CREATE TABLE IF NOT EXISTS `run_rail2` (
 	FOREIGN KEY (run_id) REFERENCES run (id)
 		ON DELETE CASCADE ON UPDATE NO ACTION
 );
-INSERT INTO run_rail22(id,run_id,element,direction,tile1_id,tile2_id,detail)
+INSERT INTO run_rail2(id,run_id,element,direction,tile1_id,tile2_id,detail)
 SELECT id,run_id,element,direction,tile1_id,tile2_id,detail FROM run_rail;
 DROP TABLE run_rail;
 ALTER TABLE run_rail2 RENAME TO run_rail;

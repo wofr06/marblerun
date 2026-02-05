@@ -1,7 +1,11 @@
 Revision history for Program gravi and Perl extension Game::MarbleRun
+1.21 Thu Feb 05 2026
+	- typo in Marblerun.pm
+1.20 Thu Feb 05 2026
 	- fix transparant planes height, rails to lift connection
 	- storing, displaying and retrieving comments improved
 	- export of descriptions from database improved
+1.19  Tue Oct 07 2025
 	- skytrax elements added
 1.18  Sun Mar 23 2025
 	- minor adjustments for animation
