@@ -10,10 +10,18 @@ use warnings;
 use strict;
 use DBI;
 use Getopt::Long;
+
+my $base;
+BEGIN {
+    ($base = $0) =~ s|/[^/]*$|/../lib|;
+}
+
+use lib $base;
 use Game::MarbleRun;
 use Game::MarbleRun::Draw;
 use Game::MarbleRun::Store;
 use Locale::Maketext::Simple (Style => 'gettext', Class => 'Game::MarbleRun');
+
 
 use vars qw(%opt);
 
@@ -144,7 +152,7 @@ sub usage {
     -o name file name for export or svg image file prefix (without .svg)
     -q      quiet run, do only output svg image
     -r      coordinates are relative to ground planes (default for large runs)
-    -s      print a list of existing construction sets and its contents
+    -s      print a list of existing construction sets and with -v its contents
     -u [id] chose a person to determine the available material
     -v      verbose output (with -i sort by number of elements)
     -x      export a single run to a file or to STDOUT

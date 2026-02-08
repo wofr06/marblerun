@@ -938,7 +938,7 @@ sub parse_run {
 				}
 			}
 			# other height elements 1..9,+,E,L,xL,w+,w2,z+,z1,z2
-			while ($tile =~ s/^([+\dEL]|xL|z[12+]|w[2+])//) {
+			while ($tile =~ s/^([+\dEL]|xL|z[12+]|k[2+])//) {
 				$elem = $1;
 				# direction for balconies and pillars (for pillar optional)
 				if ($elem =~ /^[EL]|xL/) {
@@ -950,9 +950,9 @@ sub parse_run {
 						$dir = 0;
 					}
 				}
-				if ($elem =~ /^[wz]?(\d)/) {
+				if ($elem =~ /^[kz]?(\d)/) {
 					$z += 2*$1;
-				} elsif ($elem =~ /^[wz]?\+/) {
+				} elsif ($elem =~ /^[kz]?\+/) {
 					$z++;
 				} elsif ($elem eq 'E') {
 					$num_E = 0;
@@ -1022,7 +1022,7 @@ sub parse_run {
 				my @elem = grep {$self->{elem_name}{$_} eq $tile or loc($self->{elem_name}{$_}) eq $tile} keys %{$self->{elem_name}};
 				$tile = $elem[0] ? $elem[0] : "|$tile|";
 			} else {
-				$tile = $1 if s/^([wxyz]?[=^A-Za-z])//;
+				$tile = $1 if s/^([kwxyz]?[=^A-Za-z])//;
 			}
 			if (s/^([a-f])//) {
 				$dir = ord($1) - 97;
@@ -1070,11 +1070,11 @@ sub parse_run {
 			my $rails;
 			for (@items) {
 				next if /^\d*o/; # marbles already handled
-				if (s/^([wx]?[A-Za-w])//) {
+				if (s/^([kwx]?[A-Za-w])//) {
 				# all known rails (exists and range of small letters)
 					$r = $1;
 					my $w_detail;
-					if ($r !~ /^([wx]?[a-egk-nqs-v])/
+					if ($r !~ /^([kwx]?[a-egl-nqs-v])/
 							or ! exists $self->{elem_name}{$r}) {
 						$self->error("Wrong rail char '%1'", $r);
 					} elsif (s/^(\d*)([a-f])//i) {

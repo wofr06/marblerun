@@ -5,6 +5,14 @@ use warnings;
 use strict;
 use Getopt::Std;
 use POSIX qw(strftime);
+my $base;
+
+# try to use local instead of installed files if possible
+BEGIN {
+	($base = $0) =~ s|/[^/]*$||;
+}
+use lib "$base/../lib";
+
 use Game::MarbleRun;
 use Game::MarbleRun::Draw;
 use Game::MarbleRun::Store;
@@ -54,9 +62,17 @@ say "msgid \"$phrases->{$_}\"\nmsgstr \"",loc2($phrases->{$_}),"\"\n" for sort k
 
 my $scriptpath = (grep {-r "$_/gravi"}  split /:/,$ENV{"PATH"})[0];
 # loop over Files with localization calls
-	for my $f (qw(MarbleRun.pm Draw.pm Store.pm gravi)) {
-	open F, ($INC{"Game/$f"} || $INC{"Game/MarbleRun/$f"} || "$scriptpath/$f")
-		or die "$f: $!\n";
+for my $file (qw(MarbleRun.pm Draw.pm Store.pm gravi)) {
+	my $f = $file;
+	if ($f eq 'MarbleRun.pm') {
+		$f = -r "$base/../lib/Game/$f" ? "$base/../lib/Game/$f" : $INC{"Game/$f"};
+	} elsif ($f eq 'gravi') {
+		$f = -r "$base/$f" ? "$base/$f" : "$scriptpath/$f";
+	} else {
+		$f = -r "$base/../lib/Game/MarbleRun/$f" ? "$base/../lib/Game/MarbleRun/$f" : $INC{"Game/MarbleRun/$f"};
+	}
+	open F,  $f or die "$f: $!\n";
+	warn "analyzing $file at $f\n";
 	my $in_eof;
 	while (<F>) {
 		# usage block in gravi
@@ -65,7 +81,7 @@ my $scriptpath = (grep {-r "$_/gravi"}  split /:/,$ENV{"PATH"})[0];
 				last if /^EOF/;
 				$in_eof .= $_;
 			}
-			say "#: $f:$.\nmsgid \"\"";
+			say "#: $file:$.\nmsgid \"\"";
 			say "\"$_\\n\"" for split /\n/, $in_eof;
 			say "msgstr \"\"";
 			say "\"$_\\n\"" for split /\n/, loc($in_eof);
@@ -74,7 +90,7 @@ my $scriptpath = (grep {-r "$_/gravi"}  split /:/,$ENV{"PATH"})[0];
 		my $in = $1 || $2 || $3;
 		next if exists $seen{$in};
 		my $str = loc2($in);
-		say "#: $f:$.\nmsgid \"$in\"\nmsgstr \"$str\"\n";
+		say "#: $file:$.\nmsgid \"$in\"\nmsgstr \"$str\"\n";
 		$seen{$in} = 1;
 	}
 	close F;
@@ -84,7 +100,9 @@ sub loc2 {
 	my ($in) = @_;
 	my $out;
 	$in =~ s/\\n/\n/g;
-	if ($in =~ /%5/) {
+	if ($in =~ /%6/) {
+		$out = loc($in, '%1', '%2', '%3', '%4', '%5', '%6');
+	} elsif ($in =~ /%5/) {
 		$out = loc($in, '%1', '%2', '%3', '%4', '%5');
 	} elsif ($in =~ /%4/) {
 		$out = loc($in, '%1', '%2', '%3', '%4');
