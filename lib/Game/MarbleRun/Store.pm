@@ -259,6 +259,7 @@ sub rail_connection {
 			$z_from = [0];
 		}
 		for my $case (@$case2) {
+			$case->[0] = ord($t->[5]) - 97 if $case->[0] eq 'detail';
 			if (defined $tile_dir and $rail_dir==($case->[0] + $tile_dir) % 6) {
 				push @$z_from, $case->[1];
 			}
@@ -937,7 +938,7 @@ sub parse_run {
 						[$tid++, $elem, $x1, $y1, $z, $detail, $dir, $level] if $elem;
 				}
 			}
-			# other height elements 1..9,+,E,L,xL,w+,w2,z+,z1,z2
+			# other height elements 1..9,+,E,L,xL,w+,k2,z+,z1,z2
 			while ($tile =~ s/^([+\dEL]|xL|z[12+]|k[2+])//) {
 				$elem = $1;
 				# direction for balconies and pillars (for pillar optional)
@@ -975,7 +976,7 @@ sub parse_run {
 			}
 			# candidates for transparent plane positions
 			push @$planepos, [$x1, $y1, $z, $level] if ! $tile and $elem !~ /[=^]|x[lms]/;
-			# tile special cases S,U,xH,xB,xF,O,xM,xD,yR
+			# tile special cases S,U,xH,xB,xF,O,xM,xD,yR,yV
 			# handle Switch position + / -
 			if ($tile =~ s/^([SU]|xD)([+-]?)/$1/) {
 				$detail = $2 || '';
@@ -984,6 +985,8 @@ sub parse_run {
 				$detail = $1 || 2;
 				$self->error("Helix must have at least 2 elements")
 					if $detail < 2;
+			} elsif ($tile =~ s/yV([a-f])/yV/) {
+				$detail = $1;
 			# handle number of bridge unfolding elements
 			} elsif ($tile =~ s/xB(\d?)(\D)/xB$2/) {
 				$detail = $1 || 4;
@@ -1040,7 +1043,7 @@ sub parse_run {
 			if (exists $self->{elem_name}{$tile}) {
 				$tile_name = loc($self->{elem_name}{$tile});
 				$self->error("%1 '%2' is not a tile", $tile_name, $tile)
-					if $tile =~ /[a-df-v]/ and $tile !~ /x[lms]/;
+					if $tile =~ /[a-df-jl-v]/ and $tile !~ /x[lms]/;
 				$self->error("Missing tile orientation for '%1'", $tile)
 					if ! defined $dir and $tile !~ /[OR^=]/;
 				$self->error("Tile '%1' needs no orientation", $tile)
@@ -1111,7 +1114,7 @@ sub parse_run {
 					} elsif (! $_) {
 						$self->error("Missing rail direction for '%1'", $r);
 					}
-					if ($_) {
+					if ($_ and $_ !~ /^k/) {
 						if (length $_ == 1) {
 							$self->error("1 Excessive char '%1'", $_);
 						} elsif (length $_ > 1) {

@@ -1,6 +1,6 @@
 Revision history for Program gravi and Perl extension Game::MarbleRun
+	- support for Gravitrax set Advent_25 and turbo lift added
 	- instructions for rail placement improved
-	- documentation of Gravitrax set Advent_25
 	- changed prefix for Skytrax from w to k
 1.21 Thu Feb 05 2026
 	- typo in Marblerun.pm

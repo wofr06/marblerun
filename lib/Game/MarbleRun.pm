@@ -12,7 +12,7 @@ use Locale::Maketext::Simple (Style => 'gettext');
 $Game::MarbleRun::VERSION = '1.21';
 my $homedir = $ENV{HOME} || $ENV{HOMEPATH} || die "unknown homedir\n";
 $Game::MarbleRun::DB_FILE = "$homedir/.gravi.db";
-$Game::MarbleRun::DB_SCHEMA_VERSION = 19;
+$Game::MarbleRun::DB_SCHEMA_VERSION = 20;
 
 sub new {
 	my ($class, %attr) = @_;
@@ -59,14 +59,14 @@ sub features {
 	# cond = 0 din, dout cannot be reversed
 	# cond = 'r' din, dout and zin, zout can be reversed
 	# result = [n]o[dir]: outgoing marble[s] in direction dir
-	# zout > 0 : change of z to new value n, zout < 0 change to zout <= -n
+	# zout > 0 or -7: change of z to new value n, zout < 0 change to zout <= -n
 	my $tile_r = [
 		# sym   din dout    zin    zout    cond  result
 		[ 'A',  '',   0,      0,      0,   'o0',   'o0'],
 		[ 'A',  '',   2,      0,      0,   'o2',   'o2'],
 		[ 'A',  '',   4,      0,      0,   'o4',   'o4'],
-		[ 'C',   0,   4,      0,      0,   'r'],
-		[ 'C',   1,   2,      0,      0,   'r'],
+		[ 'C',   4,   0,      0,      0,   'r'],
+		[ 'C',   2,   1,      0,      0,   'r'],
 		[ 'D',   0, 'M',      0,      0,    -4],
 		[ 'F',   0,   3,      0,      7,     0,       1],
 		[ 'G', 'M',   0,      0,      0,     4],
@@ -102,11 +102,10 @@ sub features {
 		[ 'W',   3,   0,      0,      0,     0],
 		[ 'W',   4,   0,      0,      0,     0],
 		[ 'W',   0,   3,      0,      0,     0],
-		[ 'X',   0,   3,      0,      0,   'r'],
-		[ 'X',   1,   4,      0,      0,   'r'],
+		[ 'X',   3,   0,      0,      0,   'r'],
+		[ 'X',   4,   1,      0,      0,   'r'],
 		[ 'Y',   2,   0,      0,      0,     0],
 		[ 'Y',   4,   0,      0,      0,     0],
-		[ 'Y',   0,   2,      0,      0,     0],
 		[ 'Z',   0,  '',      0,      0,     0],
 		[ 'Z',   2,  '',      0,      0,     0],
 		[ 'Z',   4,  '',      0,      0,     0],
@@ -220,6 +219,25 @@ sub features {
 		['kZ',   3,  '',      0,      0,     0],
 		['kZ',   4,  '',      0,      0,     0],
 		['kZ',   5,  '',      0,      0,     0],
+		['wA',   4,   0,      1,      0,   'r'],
+		['wA',   3,   1,      1,      0,   'r'],
+		['wB',   1,   0,      1,      0,   'r'],
+		['wB',   3,   2,      1,      1,   'r'],
+		['wB',   4,   5,      1,      0,   'r'],
+		['wC',   4,   0,      1,      0,   'r'],
+		['wC',   2,   1,      1,      0,   'r'],
+		['wD',   3,   1,      1,      0,   'r'],
+		['wD',   5,   0,      1,      0,   'r'],
+		['wJ',   3,   0,      1,      0,   'r'],
+		['wJ',   4,   1,      1,      0,   'r'],
+		['wW',   2,   0,      1,      0,     0],
+		['wW',   3,   0,      1,      0,     0],
+		['wW',   4,   0,      1,      0,     0],
+		['wW',   0,   3,      0,      1,     0],
+		['wX',   3,   0,      1,      0,   'r'],
+		['wX',   4,   1,      1,      0,   'r'],
+		['wY',   2,   0,      1,      0,     0],
+		['wY',   4,   0,      1,      0,     0],
 		['xA',   3,  '',      0,      0, 'o0o3',   'o0'],
 		['xB',   3,   0,      0,      0,      0,      1],
 		['xB',   3,   0,      0,      0,      1,      1],
@@ -279,6 +297,7 @@ sub features {
 		['xZ',   3,  '',      0,      0, 'o0o3',   'o0'],
 		['yC',   0,   4,      0,      0,   'r'],
 		['yC',   1,   3,      0,      0,   'r'],
+		['yF',   3,   0,      0,     14,     0],
 		['yH',   0,   3,      7,      0,     0],
 		['yH',   1,   4,      7,      0,     0],
 		['yH',   2,   5,      7,      0,     0],
@@ -330,6 +349,9 @@ sub features {
 		['yT',   4,   3,      7,      0,      0,      5],
 		['yT',   5,   4,      7,      0,      1,      0],
 		['yT',   5,   4,      7,      0,      0,      5],
+		['yV',   0, 'detail', 0,     -7,     0],
+		['yV',   2, 'detail', 0,     -7,     0],
+		['yV',   4, 'detail', 0,     -7,     0],
 		['yW',   2,   0,      0,      0,     0],
 		['yW',   5,   3,      0,      0,     0],
 		['yW',   0,   3,      0,      0,   'r'],
@@ -343,6 +365,8 @@ sub features {
 		['zE',   0,   1,      0,     14,     0],
 		['zF',   0,   3,      0,      0,     0],
 		['zL',   0,   3,      0,      8,     0],
+		['zM',   1,   0,      0,      0,     0],
+		['zM',   5,   0,      0,      0,     0],
 		['zQ',   0,   3,      0,      0,     0],
 		['zQ',   1,   3,      0,      0,     0],
 		['zQ',   5,   3,      0,      0,     0],
@@ -663,9 +687,14 @@ EOF
 		kS=>'Sky Curve very short minus', kT=>'Sky Curve very short plus',
 		kP=>'Sky Drop and Catcher',
 		kU=>'Sky 2 in 1 left with Curve', kV=>'Sky 2 in 1 right with Curve',
+		wY=>'2 in 1 sloped', wW=>'3 in 1 sloped', wC=>'Curve sloped minus',
+		wD=>'Curve sloped plus', wX=>'Junction sloped',
+		wJ=>'Junction sloped jump', wA=>'2 Curves sloped',
+		wB=>'3 Curves sloped', yV=>'Space Tube', yF=>'Turbo Lift',
 		'z+'=>'Light Tile Small', z1=>'Light Tile large', z2=>'Light Tile Base',
 		zA=>'DomeStarter', zE=>'Elevator', zF=>'FinishTrigger', zL=>'Lever',
 		zQ=>'Queue', zS=>'DropDownSwitch', zT=>'Trigger', zZ=>'FinishArena',
+		zM=>'Electric Cannon',
 		# Rails
 		s=>'Rail Short', m=>'Rail Medium', l=>'Rail Long', b=>'Rail Bernoulli',
 		v=>'Drop Rail Concave', u=>'Drop Rail Convex', g=>'Rail Overlong',
@@ -722,6 +751,9 @@ EOF
 			t=>1, xC=>1, d=>3, g=>1, q=>1, xI=>1, U=>1, yI=>1, a=>2, xY=>1,
 			I=>1, xH=>1, i=>1, j=>1, h=>6, yY=>1, xW=>1, yW=>1, T=>2, xS=>1,
 			o=>1, '='=>1],
+		'Advent 25', 49, ['_'=>1, '='=>1, o=>3, 1=>14, '+'=>10, s=>5, m=>2,
+			C=>5, wY=>1, wW=>1, wC=>1, wD=>1, wA=>1, wB=>1, wx=>1, wJ=>1, Z=>1,
+			S=>1, yV=>1, H=>1, M=>1, xA=>1],
 		# Action tiles
 		'Hammer', 11, [H=>1, o =>1, l=>1, m=>2, s=>3],
 		'Looping', 12, [Q=>1, l=>1, m=>2, s=>3],
@@ -768,7 +800,7 @@ EOF
 		'Transfer v2', 44, [xR=>3],
 		'Zipline v2', 45,[xA=>1, xZ=>1, o=>1, 1=>4, xa=>1],
 		# 2024
-		'Vertical Cannon', 38, [yR => 1],
+		'Vertical Cannon', 38, [yM => 1],
 	];
 	# create tables (only single sql statements allowed)
 	$dbh->do($_) for split /;/, $sql;

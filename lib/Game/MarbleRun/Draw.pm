@@ -331,17 +331,24 @@ sub put_Tile {
 	# S: switch lever, T: text
 	my %tiles = ('Straight Tile' => 'I0',
 		C => 'a1A0',
+		wC => 'a1A0',
 		I => 'H0I0',
 		S => 'A0A2S0',
 		T => 'H0A0',
 		U => 'H0A0A2S0',
 		V => 'I0C0I3C1',
 		W => 'A0I0A2',
+		wW => 'A0I0A2',
 		X => 'I0I1',
+		wX => 'I0I1',
+		wJ => 'I0I1',
 		Y => 'A0A2',
+		wY => 'A0A2',
+		wB => 'a0a2a4',
 		xC => 'a0a2a4',
 		xI => 'a1I0a4',
 		xV => 'I0I2I4C0C1',
+		wD => 'a4A3',
 		xW => 'A0I0A3',
 		xX => 'I0I2I4',
 		xY => 'A0I0a1',
@@ -350,6 +357,7 @@ sub put_Tile {
 		yX => 'A0A1a2',
 		yY => 'A2I0a4',
 		yC => 'A0A3',
+		wA => 'A0A3',
 	);
 	my $thickness = 1/6.;	# for vortex
 	$orient_in ||= 0;
@@ -384,6 +392,8 @@ sub put_Tile {
 				'fill-opacity' => '0.8',});
 		}
 	}
+	my $arrow = $self->{dirchr}[$orient_in];
+	$self->put_text($x, $y, $arrow, {class => 'text'}) if $elem =~ /^w/;
 }
 
 {
