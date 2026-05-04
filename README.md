@@ -1,5 +1,8 @@
 # Store marble runs, generate build instructions and visualize runs
 
+![GitHub Release](https://img.shields.io/github/v/release/wofr06/marblerun)
+
+
 A program `gravi` has been written to support various tasks around marble run
 tracks built with GraviTrax® from Ravensburger.
 
