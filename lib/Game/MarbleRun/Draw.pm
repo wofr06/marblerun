@@ -28,13 +28,7 @@ sub new {
 		screen_y => $attr{screen_y} || 0.8*($sc_y||0) || 600,
 	};
 	bless $self => $class;
-	# set viewport workaround for: style => {'viewport-fill' => 'white'}
-	my $svg = SVG->new(width => $self->{screen_x}, height => $self->{screen_y});
-	$svg->rect(width=>"100%", height=>"100%", fill=>"white");
-	$self->{svg} = $svg;
-	# defs section in svg
-	$self->svg_defs();
-	# db initialization and preloading of frequently used data
+	# db initialization
 	$self->config(%attr);
 }
 

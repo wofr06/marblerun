@@ -25,16 +25,20 @@ sub process_input {
 	$self->{warn} = 0;
 	$self->{fname} = $file || 'STDIN';
 	if ($file) {
-		open F, $file or die "$file: $!\n";
+		open my $fh, '<', $file or die "$file: $!\n";
 		$self->error("File size too large, exiting") if -s $file > 100000;
+		{
+			local $/ = undef;
+			$self->{file_content} = <$fh>;
+		}
+		close $fh;
 	} else {
-		*F = *STDIN;
+		# slurp STDIN
+		{
+			local $/ = undef;
+			$self->{file_content} = <STDIN>;
+		}
 	}
-	{
-		local $/ = undef;
-		$self->{file_content} = <F>;
-	}
-	close F if $file;
 	return if ! $self->{file_content};
 	print $self->{file_content} if $self->{verbose};
 	$what = 'run';
@@ -275,8 +279,7 @@ sub store_person {
 	my $sql = "INSERT OR IGNORE INTO person (name,comment)
 		VALUES('$person', $comment)";
 	$dbh->do($sql);
-	$sql = "SELECT id FROM person WHERE name='$person'";
-	my $id = ($dbh->selectrow_arrayref($sql))[0][0];
+	my ($id) = $dbh->selectrow_array('SELECT id FROM person WHERE name = ?', undef, $person);
 	$sql = "UPDATE config SET main_user=$id";
 	$sql .= " WHERE main_user IS NULL" if ! $star;
 	$dbh->do($sql);
@@ -308,9 +311,9 @@ sub store_material {
 		$star = $header->[2];
 		$comment .= $header->[3] if $header->[3];
 	}
-		my $id = @{$dbh->selectall_arrayref('SELECT person_id
-			FROM person_elem')}[0];
-		$star = 1 if ! $id;
+	# check whether any person_elem rows exist (used to set default star)
+	my ($any_person_id) = $dbh->selectrow_array('SELECT person_id FROM person_elem LIMIT 1');
+	$star = 1 if ! $any_person_id;
 	my $person_id = $self->store_person($owner, $star, $comment);
 	if ($self->{db} =~ /memory/) {
 		say loc("Checking material for %1", $owner);
@@ -385,16 +388,18 @@ sub store_material {
 sub store_run_header {
 	my ($self, $data) = @_;
 	my $dbh = $self->{dbh};
-	my $flds = join(',', keys %$data);
-	my $vals = join(',', map {$dbh->quote($_)} values %$data);
-	my $sql = "INSERT OR IGNORE INTO run ($flds) VALUES($vals)";
-	$dbh->do("INSERT OR IGNORE INTO run ($flds) VALUES($vals)");
-	$sql = "SELECT id FROM run WHERE digest='$data->{digest}'";
-	my $id = ($dbh->selectrow_arrayref($sql))[0][0];
-	$dbh->do("DELETE FROM run_tile WHERE run_id=$id");
-	$dbh->do("DELETE FROM run_rail WHERE run_id=$id");
-	$dbh->do("DELETE FROM run_marble WHERE run_id=$id");
-	$dbh->do("DELETE FROM run_comment WHERE run_id=$id");
+	# Build an ordered list of keys/values so placeholders match
+	my @fields = keys %$data;
+	my $flds = join(',', @fields);
+	my $placeholders = join(',', map {'?'} @fields);
+	my @vals = map { $data->{$_} } @fields;
+	my $sth = $dbh->prepare("INSERT OR IGNORE INTO run ($flds) VALUES($placeholders)");
+	$sth->execute(@vals);
+	my ($id) = $dbh->selectrow_array('SELECT id FROM run WHERE digest = ? LIMIT 1', undef, $data->{digest});
+	$dbh->do("DELETE FROM run_tile WHERE run_id = ?", undef, $id) if defined $id;
+	$dbh->do("DELETE FROM run_rail WHERE run_id = ?", undef, $id) if defined $id;
+	$dbh->do("DELETE FROM run_marble WHERE run_id = ?", undef, $id) if defined $id;
+	$dbh->do("DELETE FROM run_comment WHERE run_id = ?", undef, $id) if defined $id;
 	return $id;
 }
 
@@ -1386,7 +1391,7 @@ format after parsing and before storage in the DB. Called from store_run.
 $g->resolve_z($rail, $z_from, $z_to, $from_pos, $data);
 
 find the best end point for the rail from $from_pos described by $rail data
-using the possible z positions $z_from and $z_to.
+using the possible z (height) values $z_from and $z_to.
 
 =head2 rail_connection
 
@@ -1479,19 +1484,19 @@ parsed data.
 =head1 SEE ALSO
 
 See also the documentation in Game::MarbleRun and Game::MarbleRun::Draw.
-The file gravi_en.pdf and gravi_de.pdf (in german) describe in more detail
+The file gravi_en.pdf and gravi_de.pdf (in german) describe in more detail=head1 AUTHOR
 the notation of marble runs.
+the notation of marble runs.Wolfgang Friebel, E<lt>wp.friebel@gmail.comE<gt>
 
-=head1 AUTHOR
+=head1 AUTHOR=head1 COPYRIGHT AND LICENSE
 
-Wolfgang Friebel, E<lt>wp.friebel@gmail.comE<gt>
+Wolfgang Friebel, E<lt>wp.friebel@gmail.comE<gt>Copyright (C) 2020-2025 by Wolfgang Friebel
 
-=head1 COPYRIGHT AND LICENSE
-
+=head1 COPYRIGHT AND LICENSEThis library is free software; you can redistribute it and/or modify
+r,
 Copyright (C) 2020-2025 by Wolfgang Friebel
 
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.28.1 or,
-at your option, any later version of Perl 5 you may have available.
+This library is free software; you can redistribute it and/or modify=cut
+it under the same terms as Perl itself, either Perl version 5.28.1 or,at your option, any later version of Perl 5 you may have available.
 
 =cut

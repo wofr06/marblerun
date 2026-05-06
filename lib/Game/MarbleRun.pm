@@ -78,6 +78,7 @@ sub features {
 		[ 'J',   3,   0,      9,      7,      1,      1],
 		[ 'K',   3,   0,      0,      9,      0,      1],
 		[ 'M',   3,  '',      0,      0, '2o0o3',  'o0'],
+		[ 'M',   0,  '',      0,      0, '2o3o0',  'o3'],
 		[ 'N',   0,  '',      0,      0, 'o1o0',   'o1'],
 		[ 'N',   0,  '',      0,      0, 'o3o0',   'o3'],
 		[ 'N',   0,  '',      0,      0, 'o5o0',   'o5'],
@@ -251,7 +252,7 @@ sub features {
 		['xD', 'F',   5,      8,      0,     0,       0],
 		['xD',   1,   1,      0,      0,     1],
 		['xD',   5,   5,      0,      0,     0],
-		['xF',  0, 'detail2', 0, '4*detail1+7', '3*(detail1-1)o0', 'o0'],
+		['xF',  0, 'detail2', 0, '7*(detail1-1)', '3*(detail1-1)o0', 'o0'],
 		['xH', '(2*detail-1)%6', 0, 'detail', 0,  0],
 		['xH', 'M',   0, 'detail+2',    0,     0],
 		['xI',   0,   3,      0,      0,   'r'],
@@ -1043,7 +1044,7 @@ sub check_num_elements {
 	my $miss = $needed->{1} || 0 - $owned->{1};
 	if ($miss > 0) {
 		my $free = int(($owned->{'+'} - ($needed->{'+'} || 0))/2);
-		my $added =  min($miss, $free);
+		my $added = min($miss, $free);
 		$needed->{'+'} += 2*$added;
 		$owned->{1} += $added;
 	}
@@ -1051,8 +1052,8 @@ sub check_num_elements {
 	$miss = $needed->{L} || 0 - $owned->{L} || 0;
 	if ($miss > 0) {
 		my $free = $owned->{xL} || 0 - ($needed->{xL} || 0);
-		my $added =  min($miss, $free);
-		$needed->{xL} +=  $added;
+		my $added = min($miss, $free);
+		$needed->{xL} += $added;
 		$owned->{L} += $added;
 	}
 	# if no walls needed, a pillar can be replaced by height elements
@@ -1063,8 +1064,8 @@ sub check_num_elements {
 		if (! $walls) {
 			my $free_1 = $owned->{1} - $needed->{1};
 			my $free_plus = $owned->{'+'} - $needed->{'+'};
-			my $added =  min($miss, int((2*$free_1 + $free_plus)/14));
-			$needed->{1} +=  min(7*$added, $free_1);
+			my $added = min($miss, int((2*$free_1 + $free_plus)/14));
+			$needed->{1} += min(7*$added, $free_1);
 			$added -= min(7*$added, $free_1);
 			$needed->{'+'} += min(14*$added, $free_plus) if $added > 0;
 			$owned->{L} += $added;
@@ -1541,7 +1542,7 @@ sub dir_string {
 sub display_run {
 	my ($self, $run_id, $person_id) = @_;
 	my $quiet = $self->{quiet};
-	my $svg = $self->{svg};
+
 	my %pos;
 	my $tp_pos = [[0,0]];
 	my ($meta, $tile, $rail, $marble, $excl) = $self->fetch_run_data($run_id);
@@ -1553,6 +1554,21 @@ sub display_run {
 	my $bx = int(($meta->[6] + 5)/6);
 	my $by = int(($meta->[7] + 4)/5);
 	$self->error("Unknown board size, exiting") if ! $bx or ! $by;
+
+	# choose picture size according to board size
+	my ($pict_x, $pict_y) = ($self->{screen_x}, $by/$bx*$self->{screen_x});
+	if ($pict_y > $self->{screen_y}) {
+		$pict_x *= $self->{screen_y}/$pict_y;
+		$pict_y = $self->{screen_y};
+	}
+	my $svg = SVG->new(width => $pict_x, height => $pict_y);
+	# set viewport workaround for: style => {'viewport-fill' => 'white'}
+	$svg->rect(width=>"100%", height=>"100%", fill=>"white");
+
+	$self->{svg} = $svg;
+	# defs section in svg
+	$self->svg_defs();
+
 	$self->{relative} = 1 if $meta->[6] > 35 or $meta->[7] > 35;
 	my ($dx, $dy) = (0, 0);
 	if ($self->{verbose}) {
