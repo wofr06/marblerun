@@ -117,6 +117,7 @@ sub features {
 		['kA',  '', 'B',      0,      0,   'o1',   'oB'],
 		['kA',  '', 'D',      0,      0,   'o3',   'oD'],
 		['kA',  '', 'F',      0,      0,   'o5',   'oF'],
+		['kC',   1,   2,      0,      0,   'r'],
 		['kC',   0,   4,      0,      0,   'r'],
 		['kC', 'D', 'D',      0,      0,     0],
 		['kD',   0, 'M',      0,      0,     0],
@@ -1556,8 +1557,9 @@ sub display_run {
 	$self->error("Unknown board size, exiting") if ! $bx or ! $by;
 
 	# choose picture size according to board size
-	my ($pict_x, $pict_y) = ($self->{screen_x}, $by/$bx*$self->{screen_x});
+	my ($pict_x, $pict_y) = ($self->{screen_x}, $by/($bx+0.2)*$self->{screen_x});
 	if ($pict_y > $self->{screen_y}) {
+		#$pict_x *= (1+0.5*$bx/$by)*$self->{screen_y}/$pict_y;
 		$pict_x *= $self->{screen_y}/$pict_y;
 		$pict_y = $self->{screen_y};
 	}
@@ -1588,7 +1590,7 @@ sub display_run {
 		$self->{outputfile} = $self->get_file_name($self->{outputfile}, 'svg',
 			loc("ENTER to continue without SVG output"), 1)
 			if ! $self->{outputfile};
-			$self->{outputfile} = undef if ! $self->{outputfile};
+		$self->{outputfile} = undef if ! $self->{outputfile};
 		$self->board($by, $bx, $run_id, $self->{fill}, $excl, $meta->[1]);
 	}
 	# SVG end #

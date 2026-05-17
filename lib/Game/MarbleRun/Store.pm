@@ -93,7 +93,8 @@ sub verify_rail_endpoints {
 		my $z = $t->[4] || 0;
 		my $pos = $self->num2pos($t->[2], $t->[3]);
 		$self->error("At %1 level %2 (%3) is already a tile %4", $pos, $level,
-			$z, $data->[$t_pos->{$pos}{$z}][1]) if exists $t_pos->{$pos}{$z};
+			$z, $data->[$t_pos->{$pos}{$z}][1]) if exists $t_pos->{$pos}{$z}
+			and $data->[$t_pos->{$pos}{$z}][1] !~ /^k/;
 		$z -= 14 if $t->[1] =~ /^x?L/;
 		$t_pos->{$pos}{$z} = $i;
 	}
@@ -944,10 +945,13 @@ sub parse_run {
 				}
 			}
 			# other height elements 1..9,+,E,L,xL,w+,k2,z+,z1,z2
-			while ($tile =~ s/^([+\dEL]|xL|z[12+]|k[2+])//) {
+			my $sky_tile = 0;
+			while ($tile =~ s/^([+\dEL]|xL|z[12+]|k[A-Z\+2])//) {
 				$elem = $1;
+				# an ordinary tile may follow after k+
+				$sky_tile = $elem eq 'k+' ? 0 : 1 if $elem =~ /^k[A-Z\+2]/;
 				# direction for balconies and pillars (for pillar optional)
-				if ($elem =~ /^[EL]|xL/) {
+				if ($elem =~ /^[EL]|xL|^k[A-Z]/) {
 					if ($tile =~ s/^([a-f])//) {
 						$dir = ord($1) - 97;
 					} elsif ($elem eq 'xL') {
@@ -981,6 +985,10 @@ sub parse_run {
 			}
 			# candidates for transparent plane positions
 			push @$planepos, [$x1, $y1, $z, $level] if ! $tile and $elem !~ /[=^]|x[lms]/;
+			if ($sky_tile and $tile !~ /^k/) {
+				say "error: $tile must not follow a skytrax tile" if $tile;
+			}
+			next if ! $_;
 			# tile special cases S,U,xH,xB,xF,O,xM,xD,yR,yV
 			# handle Switch position + / -
 			if ($tile =~ s/^([SU]|xD)([+-]?)/$1/) {
@@ -1082,7 +1090,7 @@ sub parse_run {
 				# all known rails (exists and range of small letters)
 					$r = $1;
 					my $w_detail;
-					if ($r !~ /^([kwx]?[a-egl-nqs-v])/
+					if ($r !~ /^([kwx]?[a-egk-nqs-v])/
 							or ! exists $self->{elem_name}{$r}) {
 						$self->error("Wrong rail char '%1'", $r);
 					} elsif (s/^(\d*)([a-f])//i) {
@@ -1132,13 +1140,14 @@ sub parse_run {
 			}
 			my $n = scalar keys(%$rails);
 			my $nmax = 0;
+			$tile ||= $elem;
 			$nmax = @{$self->{conn0}{$tile}} if exists $self->{conn0}{$tile};
 			if (exists $self->{conn1}{$tile}) {
 				my $key0 = (keys %{$self->{conn1}{$tile}})[0];
 				$nmax += @{$self->{conn1}{$tile}{$key0}};
 			}
 			$self->error("%1 rail data seen, %2 is maximum for tile %3",
-				$n, $nmax, $tile || $elem) if $n > $nmax and $tile !~ /^\|/;
+				$n, $nmax, $tile) if $n > $nmax and $tile !~ /^\|/;
 			push @$rules, $f;
 		}
 	}
