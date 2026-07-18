@@ -312,7 +312,7 @@ sub draw_tile {
 	# special cases for generic elements
 	} elsif ($elem eq 'xG') {
 		$self->put_BasicTile($x, $y, $orient);
-	# other tiles (F,R,xM,xP,xR,xS,yH,yK,yR,yS,yT) handled here
+	# other tiles (F,R,xM,xN,xP,xR,xS,yH,yK,yR,yS,yT) handled here
 	# (hexagon plus symbol) (K, Q also with through line)
 	} else {
 		$self->put_Tile($x, $y, $z, $elem, $orient, $detail);

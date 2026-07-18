@@ -46,7 +46,7 @@ my $line = [
 	'tunnel pillar' => ['22 xL' => qr/direction missing/i, 'run'], # 926
 	'helix elements' => ['22 xH1a'=> qr/helix/i, 'run'], # 965
 	'bridge elements' => ['41 xB9d' => qr/even number/i, 'run'], # 970
-	'mixer' => ['41 xMaa' => qr/mixer with orientation/i, 'run'], # 988
+	'mixer' => ['41 xMaa' => qr/with orientation/i, 'run'], # 988
 	'open basket' => ['22 3Oa' => qr/no height/si, 'run'], # 991
 	'excess tile char' => ['22 Caa' => qr/excess/i, 'run'], # 1004
 	'wrong orientation' => ['22 Cx' => qr/wrong orient/i, 'run'], # 1007
@@ -78,7 +78,7 @@ my $line = [
 ];
 while (my($s, $l) = splice(@$line, 0, 2)) {
 	$g->{warn} = 0;
-	my $content = "test\n$l->[0]";
+	my $content = "$s\n$l->[0]";
 	if ($l->[2] eq 'run') {
 		like(capture_stderr{{my $rules=$g->parse_run($content);
 								$g->store_run($rules)}}, $l->[1], $s);

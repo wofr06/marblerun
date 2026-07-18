@@ -1,4 +1,8 @@
 Revision history for Program gravi and Perl extension Game::MarbleRun
+1.22 Sat, Jul 18 2026
+	- documented new rules for skytrax, but not yet implemented
+	- enhanced german documentation for skytrax (pictures for the tiles)
+	- added variants of mixer and carousel (different asembly)
 	- support for Gravitrax set Advent_25 and turbo lift added
 	- instructions for rail placement improved
 	- changed prefix for Skytrax from w to k

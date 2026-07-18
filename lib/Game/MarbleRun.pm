@@ -9,10 +9,10 @@ use List::Util qw(min max);
 use Game::MarbleRun::I18N;
 use Locale::Maketext::Simple (Style => 'gettext');
 
-$Game::MarbleRun::VERSION = '1.21';
+$Game::MarbleRun::VERSION = '1.22';
 my $homedir = $ENV{HOME} || $ENV{HOMEPATH} || die "unknown homedir\n";
 $Game::MarbleRun::DB_FILE = "$homedir/.gravi.db";
-$Game::MarbleRun::DB_SCHEMA_VERSION = 20;
+$Game::MarbleRun::DB_SCHEMA_VERSION = 21;
 
 sub new {
 	my ($class, %attr) = @_;
@@ -55,7 +55,7 @@ sub features {
 	# direction F means fly in (dir 0)/out straight ahead (catapult, trampolin)
 	# cond = [n]o[dir] n marbles, direction dir must be present,
 	# cond = n z difference at least |n|
-	# cond = n1 and result = n2 state n1 becomes state n2 (S, U, xM, xV)
+	# cond = n1 and result = n2 state n1 becomes state n2 (S, U, xM, xN, xV)
 	# cond = 0 din, dout cannot be reversed
 	# cond = 'r' din, dout and zin, zout can be reversed
 	# result = [n]o[dir]: outgoing marble[s] in direction dir
@@ -87,7 +87,7 @@ sub features {
 		[ 'P', 'M',  '',      0,      0, 'o2oM',   'o2'],
 		[ 'P', 'M',  '',      0,      0, 'o4oM',   'o4'],
 		[ 'Q',   3,   0,      0,      0,   'r'],
-		[ 'R', 'F', 'F',      0,     -8,     3],
+		[ 'R', 'X', 'X',      0,     -8,     3],
 		[ 'S',   0,   2,      0,      0,      0,      1],
 		[ 'S',   0,   4,      0,      0,      1,      0],
 		[ 'S',   4,   0,      0,      0,      0,      1],
@@ -107,6 +107,7 @@ sub features {
 		[ 'X',   4,   1,      0,      0,   'r'],
 		[ 'Y',   2,   0,      0,      0,     0],
 		[ 'Y',   4,   0,      0,      0,     0],
+		#['Y',   0,   2 or 4, 0,      0,      0], not predictable
 		[ 'Z',   0,  '',      0,      0,     0],
 		[ 'Z',   2,  '',      0,      0,     0],
 		[ 'Z',   4,  '',      0,      0,     0],
@@ -247,10 +248,10 @@ sub features {
 		['xC',   0,   1,      0,      0,   'r'],
 		['xC',   2,   3,      0,      0,   'r'],
 		['xC',   4,   5,      0,      0,   'r'],
-		['xD', 'F',   1,      7,      0,     1,       1],
-		['xD', 'F',   1,      8,      0,     1,       1],
-		['xD', 'F',   5,      7,      0,     0,       0],
-		['xD', 'F',   5,      8,      0,     0,       0],
+		['xD', 'X',   1,      7,      0,     1,       1],
+		['xD', 'X',   1,      8,      0,     1,       1],
+		['xD', 'X',   5,      7,      0,     0,       0],
+		['xD', 'X',   5,      8,      0,     0,       0],
 		['xD',   1,   1,      0,      0,     1],
 		['xD',   5,   5,      0,      0,     0],
 		['xF',  0, 'detail2', 0, '7*(detail1-1)', '3*(detail1-1)o0', 'o0'],
@@ -259,21 +260,30 @@ sub features {
 		['xI',   0,   3,      0,      0,   'r'],
 		['xI',   1,   2,      0,      0,   'r'],
 		['xI',   4,   5,      0,      0,   'r'],
-		['xK',   3, 'F',      0,     15,      0,      1],
-		['xM',   0,   1,      7,      0,      0,      5],
-		['xM',   0,   5,      7,      0,      4,      3],
-		['xM',   0,   3,      7,      0,      2,      1],
-		['xM',   2,   5,      7,      0,      0,      3],
-		['xM',   2,   3,      7,      0,      4,      1],
-		['xM',   2,   1,      7,      0,      2,      5],
-		['xM',   4,   5,      7,      0,      0,      3],
-		['xM',   4,   3,      7,      0,      4,      1],
-		['xM',   4,   1,      7,      0,      2,      5],
+		['xK',   3, 'X',      0,     15,       0,      1],
+		['xM',   0,   1,      7,      0,       1,      5],
+		['xM',   0,   5,      7,      0,       5,      3],
+		['xM',   0,   3,      7,      0,       3,      1],
+		['xM',   2,   5,      7,      0,       5,      3],
+		['xM',   2,   3,      7,      0,       3,      1],
+		['xM',   2,   1,      7,      0,       1,      5],
+		['xM',   4,   5,      7,      0,       5,      3],
+		['xM',   4,   3,      7,      0,       3,      1],
+		['xM',   4,   1,      7,      0,       1,      5],
+		['xN',   0,   0,      7,      0,       0,      4],
+		['xN',   0,   4,      7,      0,       4,      2],
+		['xN',   0,   2,      7,      0,       2,      0],
+		['xN',   2,   4,      7,      0,       4,      2],
+		['xN',   2,   2,      7,      0,       2,      0],
+		['xN',   2,   0,      7,      0,       0,      4],
+		['xN',   4,   4,      7,      0,       4,      2],
+		['xN',   4,   2,      7,      0,       2,      0],
+		['xN',   4,   0,      7,      0,       0,      4],
 		['xP',   0, 'M',      0,      0,   'oM',   'o3'],
 		['xP',   3, 'M',      0,      0,   'oM',   'o0'],
 		['xQ',   0,   1,      0,      0,   'r'],
-		['xR', 'F', 'F',     10,      8,      0,      1],
-		['xR', 'F', 'F',     10,      9,      0,      1],
+		['xR', 'X', 'X',     10,      8,      0,      1],
+		['xR', 'X', 'X',     10,      9,      0,      1],
 		['xS',  '',   0,      0,      0,   'o0',   'o0'],
 		['xS',  '',   1,      0,      0,   'o1',   'o1'],
 		['xS',  '',   2,      0,      0,   'o2',   'o2'],
@@ -320,6 +330,18 @@ sub features {
 		['yK',   3,   3,      7,      7,   0],
 		['yK',   4,   5,      8,      7,   0],
 		['yK',   5,   5,      7,      7,   0],
+		['yL',   0,   0,      0,      0,   0],
+		['yL',   1,   2,      1,      0,   0],
+		['yL',   2,   2,      0,      0,   0],
+		['yL',   3,   4,      1,      0,   0],
+		['yL',   4,   4,      0,      0,   0],
+		['yL',   5,   0,      1,      0,   0],
+		['yL',   0,   1,      8,      7,   0],
+		['yL',   1,   1,      7,      7,   0],
+		['yL',   2,   3,      8,      7,   0],
+		['yL',   3,   3,      7,      7,   0],
+		['yL',   4,   5,      8,      7,   0],
+		['yL',   5,   5,      7,      7,   0],
 		['yM',   0,   'detail',      0,      11,   'o0'. ''],
 		['yM',   0,   'detail',      0,      11,   '2o0'. ''],
 		['yM',   0,   'detail',      0,      11,   '3o0'. 'o0'],
@@ -328,10 +350,10 @@ sub features {
 		['yR',   4,   0,      0,      0,     0],
 		['yR',   0,  '',     14,      7,     '',     ''],
 		['yR',   0,  '',     14,      7,   'oM',     ''],
-		['yR',   0,  '',     14,      7, 'oMo0',   'o9'],
+		['yR',   0,  '',     14,      7, 'oMo0',   'odetail'],
 		['yR',   3,  '',     14,      7,     '',     ''],
 		['yR',   3,  '',     14,      7,   'oM',     ''],
-		['yR',   3,  '',     14,      7, 'oMo0',   'o9'],
+		['yR',   3,  '',     14,      7, 'oMo0',   'odetail'],
 		['yS',   0,   3,      7,      7, 'fast', 'fast'],
 		['yS',   1,   4,      7,      7, 'fast', 'fast'],
 		['yS',   0,   2,      7,      0,      0,      3],
@@ -364,7 +386,7 @@ sub features {
 		['yY',   4,   5,      0,      0,   'r'],
 		['yY',   2,   0,      0,      0,     0],
 		['zA',  '',   0,      0,      0,   'o0',   'o0'],
-		['zE',   0,   1,      0,     14,     0],
+		['zE',   0,   1,      0,      8,     0],
 		['zF',   0,   3,      0,      0,     0],
 		['zL',   0,   3,      0,      8,     0],
 		['zM',   1,   0,      0,      0,     0],
@@ -670,14 +692,14 @@ EOF
 		xF=>'Lifter', f=>'Lift Tube Element', xi=>'Lift in', xj=>'Lift out',
 		xH=>'Spiral', i=>'Spiral in', j=>'Spiral out', h=>'Spiral Curve',
 		L=>'Pillar', xL=>'Tunnel Pillar', B=>'Balcony', E=>'Double Balcony',
-		xM=>'Mixer', yS=>'Splitter', xD=>'Dipper', xS=>'Spinner',
+		xM=>'Mixer', xN=>'Mixer2', yS=>'Splitter', xD=>'Dipper', xS=>'Spinner',
 		yH=>'Helix', yT=>'Turntable', xQ=>'Loop Curve', xV=>'Vortex 3 in',
 		xC=>'Curve 3x small', yC=>'Curve 2x large', yK=>'Carousel',
-		xI=>'Straight with 2 Curves', xX=>'Straight 3x', xW=>'2x 2 in 1 left',
-		yW=>'2x 2 in 1 right', xY=>'2 in 1 left with Curve',
-		yY=>'2 in 1 right with Curve', yX=>'3 Curves, 2 crossing',
-		yI=>'Cross Straight and Curve', xP=>'Color Swap', yR=>'Releaser',
-		yM=>'Vertical Cannon',
+		yL=>'Carousel2', xI=>'Straight with 2 Curves', xX=>'Straight 3x',
+		xW=>'2x 2 in 1 left', yW=>'2x 2 in 1 right',
+		xY=>'2 in 1 left with Curve', yY=>'2 in 1 right with Curve',
+		yX=>'3 Curves, 2 crossing', yI=>'Cross Straight and Curve',
+		xP=>'Color Swap', yR=>'Releaser', yM=>'Vertical Cannon',
 		'k+'=>'Sky Height Tile Small', 'k2'=>'Sky Height Tile Large',
 		kA=>'Sky Launcher', kZ=>'Sky Landing', kC=>'Sky Curve',
 		kY=>'Sky Curve2', kX=>'Sky Junction', kD=>'Sky Drop',
@@ -886,8 +908,8 @@ sub error {
 	$str .= " (file $self->{fname}$line!)" if $self->{fname};
 	$self->{warn}++;
 	my $locstr = loc('exit');
-	die "$str\n" if $str =~ /$locstr|exit/i;
-	warn "$str\n";
+	die "########### $str\n" if $str =~ /$locstr|exit/i;
+	warn "########### $str\n";
 }
 
 sub adjust {
@@ -1877,7 +1899,7 @@ sub initial_actions {
 			$pos .= loc('prepare for start');
 		} elsif ($sym eq 'yS') {
 			$pos .= loc("flap in %1", $self->dir_string($dir, 1));
-		} elsif ($sym eq 'xM') {
+		} elsif ($sym eq 'xM' or $sym eq 'xN') {
 			next if ! defined $detail;
 			$pos .= loc("%1 should leave tile in %2", $ball,
 				$self->dir_string($detail, 1));

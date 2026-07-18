@@ -265,7 +265,7 @@ sub rail_connection {
 		}
 		for my $case (@$case2) {
 			$case->[0] = ord($t->[5]) - 97 if $case->[0] eq 'detail';
-			if (defined $tile_dir and $rail_dir==($case->[0] + $tile_dir) % 6) {
+			if (defined $tile_dir and $case->[0] =~ /\d+/ and $rail_dir==($case->[0] + $tile_dir) % 6) {
 				push @$z_from, $case->[1];
 			}
 		}
@@ -913,7 +913,7 @@ sub parse_run {
 						[$tid++, $elem, $x1, $y1, $z, $num_E, $dir, $level] if $elem;
 				}
 			# balcony lines
-			} elsif ($tile =~ s/^([^wxyz]+)B// or $tile =~ s/^B([\da-d])//) {
+			} elsif ($tile =~ s/^([^wxyz])B// or $tile =~ s/^B([\da-d])//) {
 				$elem = 'B';
 				my $hole = $1;
 				if ($hole and $hole =~/^(\d)$|^([a-d])$/) {
@@ -986,12 +986,12 @@ sub parse_run {
 			# candidates for transparent plane positions
 			push @$planepos, [$x1, $y1, $z, $level] if ! $tile and $elem !~ /[=^]|x[lms]/;
 			if ($sky_tile and $tile !~ /^k/) {
-				say "error: $tile must not follow a skytrax tile" if $tile;
+				$self->error("%1 must not follow a skytrax tile", $tile) if $tile;
 			}
 			next if ! $_;
-			# tile special cases S,U,xH,xB,xF,O,xM,xD,yR,yV
+			# tile special cases S,U,xH,xB,xF,O,xM,xN,xD,yR,yV
 			# handle Switch position + / -
-			if ($tile =~ s/^([SU]|xD)([+-]?)/$1/) {
+			if ($tile =~ s/^([SU]|xD|zS)([+-]?)/$1/) {
 				$detail = $2 || '';
 			# handle number of helix elements
 			} elsif ($tile =~ s/xH(\d*)/xH/) {
@@ -1018,10 +1018,10 @@ sub parse_run {
 				$detail = '';
 				$detail .= ord(lc $_) - 97 for split '', $1;
 			# Mixer
-			} elsif ($tile =~ s/xM([a-f])([a-f])/xM$2/) {
-				$detail = ord(lc $1) - 97;
-				$dir = ord(lc $2) - 97;
-				$self->error("For the mixer with orientation %1 the direction %2 of the outgoing ball is not possible", $1, $2) if ! ($dir + $detail) % 2;
+			} elsif ($tile =~ s/(x[MN])([a-f])([a-f])/$1$3/) {
+				$detail = ord(lc $2) - 97;
+				$dir = ord(lc $3) - 97;
+				$self->error("For the mixer %1 with orientation %2 the direction %3 of the outgoing ball is not possible", $1, $2, $3) if $1 eq 'xM' and ! ($dir + $detail) % 2 or $1 eq 'xN' and ($dir + $detail) % 2;
 			# Releaser
 			} elsif ($tile =~ s/yR([a-f])([a-f])/yR$2/) {
 				$detail = ord(lc $1) - 97;
@@ -1113,7 +1113,7 @@ sub parse_run {
 							$self->rail_xy($r, $x1, $y1, $dir, $w_detail, $level);
 						if (exists $rails->{$dir}) {
 							my $levels = 1;
-							$levels = 2 if grep {$_ eq $tile} qw(xM yH yT);
+							$levels = 2 if grep {$_ eq $tile} qw(xM xN yH yT);
 							$self->error("Rail %1%2: another rail in same direction already seen", $r, chr(97 + $dir)) if $rails->{$dir} >= $levels;
 						}
 						if ($tile) {
